@@ -37,10 +37,10 @@ button {
   gap: 10px;
 }
 .brand-mark {
-  width: 16px;
-  height: 16px;
-  background: var(--accent);
-  clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  display: block;
 }
 .brand-name {
   font-family: var(--display);
@@ -213,11 +213,13 @@ button {
 .table-wrap {
   border: 1px solid var(--hairline);
   border-radius: 12px;
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   background: #fff;
 }
 .table {
   width: 100%;
+  min-width: 760px;
   border-collapse: collapse;
   font-size: 14px;
 }
@@ -245,8 +247,46 @@ button {
 .cell-title {
   font-weight: 600;
 }
+.cell-desc {
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ink-2);
+}
 .cell-actions {
   text-align: right;
+}
+
+/* ---- Search bar ---------------------------------------------------------- */
+.searchbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.search-input {
+  width: 100%;
+  max-width: 360px;
+  font-family: var(--ui);
+  font-size: 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+}
+.search-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+  border-color: transparent;
+}
+.search-count {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
 }
 
 /* ---- Status pills -------------------------------------------------------- */
@@ -458,12 +498,44 @@ button {
   border-top: 1px solid var(--hairline);
 }
 
-@media (max-width: 560px) {
-  .field-row {
-    flex-direction: column;
+/* ---- Mobile ------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .header {
+    flex-wrap: wrap;
+    min-height: auto;
+    padding: 12px 16px;
+    gap: 10px;
+  }
+  .header-right {
+    width: 100%;
+    margin-left: 0;
+    gap: 10px;
+    justify-content: space-between;
+  }
+  .account {
+    border-left: none;
+    padding-left: 0;
   }
   .account-email {
     display: none;
+  }
+  .brand-sub {
+    display: none;
+  }
+  .main {
+    padding: 16px;
+  }
+  .search-input {
+    max-width: none;
+  }
+  .field-row {
+    flex-direction: column;
+  }
+  .overlay {
+    padding: 16px 12px;
+  }
+  .board {
+    grid-auto-columns: minmax(220px, 80%);
   }
 }
 

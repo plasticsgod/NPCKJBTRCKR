@@ -14,6 +14,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState("table"); // "table" | "board"
   const [editing, setEditing] = useState(null); // job being edited, or {} for new, or null
+  const [query, setQuery] = useState("");
 
   // --- Auth: track who is signed in -------------------------------------------
   useEffect(() => {
@@ -74,6 +75,12 @@ export default function App() {
     else loadJobs();
   }
 
+  // --- Filter by brand (search) ----------------------------------------------
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? jobs.filter((j) => (j.brand || "").toLowerCase().includes(q))
+    : jobs;
+
   // --- Render -----------------------------------------------------------------
   if (!authReady) return <div className="screen-center muted">Loading…</div>;
   if (!session) return <Auth />;
@@ -100,10 +107,34 @@ export default function App() {
               + New Job
             </button>
           </div>
-        ) : view === "table" ? (
-          <JobTable jobs={jobs} onEdit={setEditing} onDelete={deleteJob} />
         ) : (
-          <JobBoard jobs={jobs} onEdit={setEditing} onStatus={changeStatus} />
+          <>
+            <div className="searchbar">
+              <input
+                className="search-input"
+                type="search"
+                placeholder="Search by brand…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              {q && (
+                <span className="search-count">
+                  {filtered.length} {filtered.length === 1 ? "match" : "matches"}
+                </span>
+              )}
+            </div>
+
+            {filtered.length === 0 ? (
+              <div className="empty">
+                <p className="empty-title">No matches</p>
+                <p className="muted">No jobs have a brand matching “{query}”.</p>
+              </div>
+            ) : view === "table" ? (
+              <JobTable jobs={filtered} onEdit={setEditing} onDelete={deleteJob} />
+            ) : (
+              <JobBoard jobs={filtered} onEdit={setEditing} onStatus={changeStatus} />
+            )}
+          </>
         )}
       </main>
 
