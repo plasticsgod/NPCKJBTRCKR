@@ -2,7 +2,7 @@ export default function Header({ count, view, onView, email, onNew, onSignOut })
   return (
     <header className="header">
       <div className="brand">
-        <span className="brand-mark" />
+        <img className="brand-mark" src="/images/favicon.png" alt="NutraPack logo" />
         <span className="brand-name">NutraPack</span>
         <span className="brand-sub">Job Tracker</span>
       </div>

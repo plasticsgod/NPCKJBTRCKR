@@ -31,7 +31,7 @@ export default function Auth() {
     <div className="screen-center">
       <form className="auth-card" onSubmit={submit}>
         <div className="brand">
-          <span className="brand-mark" />
+          <img className="brand-mark" src="/images/favicon.png" alt="NutraPack logo" />
           <span className="brand-name">NutraPack</span>
           <span className="brand-sub">Job Tracker</span>
         </div>
