@@ -11,6 +11,7 @@ export default function JobTable({ jobs, onEdit, onDelete }) {
           <tr>
             <th>Job Title</th>
             <th>Brand</th>
+            <th>Description</th>
             <th>Status</th>
             <th>Printing Facility</th>
             <th>PO Number</th>
@@ -23,6 +24,9 @@ export default function JobTable({ jobs, onEdit, onDelete }) {
             <tr key={j.id} onClick={() => onEdit(j)} className="row">
               <td className="cell-title">{j.job_title}</td>
               <td>{j.brand || "—"}</td>
+              <td className="cell-desc" title={j.description || ""}>
+                {j.description || "—"}
+              </td>
               <td>
                 <StatusPill status={j.status} />
               </td>
