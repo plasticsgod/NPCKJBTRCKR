@@ -955,3 +955,23 @@ button {
 @media (max-width: 520px) {
   .drawer-fields { grid-template-columns: 1fr; }
 }
+
+/* ---- Job modal tabs ------------------------------------------------------ */
+.modal-tabs { max-width: 580px; }
+.modal-tab-bar { display: flex; gap: 2px; background: var(--panel); border-radius: 999px; padding: 3px; }
+.mtab { background: transparent; border: none; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ink-3); padding: 7px 16px; border-radius: 999px; }
+.mtab.on { background: var(--ink); color: var(--bg); }
+
+/* ---- File upload + list -------------------------------------------------- */
+.files-panel { gap: 14px; }
+.upload-zone { display: block; border: 2px dashed var(--hairline); border-radius: 12px; padding: 24px; text-align: center; cursor: pointer; transition: border-color .15s; }
+.upload-zone:hover { border-color: var(--accent); }
+.upload-inner { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+.upload-icon { font-size: 24px; color: var(--ink-3); }
+.file-list { display: flex; flex-direction: column; gap: 8px; }
+.file-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--panel); border-radius: 10px; }
+.file-icon { font-size: 20px; flex-shrink: 0; }
+.file-info { flex: 1; min-width: 0; }
+.file-name { display: block; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-meta { display: block; font-size: 11px; color: var(--ink-3); margin-top: 1px; }
+.delete-warning { background: #fff8e6; border: 1px solid #ecdca8; color: #8a6d1f; border-radius: 8px; padding: 10px 14px; font-size: 13px; }
