@@ -56,7 +56,7 @@ export default function TaskDrawer({ task, userEmail, onClose, onUpdate, onDelet
   }
 
   return (
-    <div className="overlay" onClick={onClose}>
+    <div className="drawer-overlay" onClick={onClose}>
       <aside className="drawer" onClick={(e) => e.stopPropagation()}>
         <div className="drawer-head">
           <input className="drawer-title" value={local.title}
