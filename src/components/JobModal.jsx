@@ -26,8 +26,6 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
   const [form, setForm] = useState({ ...EMPTY, ...job });
 
   function set(key, value) {
-    setForm((f) => ({ ...f, [key]: value }));
-    // Auto-set files_delete_after when status flips to Delivered.
     if (key === "status") {
       if (value === "Delivered") {
         const d = new Date();
@@ -36,6 +34,8 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
       } else {
         setForm((f) => ({ ...f, status: value, files_delete_after: null }));
       }
+    } else {
+      setForm((f) => ({ ...f, [key]: value }));
     }
   }
 
@@ -45,21 +45,18 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
     onSave({ ...form, print_qty: Number(form.print_qty) || 0 });
   }
 
-  // Close on Escape only.
   useEffect(() => {
     function onKey(e) { if (e.key === "Escape") onClose(); }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Deletion warning
   const deleteWarning = (() => {
     if (!form.files_delete_after) return null;
     const d = new Date(form.files_delete_after);
-    const now = new Date();
-    const days = Math.ceil((d - now) / 86400000);
-    if (days <= WARN_DAYS && days >= 0) return `⚠️ Files will be auto-deleted in ${days} day${days !== 1 ? "s" : ""}.`;
-    if (days < 0) return "⚠️ Files are scheduled for deletion.";
+    const days = Math.ceil((d - new Date()) / 86400000);
+    if (days <= WARN_DAYS && days >= 0) return `⚠️ Proof files will be auto-deleted in ${days} day${days !== 1 ? "s" : ""}.`;
+    if (days < 0) return "⚠️ Proof files are scheduled for deletion.";
     return null;
   })();
 
@@ -70,20 +67,19 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
           <h2>{isNew ? "New Job" : "Edit Job"}</h2>
           <div className="modal-tab-bar">
             <button type="button" className={tab === "details" ? "mtab on" : "mtab"} onClick={() => setTab("details")}>Details</button>
-            {!isNew && <button type="button" className={tab === "files" ? "mtab on" : "mtab"} onClick={() => setTab("files")}>Files</button>}
+            {!isNew && <button type="button" className={tab === "proofs" ? "mtab on" : "mtab"} onClick={() => setTab("proofs")}>Proofs</button>}
+            {!isNew && <button type="button" className={tab === "artwork" ? "mtab on" : "mtab"} onClick={() => setTab("artwork")}>Artwork</button>}
           </div>
           <button type="button" className="link" onClick={onClose}>Close</button>
         </div>
 
-        {tab === "details" ? (
+        {tab === "details" && (
           <div className="modal-body">
             {deleteWarning && <p className="delete-warning">{deleteWarning}</p>}
-
             <label className="field">
               <span>Job Title</span>
               <input value={form.job_title} onChange={(e) => set("job_title", e.target.value)} required autoFocus />
             </label>
-
             <div className="field-row">
               <label className="field">
                 <span>Customer</span>
@@ -99,7 +95,6 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
                   onChange={(e) => set("print_qty", e.target.value)} />
               </label>
             </div>
-
             <div className="field-row">
               <label className="field">
                 <span>Status</span>
@@ -115,7 +110,6 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
                 </select>
               </label>
             </div>
-
             {form.printing_facility === "Sttark" && (
               <label className="field">
                 <span>Sttark Order ID <span className="field-hint">— links live Sttark status</span></span>
@@ -123,13 +117,10 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
                   onChange={(e) => set("sttark_order_id", e.target.value.trim())} />
               </label>
             )}
-
             <label className="field">
               <span>Description</span>
-              <textarea rows={3} value={form.description}
-                onChange={(e) => set("description", e.target.value)} />
+              <textarea rows={3} value={form.description} onChange={(e) => set("description", e.target.value)} />
             </label>
-
             <div className="field-row">
               <label className="field">
                 <span>PO Number</span>
@@ -140,36 +131,34 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
                 <input value={form.ship_to} onChange={(e) => set("ship_to", e.target.value)} />
               </label>
             </div>
-
             <label className="field">
               <span>Shipping Address</span>
-              <textarea rows={2} value={form.shipping_address}
-                onChange={(e) => set("shipping_address", e.target.value)} />
+              <textarea rows={2} value={form.shipping_address} onChange={(e) => set("shipping_address", e.target.value)} />
             </label>
-
             {form.files_delete_after && (
               <label className="field">
-                <span>Files auto-delete date <span className="field-hint">— change to extend</span></span>
+                <span>Proof files auto-delete date <span className="field-hint">— change to extend</span></span>
                 <input type="date" value={form.files_delete_after}
                   onChange={(e) => set("files_delete_after", e.target.value || null)} />
               </label>
             )}
           </div>
-        ) : (
-          <FilesPanel jobId={job.id} />
         )}
+
+        {tab === "proofs" && <ProofsPanel jobId={job.id} />}
+        {tab === "artwork" && <ArtworkPanel jobId={job.id} />}
 
         <div className="modal-foot">
           <button type="button" className="btn-ghost" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn-accent">{isNew ? "Create Job" : "Save Changes"}</button>
+          {tab === "details" && <button type="submit" className="btn-accent">{isNew ? "Create Job" : "Save Changes"}</button>}
         </div>
       </form>
     </div>
   );
 }
 
-// ---- Files panel -----------------------------------------------------------
-function FilesPanel({ jobId }) {
+// ---- Proofs panel (file uploads) -------------------------------------------
+function ProofsPanel({ jobId }) {
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [userEmail, setUserEmail] = useState("");
@@ -208,8 +197,7 @@ function FilesPanel({ jobId }) {
     const { data, error } = await supabase.storage.from("job-files").download(file.storage_path);
     if (error) { alert("Download failed: " + error.message); return; }
     const url = URL.createObjectURL(data);
-    const a = document.createElement("a");
-    a.href = url; a.download = file.name; a.click();
+    const a = document.createElement("a"); a.href = url; a.download = file.name; a.click();
     URL.revokeObjectURL(url);
   }
 
@@ -222,17 +210,17 @@ function FilesPanel({ jobId }) {
 
   return (
     <div className="modal-body files-panel">
+      <p className="panel-note">Upload proof files for this job. Proofs are automatically deleted 30 days after the job is marked Delivered.</p>
       <label className="upload-zone">
         <input type="file" multiple onChange={upload} disabled={uploading} style={{ display: "none" }} />
         <div className="upload-inner">
           <span className="upload-icon">↑</span>
-          <span>{uploading ? "Uploading…" : "Click to upload files"}</span>
-          <span className="muted small">AI, PDF, images — any format</span>
+          <span>{uploading ? "Uploading…" : "Click to upload proof files"}</span>
+          <span className="muted small">PDF, AI, images — any format</span>
         </div>
       </label>
-
       {files.length === 0 ? (
-        <p className="muted small" style={{ textAlign: "center", padding: "16px 0" }}>No files uploaded yet.</p>
+        <p className="muted small" style={{ textAlign: "center", padding: "16px 0" }}>No proof files uploaded yet.</p>
       ) : (
         <div className="file-list">
           {files.map((f) => (
@@ -242,8 +230,83 @@ function FilesPanel({ jobId }) {
                 <span className="file-name">{f.name}</span>
                 <span className="file-meta">{fmtSize(f.size)} · {f.uploaded_by} · {fmtDate(f.created_at)}</span>
               </div>
-              <button className="link" onClick={() => download(f)}>Download</button>
-              <button className="link danger" onClick={() => remove(f)}>Delete</button>
+              <button type="button" className="link" onClick={() => download(f)}>Download</button>
+              <button type="button" className="link danger" onClick={() => remove(f)}>Delete</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---- Artwork panel (links only) --------------------------------------------
+function ArtworkPanel({ jobId }) {
+  const [links, setLinks] = useState([]);
+  const [label, setLabel] = useState("");
+  const [url, setUrl] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserEmail(data.user?.email || ""));
+  }, []);
+
+  const load = useCallback(async () => {
+    const { data } = await supabase
+      .from("job_artwork").select("*").eq("job_id", jobId).order("created_at", { ascending: false });
+    setLinks(data ?? []);
+  }, [jobId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function addLink() {
+    if (!url.trim()) return;
+    await supabase.from("job_artwork").insert({
+      job_id: jobId,
+      label: label.trim() || "Artwork link",
+      url: url.trim(),
+      added_by: userEmail,
+    });
+    setLabel(""); setUrl("");
+    load();
+  }
+
+  async function removeLink(id) {
+    if (!confirm("Remove this artwork link?")) return;
+    await supabase.from("job_artwork").delete().eq("id", id);
+    load();
+  }
+
+  return (
+    <div className="modal-body files-panel">
+      <p className="panel-note">Add links to approved artwork files (Google Drive, Dropbox, etc.). Links are never auto-deleted.</p>
+      <div className="artwork-form">
+        <label className="field">
+          <span>Label</span>
+          <input value={label} placeholder="e.g. Final approved artwork"
+            onChange={(e) => setLabel(e.target.value)} />
+        </label>
+        <label className="field">
+          <span>URL</span>
+          <input value={url} placeholder="https://drive.google.com/..."
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLink(); } }} />
+        </label>
+        <button type="button" className="btn-accent" onClick={addLink} disabled={!url.trim()}>Add link</button>
+      </div>
+      {links.length === 0 ? (
+        <p className="muted small" style={{ textAlign: "center", padding: "16px 0" }}>No artwork links added yet.</p>
+      ) : (
+        <div className="file-list">
+          {links.map((l) => (
+            <div className="file-row" key={l.id}>
+              <span className="file-icon">🔗</span>
+              <div className="file-info">
+                <span className="file-name">{l.label}</span>
+                <span className="file-meta">{l.added_by} · {fmtDate(l.created_at)}</span>
+              </div>
+              <a href={l.url} target="_blank" rel="noopener noreferrer" className="link">Open</a>
+              <button type="button" className="link danger" onClick={() => removeLink(l.id)}>Remove</button>
             </div>
           ))}
         </div>
@@ -256,12 +319,10 @@ function fileIcon(mime) {
   if (!mime) return "📄";
   if (mime.includes("pdf")) return "📕";
   if (mime.includes("image")) return "🖼️";
-  if (mime.includes("zip") || mime.includes("compressed")) return "🗜️";
   return "📄";
 }
 function fmtSize(bytes) {
   if (!bytes) return "—";
-  if (bytes < 1024) return bytes + " B";
   if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
   return (bytes / 1048576).toFixed(1) + " MB";
 }
