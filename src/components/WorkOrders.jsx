@@ -3,15 +3,39 @@ import JobTable from "./JobTable";
 import JobBoard from "./JobBoard";
 
 export default function WorkOrders({
-  jobs, customers, onNew, onEdit, onDelete, onStatus, onFacility,
+  jobs, customers, onNew, onEdit, onDeleteMany, onStatus, onFacility,
 }) {
   const [view, setView] = useState("table");
   const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState(new Set());
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const q = query.trim().toLowerCase();
   const filtered = q
     ? jobs.filter((j) => (j.brand || "").toLowerCase().includes(q))
     : jobs;
+
+  function toggle(id) {
+    setSelected((s) => {
+      const n = new Set(s);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  }
+  function toggleAll() {
+    setSelected((s) => {
+      if (filtered.every((j) => s.has(j.id))) return new Set(); // all selected -> clear
+      return new Set(filtered.map((j) => j.id));               // else select all visible
+    });
+  }
+  function confirmDelete() {
+    onDeleteMany([...selected]);
+    setSelected(new Set());
+    setConfirmOpen(false);
+  }
+
+  const count = selected.size;
+  const allChecked = filtered.length > 0 && filtered.every((j) => selected.has(j.id));
 
   return (
     <>
@@ -36,6 +60,16 @@ export default function WorkOrders({
         <span className="count">{filtered.length} {filtered.length === 1 ? "order" : "orders"}</span>
 
         <button className="btn-accent push-right" onClick={onNew}>+ New Job</button>
+
+        {view === "table" && (
+          <button
+            className="btn-ghost del-btn"
+            disabled={count === 0}
+            onClick={() => setConfirmOpen(true)}
+          >
+            Delete{count ? ` (${count})` : ""}
+          </button>
+        )}
       </div>
 
       {jobs.length === 0 ? (
@@ -50,9 +84,35 @@ export default function WorkOrders({
           <p className="muted">No orders have a customer matching “{query}”.</p>
         </div>
       ) : view === "table" ? (
-        <JobTable jobs={filtered} onEdit={onEdit} onDelete={onDelete} />
+        <JobTable
+          jobs={filtered}
+          onEdit={onEdit}
+          selected={selected}
+          onToggle={toggle}
+          allChecked={allChecked}
+          onToggleAll={toggleAll}
+        />
       ) : (
         <JobBoard jobs={filtered} onEdit={onEdit} onStatus={onStatus} onFacility={onFacility} />
+      )}
+
+      {confirmOpen && (
+        <div className="overlay">
+          <div className="modal confirm-modal">
+            <div className="modal-head">
+              <h2>Delete {count > 1 ? `${count} orders` : "order"}?</h2>
+            </div>
+            <div className="modal-body">
+              <p>Are you sure you want to delete {count > 1 ? "these orders" : "this order"}? This cannot be undone.</p>
+            </div>
+            <div className="modal-foot">
+              <button className="btn-ghost" onClick={() => setConfirmOpen(false)}>Cancel</button>
+              <button className="btn-danger" onClick={confirmDelete}>
+                Delete {count > 1 ? `${count} orders` : "order"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
