@@ -1,22 +1,23 @@
 import { supabase } from "../supabaseClient";
 
 // Calls the read-only sttark-status Edge Function for a set of Sttark order ids.
-// Returns { [id]: { status_label, quoted_total, ... } }. Fails soft: on any
-// error it returns {} so the Work Orders page never breaks if Sttark is down.
+// Returns { statuses, debug } where debug captures the raw result/error so the
+// app can show what happened (temporary diagnostic aid).
 export async function fetchSttarkStatuses(ids) {
   const clean = [...new Set(ids.filter(Boolean).map(String))];
-  if (clean.length === 0) return {};
+  if (clean.length === 0) return { statuses: {}, debug: { note: "no linked ids" } };
   try {
     const { data, error } = await supabase.functions.invoke("sttark-status", {
       body: { ids: clean },
     });
     if (error) {
-      console.warn("Sttark status fetch failed:", error.message);
-      return {};
+      // Try to read the function's error body for a useful message.
+      let detail = error.message;
+      try { detail = JSON.stringify(await error.context?.json?.()); } catch (_e) { /* ignore */ }
+      return { statuses: {}, debug: { error: detail, asked: clean } };
     }
-    return data?.statuses ?? {};
+    return { statuses: data?.statuses ?? {}, debug: { ok: true, asked: clean, raw: data } };
   } catch (err) {
-    console.warn("Sttark status fetch error:", err);
-    return {};
+    return { statuses: {}, debug: { thrown: String(err), asked: clean } };
   }
 }
