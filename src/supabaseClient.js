@@ -15,8 +15,12 @@ if (!url || !anonKey) {
 export const supabase = createClient(url, anonKey);
 
 // The job statuses, in pipeline order. The Board view shows one column per status.
-// Edit this list to match how NutraPack actually works.
-export const STATUSES = ["New", "In Design", "Printing", "Shipped", "Complete"];
+export const STATUSES = [
+  "Not Submitted",
+  "Waiting for proofs and approval",
+  "Printing",
+  "Shipped",
+];
 
-// Suggested printing facilities (from your original tracker). Used in the form.
-export const FACILITIES = ["PLOD", "Sttark", "Ksidrane"];
+// Printing facilities — used in the form dropdown and board quick-select.
+export const FACILITIES = ["Sttark", "K.Sidrane", "PLOD"];
