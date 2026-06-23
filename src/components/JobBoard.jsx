@@ -1,6 +1,6 @@
-import { STATUSES } from "../supabaseClient";
+import { STATUSES, FACILITIES } from "../supabaseClient";
 
-export default function JobBoard({ jobs, onEdit, onStatus }) {
+export default function JobBoard({ jobs, onEdit, onStatus, onFacility }) {
   return (
     <div className="board">
       {STATUSES.map((status) => {
@@ -23,11 +23,7 @@ export default function JobBoard({ jobs, onEdit, onStatus }) {
                 >
                   <p className="card-title">{j.job_title}</p>
                   {j.brand && <p className="card-sub">{j.brand}</p>}
-                  {j.printing_facility && (
-                    <p className="card-meta">{j.printing_facility}</p>
-                  )}
 
-                  {/* Quick status change without opening the full editor */}
                   <select
                     className="card-status"
                     value={j.status}
@@ -35,9 +31,19 @@ export default function JobBoard({ jobs, onEdit, onStatus }) {
                     onChange={(e) => onStatus(j.id, e.target.value)}
                   >
                     {STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+
+                  <select
+                    className="card-status"
+                    value={j.printing_facility || ""}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => onFacility(j.id, e.target.value)}
+                  >
+                    <option value="">— Facility —</option>
+                    {FACILITIES.map((f) => (
+                      <option key={f} value={f}>{f}</option>
                     ))}
                   </select>
                 </article>

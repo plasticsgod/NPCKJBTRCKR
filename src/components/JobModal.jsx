@@ -70,16 +70,15 @@ export default function JobModal({ job, onSave, onClose }) {
           <div className="field-row">
             <label className="field">
               <span>Printing Facility</span>
-              <input
-                list="facilities"
+              <select
                 value={form.printing_facility}
                 onChange={(e) => set("printing_facility", e.target.value)}
-              />
-              <datalist id="facilities">
+              >
+                <option value="">— Select facility —</option>
                 {FACILITIES.map((f) => (
-                  <option key={f} value={f} />
+                  <option key={f} value={f}>{f}</option>
                 ))}
-              </datalist>
+              </select>
             </label>
             <label className="field">
               <span>PO Number</span>
