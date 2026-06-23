@@ -17,6 +17,7 @@ export const supabase = createClient(url, anonKey);
 // The job statuses, in pipeline order. The Board view shows one column per status.
 export const STATUSES = [
   "Not Submitted",
+  "In Queue",
   "Waiting for proofs and approval",
   "Printing",
   "Shipped",
