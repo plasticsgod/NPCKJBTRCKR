@@ -1,4 +1,4 @@
-const TITLES = { work_orders: "Work Orders", dashboard: "Dashboard", plastics: "Plastics Estimator" };
+const TITLES = { work_orders: "Work Orders", dashboard: "Dashboard", plastics: "Plastics Estimator", projects: "Projects" };
 
 export default function Header({ page, email, onMenu, onSignOut }) {
   return (
