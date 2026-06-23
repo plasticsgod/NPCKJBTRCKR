@@ -81,6 +81,13 @@ export default function App() {
     loadJobs();
   }
 
+  // Bulk delete (the Work Orders page shows its own confirm popup first)
+  async function deleteJobs(ids) {
+    const { error } = await supabase.from("jobs").delete().in("id", ids);
+    if (error) return alert("Could not delete: " + error.message);
+    loadJobs();
+  }
+
   async function changeStatus(id, status) {
     const { error } = await supabase.from("jobs").update({ status }).eq("id", id);
     if (error) alert("Could not update status: " + error.message);
@@ -132,7 +139,7 @@ export default function App() {
             customers={customers}
             onNew={() => setEditing({})}
             onEdit={setEditing}
-            onDelete={deleteJob}
+            onDeleteMany={deleteJobs}
             onStatus={changeStatus}
             onFacility={changeFacility}
           />

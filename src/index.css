@@ -847,3 +847,26 @@ button {
   .est-grid { grid-template-columns: 1fr; }
   .ship-grid { grid-template-columns: 1fr; }
 }
+
+/* ---- Work Orders select-to-delete ---------------------------------------- */
+.chk-col { width: 40px; text-align: center; }
+.chk-col input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent); }
+.row.selected td { background: #fff3ec; }
+.del-btn { color: #b3402a; border-color: #e8c4b8; }
+.del-btn:not(:disabled):hover { background: #fff3ec; border-color: #b3402a; }
+.del-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-danger {
+  background: #b3402a;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 11px 18px;
+  border-radius: 999px;
+}
+.btn-danger:hover { background: #962f1c; }
+
+.confirm-modal { max-width: 420px; }
+.confirm-modal .modal-body { font-size: 14px; color: var(--ink-2); }
