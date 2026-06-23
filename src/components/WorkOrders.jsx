@@ -14,6 +14,7 @@ export default function WorkOrders({
   const [selected, setSelected] = useState(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [sttark, setSttark] = useState({}); // { [orderId]: { status_label, ... } }
+  const [sttarkDebug, setSttarkDebug] = useState(null); // temporary diagnostic
 
   // Auto-refresh Sttark statuses whenever Work Orders opens / jobs change,
   // and auto-update each linked job's own status from the mapped Sttark status.
@@ -21,9 +22,10 @@ export default function WorkOrders({
     const linked = jobs.filter((j) => j.sttark_order_id);
     if (linked.length === 0) { setSttark({}); return; }
     let active = true;
-    fetchSttarkStatuses(linked.map((j) => j.sttark_order_id)).then(async (s) => {
+    fetchSttarkStatuses(linked.map((j) => j.sttark_order_id)).then(async ({ statuses: s, debug }) => {
       if (!active) return;
       setSttark(s);
+      setSttarkDebug(debug);
 
       // For each linked job, map Sttark's status to ours; write back any changes.
       const updates = [];
@@ -118,6 +120,15 @@ export default function WorkOrders({
           </>
         )}
       </div>
+
+      {sttarkDebug && (
+        <pre style={{
+          background: "#14110d", color: "#eafaf0", padding: "12px 14px",
+          borderRadius: 8, fontSize: 11, overflowX: "auto", marginBottom: 14,
+        }}>
+          STTARK DEBUG: {JSON.stringify(sttarkDebug, null, 2)}
+        </pre>
+      )}
 
       {jobs.length === 0 ? (
         <div className="empty">
