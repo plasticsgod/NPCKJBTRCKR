@@ -3,7 +3,7 @@
 
 export const STTARK_TO_NUTRAPACK = {
   "Saved Quote": "Not Submitted",
-  "Preprinting": "Printing",
+  "Preprinting": "In Queue",
   "Printing": "Printing",
   "Laminating": "Printing",
   "Converting": "Printing",
