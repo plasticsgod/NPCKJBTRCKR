@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { STATUSES, FACILITIES } from "../supabaseClient";
 
 const EMPTY = {
@@ -28,9 +28,18 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
     onSave({ ...form, print_qty: Number(form.print_qty) || 0 });
   }
 
+  // Close on Escape only — never on an accidental click outside the box.
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
-    <div className="overlay" onClick={onClose}>
-      <form className="modal" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
+    <div className="overlay">
+      <form className="modal" onSubmit={submit}>
         <div className="modal-head">
           <h2>{isNew ? "New Job" : "Edit Job"}</h2>
           <button type="button" className="link" onClick={onClose}>Close</button>
