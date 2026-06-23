@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import JobTable from "./JobTable";
 import JobBoard from "./JobBoard";
+import { fetchSttarkStatuses } from "../sttark/status";
 
 export default function WorkOrders({
   jobs, customers, onNew, onEdit, onDeleteMany, onStatus, onFacility,
@@ -10,6 +11,16 @@ export default function WorkOrders({
   const [deleteMode, setDeleteMode] = useState(false);
   const [selected, setSelected] = useState(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [sttark, setSttark] = useState({}); // { [orderId]: { status_label, ... } }
+
+  // Auto-refresh Sttark statuses whenever Work Orders opens / jobs change.
+  useEffect(() => {
+    const ids = jobs.map((j) => j.sttark_order_id).filter(Boolean);
+    if (ids.length === 0) { setSttark({}); return; }
+    let active = true;
+    fetchSttarkStatuses(ids).then((s) => { if (active) setSttark(s); });
+    return () => { active = false; };
+  }, [jobs]);
 
   const q = query.trim().toLowerCase();
   const filtered = q
@@ -108,6 +119,7 @@ export default function WorkOrders({
           onToggle={toggle}
           allChecked={allChecked}
           onToggleAll={toggleAll}
+          sttark={sttark}
         />
       ) : (
         <JobBoard jobs={filtered} onEdit={onEdit} onStatus={onStatus} onFacility={onFacility} />

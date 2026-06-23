@@ -12,6 +12,7 @@ const EMPTY = {
   printing_facility: "",
   facility: "",
   shipping_address: "",
+  sttark_order_id: "",
 };
 
 export default function JobModal({ job, customers = [], onSave, onClose }) {
@@ -110,6 +111,15 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
           <label className="field">
             <span>Shipping Address</span>
             <textarea rows={2} value={form.shipping_address} onChange={(e) => set("shipping_address", e.target.value)} />
+          </label>
+
+          <label className="field">
+            <span>Sttark Order ID <span className="field-hint">— optional, links live Sttark status</span></span>
+            <input
+              value={form.sttark_order_id || ""}
+              placeholder="e.g. 987971"
+              onChange={(e) => set("sttark_order_id", e.target.value.trim())}
+            />
           </label>
         </div>
 

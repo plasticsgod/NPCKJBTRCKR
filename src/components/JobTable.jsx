@@ -12,7 +12,7 @@ function fmtDate(iso) {
   return `${mm}/${dd}/${d.getFullYear()}`;
 }
 
-export default function JobTable({ jobs, onEdit, deleteMode, selected, onToggle, allChecked, onToggleAll }) {
+export default function JobTable({ jobs, onEdit, deleteMode, selected, onToggle, allChecked, onToggleAll, sttark = {} }) {
   return (
     <div className="table-wrap">
       <table className="table">
@@ -56,7 +56,14 @@ export default function JobTable({ jobs, onEdit, deleteMode, selected, onToggle,
               <td className="cell-desc" title={j.description || ""}>{j.description || "—"}</td>
               <td className="num">{(j.print_qty ?? 0).toLocaleString()}</td>
               <td className="cell-date">{fmtDate(j.created_at)}</td>
-              <td><StatusPill status={j.status} /></td>
+              <td>
+                <StatusPill status={j.status} />
+                {j.sttark_order_id && sttark[j.sttark_order_id]?.status_label && (
+                  <span className="sttark-tag" title={`Live from Sttark · order ${j.sttark_order_id}`}>
+                    Sttark: {sttark[j.sttark_order_id].status_label}
+                  </span>
+                )}
+              </td>
               <td>{j.printing_facility || "—"}</td>
               <td>{j.po_number || "—"}</td>
               <td>{j.ship_to || "—"}</td>
