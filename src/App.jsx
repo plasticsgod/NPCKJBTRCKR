@@ -6,6 +6,7 @@ import Sidebar from "./components/Sidebar";
 import WorkOrders from "./components/WorkOrders";
 import Dashboard from "./components/Dashboard";
 import PlasticsEstimator from "./components/PlasticsEstimator";
+import Projects from "./projects/Projects";
 import JobModal from "./components/JobModal";
 
 export default function App() {
@@ -34,6 +35,7 @@ export default function App() {
       dashboard: "Dashboard",
       work_orders: "Work Orders",
       plastics: "Plastics Estimator",
+      projects: "Projects",
     };
     document.title = `${names[page] || "NutraPack"} · NutraPack App`;
   }, [page]);
@@ -129,6 +131,8 @@ export default function App() {
       <main className="main">
         {page === "plastics" ? (
           <PlasticsEstimator userEmail={session.user.email} />
+        ) : page === "projects" ? (
+          <Projects userEmail={session.user.email} />
         ) : loading ? (
           <div className="muted pad">Loading…</div>
         ) : page === "dashboard" ? (
