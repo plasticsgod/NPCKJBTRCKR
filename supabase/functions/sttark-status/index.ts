@@ -1,84 +1,64 @@
-// Supabase Edge Function: sttark-status
-// READ-ONLY. Fetches current Sttark order statuses so the app can display
-// them next to your own work-order status. Never writes anything to Sttark.
+// Supabase Edge Function: cleanup-files
+// Runs daily via a cron schedule. Deletes storage files for jobs whose
+// files_delete_after date has passed.
 //
-// Deploy:  supabase functions deploy sttark-status
-// Secret:  supabase secrets set STTARK_API_KEY=sk_live_your_key_here
-//
-// Request body: { "ids": ["987971", "986331", ...] }
-// Response:     { "statuses": { "987971": { "status_label": "Printing", ... }, ... } }
+// Deploy:   supabase functions deploy cleanup-files
+// Schedule: in Supabase dashboard -> Edge Functions -> cleanup-files -> Schedule
+//           set cron to: 0 2 * * *  (runs at 2am UTC daily)
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const STTARK_BASE = "https://www.sttark.com";
-
 const cors = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...cors, "Content-Type": "application/json" },
-  });
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
-  try {
-    // 1. Require a signed-in NutraPack user.
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } } }
-    );
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return json({ error: "Not signed in." }, 401);
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
 
-    const { ids } = await req.json().catch(() => ({ ids: [] }));
-    const wanted = new Set((ids ?? []).map((x: unknown) => String(x)));
-    if (wanted.size === 0) return json({ statuses: {} });
+  const today = new Date().toISOString().slice(0, 10);
 
-    // 2. Call Sttark's read-only orders endpoint. The docs were inconsistent
-    //    about the header prefix, so try Bearer first, then Token as a fallback.
-    const apiKey = Deno.env.get("STTARK_API_KEY");
-    if (!apiKey) return json({ error: "Sttark API key not configured." }, 500);
+  // Find jobs whose files are due for deletion.
+  const { data: jobs, error: jobErr } = await supabase
+    .from("jobs")
+    .select("id")
+    .lte("files_delete_after", today)
+    .not("files_delete_after", "is", null);
 
-    const url = `${STTARK_BASE}/customer-api/orders?limit=200`;
-    async function callSttark(prefix: string) {
-      return await fetch(url, {
-        headers: { "Authorization": `${prefix} ${apiKey}`, "Accept": "application/json" },
-      });
-    }
-
-    let ordersRes = await callSttark("Bearer");
-    if (ordersRes.status === 401 || ordersRes.status === 403) {
-      ordersRes = await callSttark("Token"); // fallback to the other documented style
-    }
-    const ordersJson = await ordersRes.json().catch(() => null);
-    if (!ordersRes.ok || !ordersJson?.data?.orders) {
-      return json({ error: "Sttark request failed.", detail: ordersJson }, 502);
-    }
-
-    // 3. Index by id, return only the linked ones.
-    const statuses: Record<string, unknown> = {};
-    for (const o of ordersJson.data.orders) {
-      const id = String(o.id);
-      if (wanted.has(id)) {
-        statuses[id] = {
-          status_label: o.status_label ?? null,
-          status_id: o.status_id ?? null,
-          quoted_total: o.quoted_total ?? null,
-          total_qty: o.total_qty ?? null,
-          modified: o.modified ?? null,
-        };
-      }
-    }
-    return json({ statuses });
-  } catch (err) {
-    return json({ error: String(err) }, 500);
+  if (jobErr) {
+    return new Response(JSON.stringify({ error: jobErr.message }), {
+      status: 500, headers: { ...cors, "Content-Type": "application/json" },
+    });
   }
+
+  const results = [];
+  for (const job of jobs ?? []) {
+    // Get all file records for this job.
+    const { data: files } = await supabase
+      .from("job_files").select("id, storage_path").eq("job_id", job.id);
+
+    if (!files?.length) continue;
+
+    // Delete from storage.
+    const paths = files.map((f) => f.storage_path);
+    await supabase.storage.from("job-files").remove(paths);
+
+    // Delete metadata records.
+    await supabase.from("job_files").delete().eq("job_id", job.id);
+
+    // Clear the deletion date so it doesn't run again.
+    await supabase.from("jobs").update({ files_delete_after: null }).eq("id", job.id);
+
+    results.push({ job_id: job.id, deleted: paths.length });
+  }
+
+  return new Response(JSON.stringify({ cleaned: results }), {
+    status: 200, headers: { ...cors, "Content-Type": "application/json" },
+  });
 });
