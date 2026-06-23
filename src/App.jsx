@@ -5,6 +5,7 @@ import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import WorkOrders from "./components/WorkOrders";
 import Dashboard from "./components/Dashboard";
+import PlasticsEstimator from "./components/PlasticsEstimator";
 import JobModal from "./components/JobModal";
 
 export default function App() {
@@ -14,7 +15,7 @@ export default function App() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null); // job being edited, {} for new, or null
-  const [page, setPage] = useState("work_orders"); // "work_orders" | "dashboard"
+  const [page, setPage] = useState("dashboard"); // "dashboard" | "work_orders" | "plastics"
   const [navOpen, setNavOpen] = useState(false);
 
   // --- Auth -------------------------------------------------------------------
@@ -26,6 +27,16 @@ export default function App() {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // --- Browser-tab title reflects the current page ---------------------------
+  useEffect(() => {
+    const names = {
+      dashboard: "Dashboard",
+      work_orders: "Work Orders",
+      plastics: "Plastics Estimator",
+    };
+    document.title = `${names[page] || "NutraPack"} · NutraPack App`;
+  }, [page]);
 
   // --- Load jobs --------------------------------------------------------------
   const loadJobs = useCallback(async () => {
@@ -109,7 +120,9 @@ export default function App() {
       />
 
       <main className="main">
-        {loading ? (
+        {page === "plastics" ? (
+          <PlasticsEstimator userEmail={session.user.email} />
+        ) : loading ? (
           <div className="muted pad">Loading…</div>
         ) : page === "dashboard" ? (
           <Dashboard jobs={jobs} />
