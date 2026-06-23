@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import JobTable from "./JobTable";
 import JobBoard from "./JobBoard";
 import { fetchSttarkStatuses } from "../sttark/status";
+import { mapSttarkStatus } from "../sttark/statusMap";
+import { supabase } from "../supabaseClient";
 
 export default function WorkOrders({
   jobs, customers, onNew, onEdit, onDeleteMany, onStatus, onFacility,
@@ -13,12 +15,30 @@ export default function WorkOrders({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [sttark, setSttark] = useState({}); // { [orderId]: { status_label, ... } }
 
-  // Auto-refresh Sttark statuses whenever Work Orders opens / jobs change.
+  // Auto-refresh Sttark statuses whenever Work Orders opens / jobs change,
+  // and auto-update each linked job's own status from the mapped Sttark status.
   useEffect(() => {
-    const ids = jobs.map((j) => j.sttark_order_id).filter(Boolean);
-    if (ids.length === 0) { setSttark({}); return; }
+    const linked = jobs.filter((j) => j.sttark_order_id);
+    if (linked.length === 0) { setSttark({}); return; }
     let active = true;
-    fetchSttarkStatuses(ids).then((s) => { if (active) setSttark(s); });
+    fetchSttarkStatuses(linked.map((j) => j.sttark_order_id)).then(async (s) => {
+      if (!active) return;
+      setSttark(s);
+
+      // For each linked job, map Sttark's status to ours; write back any changes.
+      const updates = [];
+      for (const j of linked) {
+        const sttarkLabel = s[j.sttark_order_id]?.status_label;
+        const mapped = mapSttarkStatus(sttarkLabel);
+        if (mapped && mapped !== j.status) {
+          updates.push(supabase.from("jobs").update({ status: mapped }).eq("id", j.id));
+        }
+      }
+      if (updates.length > 0) {
+        await Promise.allSettled(updates);
+        // The jobs realtime subscription in App will refresh the table.
+      }
+    });
     return () => { active = false; };
   }, [jobs]);
 
