@@ -870,3 +870,26 @@ button {
 
 .confirm-modal { max-width: 420px; }
 .confirm-modal .modal-body { font-size: 14px; color: var(--ink-2); }
+
+/* ---- Sttark live status tag ---------------------------------------------- */
+.sttark-tag {
+  display: inline-block;
+  margin-top: 5px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #eef1fb;
+  color: #3b4ba0;
+  border: 1px solid #c7d0ef;
+  white-space: nowrap;
+}
+.field-hint {
+  font-family: var(--ui);
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-3);
+}
