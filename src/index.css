@@ -462,6 +462,16 @@ button {
 }
 
 /* ---- Modal --------------------------------------------------------------- */
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 17, 13, 0.4);
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  z-index: 100;
+  overflow-y: auto;
+}
 .overlay {
   position: fixed;
   inset: 0;
@@ -924,7 +934,6 @@ button {
 
 /* ---- Task drawer --------------------------------------------------------- */
 .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 460px; max-width: 92vw; background: var(--bg); border-left: 1px solid var(--hairline); display: flex; flex-direction: column; box-shadow: -8px 0 30px rgba(0,0,0,.12); }
-.overlay { align-items: stretch; justify-content: flex-end; }
 .drawer-head { display: flex; align-items: center; gap: 10px; padding: 18px 20px; border-bottom: 1px solid var(--hairline); }
 .drawer-title { flex: 1; font-family: var(--display); font-size: 18px; text-transform: uppercase; border: none; background: transparent; color: var(--ink); }
 .drawer-title:focus { outline: none; border-bottom: 2px solid var(--accent); }
