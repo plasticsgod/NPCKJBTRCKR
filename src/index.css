@@ -306,6 +306,7 @@ button {
 .pill-waiting-for-proofs-and-approval { background: #eef1fb; color: #3b4ba0; border-color: #c7d0ef; }
 .pill-printing            { background: #fff8e6; color: #8a6d1f; border-color: #ecdca8; }
 .pill-shipped             { background: #eafaf0; color: #1f7a47; border-color: #b9e6cb; }
+.pill-delivered           { background: #eef0ee; color: #4a4f4a; border-color: #d2d6d2; }
 
 /* ---- Board view ---------------------------------------------------------- */
 .board {

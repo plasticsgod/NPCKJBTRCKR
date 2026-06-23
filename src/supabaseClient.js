@@ -20,6 +20,7 @@ export const STATUSES = [
   "Waiting for proofs and approval",
   "Printing",
   "Shipped",
+  "Delivered",
 ];
 
 // Printing facilities — used in the form dropdown and board quick-select.
