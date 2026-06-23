@@ -2,8 +2,9 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "./supabaseClient";
 import Auth from "./components/Auth";
 import Header from "./components/Header";
-import JobTable from "./components/JobTable";
-import JobBoard from "./components/JobBoard";
+import Sidebar from "./components/Sidebar";
+import WorkOrders from "./components/WorkOrders";
+import Dashboard from "./components/Dashboard";
 import JobModal from "./components/JobModal";
 
 export default function App() {
@@ -12,11 +13,11 @@ export default function App() {
 
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState("table"); // "table" | "board"
-  const [editing, setEditing] = useState(null); // job being edited, or {} for new, or null
-  const [query, setQuery] = useState("");
+  const [editing, setEditing] = useState(null); // job being edited, {} for new, or null
+  const [page, setPage] = useState("work_orders"); // "work_orders" | "dashboard"
+  const [navOpen, setNavOpen] = useState(false);
 
-  // --- Auth: track who is signed in -------------------------------------------
+  // --- Auth -------------------------------------------------------------------
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
@@ -37,7 +38,7 @@ export default function App() {
     setLoading(false);
   }, []);
 
-  // --- Live updates: refresh when any teammate changes a job ------------------
+  // --- Live updates -----------------------------------------------------------
   useEffect(() => {
     if (!session) return;
     loadJobs();
@@ -81,11 +82,8 @@ export default function App() {
     else loadJobs();
   }
 
-  // --- Filter by brand (search) ----------------------------------------------
-  const q = query.trim().toLowerCase();
-  const filtered = q
-    ? jobs.filter((j) => (j.brand || "").toLowerCase().includes(q))
-    : jobs;
+  // List of existing customers (for the combobox dropdown)
+  const customers = [...new Set(jobs.map((j) => j.brand).filter(Boolean))].sort();
 
   // --- Render -----------------------------------------------------------------
   if (!authReady) return <div className="screen-center muted">Loading…</div>;
@@ -94,59 +92,44 @@ export default function App() {
   return (
     <div className="app">
       <Header
-        count={jobs.length}
-        view={view}
-        onView={setView}
+        page={page}
         email={session.user.email}
-        onNew={() => setEditing({})}
+        onMenu={() => setNavOpen(true)}
         onSignOut={() => supabase.auth.signOut()}
+      />
+
+      <Sidebar
+        open={navOpen}
+        page={page}
+        onClose={() => setNavOpen(false)}
+        onNavigate={(p) => {
+          setPage(p);
+          setNavOpen(false);
+        }}
       />
 
       <main className="main">
         {loading ? (
-          <div className="muted pad">Loading jobs…</div>
-        ) : jobs.length === 0 ? (
-          <div className="empty">
-            <p className="empty-title">No jobs yet</p>
-            <p className="muted">Add your first job to get the board going.</p>
-            <button className="btn-accent" onClick={() => setEditing({})}>
-              + New Job
-            </button>
-          </div>
+          <div className="muted pad">Loading…</div>
+        ) : page === "dashboard" ? (
+          <Dashboard jobs={jobs} />
         ) : (
-          <>
-            <div className="searchbar">
-              <input
-                className="search-input"
-                type="search"
-                placeholder="Search by brand…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-              {q && (
-                <span className="search-count">
-                  {filtered.length} {filtered.length === 1 ? "match" : "matches"}
-                </span>
-              )}
-            </div>
-
-            {filtered.length === 0 ? (
-              <div className="empty">
-                <p className="empty-title">No matches</p>
-                <p className="muted">No jobs have a brand matching “{query}”.</p>
-              </div>
-            ) : view === "table" ? (
-              <JobTable jobs={filtered} onEdit={setEditing} onDelete={deleteJob} />
-            ) : (
-              <JobBoard jobs={filtered} onEdit={setEditing} onStatus={changeStatus} onFacility={changeFacility} />
-            )}
-          </>
+          <WorkOrders
+            jobs={jobs}
+            customers={customers}
+            onNew={() => setEditing({})}
+            onEdit={setEditing}
+            onDelete={deleteJob}
+            onStatus={changeStatus}
+            onFacility={changeFacility}
+          />
         )}
       </main>
 
       {editing !== null && (
         <JobModal
           job={editing}
+          customers={customers}
           onSave={saveJob}
           onClose={() => setEditing(null)}
         />
