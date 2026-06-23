@@ -302,11 +302,10 @@ button {
   color: var(--ink-2);
   border: 1px solid var(--hairline);
 }
-.pill-new { background: #fff3ec; color: #b3402a; border-color: #f4c9b6; }
-.pill-in-design { background: #eef1fb; color: #3b4ba0; border-color: #c7d0ef; }
-.pill-printing { background: #fff8e6; color: #8a6d1f; border-color: #ecdca8; }
-.pill-shipped { background: #eafaf0; color: #1f7a47; border-color: #b9e6cb; }
-.pill-complete { background: #eef0ee; color: #4a4f4a; border-color: #d2d6d2; }
+.pill-not-submitted       { background: #fff3ec; color: #b3402a; border-color: #f4c9b6; }
+.pill-waiting-for-proofs-and-approval { background: #eef1fb; color: #3b4ba0; border-color: #c7d0ef; }
+.pill-printing            { background: #fff8e6; color: #8a6d1f; border-color: #ecdca8; }
+.pill-shipped             { background: #eafaf0; color: #1f7a47; border-color: #b9e6cb; }
 
 /* ---- Board view ---------------------------------------------------------- */
 .board {

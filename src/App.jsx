@@ -75,6 +75,12 @@ export default function App() {
     else loadJobs();
   }
 
+  async function changeFacility(id, printing_facility) {
+    const { error } = await supabase.from("jobs").update({ printing_facility }).eq("id", id);
+    if (error) alert("Could not update facility: " + error.message);
+    else loadJobs();
+  }
+
   // --- Filter by brand (search) ----------------------------------------------
   const q = query.trim().toLowerCase();
   const filtered = q
@@ -132,7 +138,7 @@ export default function App() {
             ) : view === "table" ? (
               <JobTable jobs={filtered} onEdit={setEditing} onDelete={deleteJob} />
             ) : (
-              <JobBoard jobs={filtered} onEdit={setEditing} onStatus={changeStatus} />
+              <JobBoard jobs={filtered} onEdit={setEditing} onStatus={changeStatus} onFacility={changeFacility} />
             )}
           </>
         )}
