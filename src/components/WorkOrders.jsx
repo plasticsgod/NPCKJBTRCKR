@@ -7,6 +7,7 @@ export default function WorkOrders({
 }) {
   const [view, setView] = useState("table");
   const [query, setQuery] = useState("");
+  const [deleteMode, setDeleteMode] = useState(false);
   const [selected, setSelected] = useState(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -24,14 +25,22 @@ export default function WorkOrders({
   }
   function toggleAll() {
     setSelected((s) => {
-      if (filtered.every((j) => s.has(j.id))) return new Set(); // all selected -> clear
-      return new Set(filtered.map((j) => j.id));               // else select all visible
+      if (filtered.every((j) => s.has(j.id))) return new Set();
+      return new Set(filtered.map((j) => j.id));
     });
+  }
+  function exitDeleteMode() {
+    setDeleteMode(false);
+    setSelected(new Set());
+  }
+  function onDeleteClick() {
+    if (!deleteMode) { setDeleteMode(true); return; } // first click: reveal checkboxes
+    if (selected.size > 0) setConfirmOpen(true);       // later clicks: confirm
   }
   function confirmDelete() {
     onDeleteMany([...selected]);
-    setSelected(new Set());
     setConfirmOpen(false);
+    exitDeleteMode();
   }
 
   const count = selected.size;
@@ -62,13 +71,20 @@ export default function WorkOrders({
         <button className="btn-accent push-right" onClick={onNew}>+ New Job</button>
 
         {view === "table" && (
-          <button
-            className="btn-ghost del-btn"
-            disabled={count === 0}
-            onClick={() => setConfirmOpen(true)}
-          >
-            Delete{count ? ` (${count})` : ""}
-          </button>
+          <>
+            {deleteMode && (
+              <button className="btn-ghost" onClick={exitDeleteMode}>Cancel</button>
+            )}
+            <button
+              className="btn-ghost del-btn"
+              disabled={deleteMode && count === 0}
+              onClick={onDeleteClick}
+            >
+              {deleteMode
+                ? (count ? `Delete (${count})` : "Select orders…")
+                : "Delete"}
+            </button>
+          </>
         )}
       </div>
 
@@ -87,6 +103,7 @@ export default function WorkOrders({
         <JobTable
           jobs={filtered}
           onEdit={onEdit}
+          deleteMode={deleteMode}
           selected={selected}
           onToggle={toggle}
           allChecked={allChecked}

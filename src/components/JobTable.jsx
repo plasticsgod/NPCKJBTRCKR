@@ -12,15 +12,17 @@ function fmtDate(iso) {
   return `${mm}/${dd}/${d.getFullYear()}`;
 }
 
-export default function JobTable({ jobs, onEdit, selected, onToggle, allChecked, onToggleAll }) {
+export default function JobTable({ jobs, onEdit, deleteMode, selected, onToggle, allChecked, onToggleAll }) {
   return (
     <div className="table-wrap">
       <table className="table">
         <thead>
           <tr>
-            <th className="chk-col">
-              <input type="checkbox" checked={allChecked} onChange={onToggleAll} aria-label="Select all" />
-            </th>
+            {deleteMode && (
+              <th className="chk-col">
+                <input type="checkbox" checked={allChecked} onChange={onToggleAll} aria-label="Select all" />
+              </th>
+            )}
             <th>Job Title</th>
             <th>Customer</th>
             <th>Description</th>
@@ -34,15 +36,21 @@ export default function JobTable({ jobs, onEdit, selected, onToggle, allChecked,
         </thead>
         <tbody>
           {jobs.map((j) => (
-            <tr key={j.id} onClick={() => onEdit(j)} className={"row" + (selected.has(j.id) ? " selected" : "")}>
-              <td className="chk-col" onClick={(e) => e.stopPropagation()}>
-                <input
-                  type="checkbox"
-                  checked={selected.has(j.id)}
-                  onChange={() => onToggle(j.id)}
-                  aria-label={`Select ${j.job_title}`}
-                />
-              </td>
+            <tr
+              key={j.id}
+              onClick={() => (deleteMode ? onToggle(j.id) : onEdit(j))}
+              className={"row" + (deleteMode && selected.has(j.id) ? " selected" : "")}
+            >
+              {deleteMode && (
+                <td className="chk-col" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={selected.has(j.id)}
+                    onChange={() => onToggle(j.id)}
+                    aria-label={`Select ${j.job_title}`}
+                  />
+                </td>
+              )}
               <td className="cell-title">{j.job_title}</td>
               <td>{j.brand || "—"}</td>
               <td className="cell-desc" title={j.description || ""}>{j.description || "—"}</td>
