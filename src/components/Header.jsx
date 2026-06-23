@@ -1,4 +1,4 @@
-const TITLES = { work_orders: "Work Orders", dashboard: "Dashboard" };
+const TITLES = { work_orders: "Work Orders", dashboard: "Dashboard", plastics: "Plastics Estimator" };
 
 export default function Header({ page, email, onMenu, onSignOut }) {
   return (
@@ -9,7 +9,7 @@ export default function Header({ page, email, onMenu, onSignOut }) {
 
       <div className="brand">
         <img className="brand-mark" src="/images/favicon.png" alt="NutraPack logo" />
-        <span className="brand-name">NutraPack</span>
+        <span className="brand-name">NutraPack App</span>
         <span className="brand-sub">{TITLES[page]}</span>
       </div>
 

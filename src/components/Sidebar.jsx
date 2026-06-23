@@ -1,6 +1,7 @@
 const NAV = [
-  { id: "work_orders", label: "Work Orders" },
   { id: "dashboard", label: "Dashboard" },
+  { id: "work_orders", label: "Work Orders" },
+  { id: "plastics", label: "Plastics Estimator" },
 ];
 
 export default function Sidebar({ open, page, onClose, onNavigate }) {
