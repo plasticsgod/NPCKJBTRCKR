@@ -3,8 +3,10 @@ import { supabase } from "../supabaseClient";
 // Sends a notification email via the send-notification Edge Function.
 // Fails silently — a notification failure should never block the user action.
 async function notify(payload) {
+  console.log("notify() called with:", payload);
   try {
-    const { error } = await supabase.functions.invoke("send-notification", { body: payload });
+    const { data, error } = await supabase.functions.invoke("send-notification", { body: payload });
+    console.log("notify() result:", { data, error });
     if (error) console.warn("Notification failed:", error.message);
   } catch (err) {
     console.warn("Notification error:", err);
