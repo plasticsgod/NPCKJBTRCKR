@@ -136,13 +136,15 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
           <label className="meta-field">
             <span>Assignee</span>
             <div className="person-picker">
-              {local.owner && <span className="avatar" title={local.owner}>{initials(local.owner)}</span>}
-              <input list="drawer-user-list" value={local.owner || ""} placeholder="Assign…"
-                className="person-input"
-                onChange={(e) => setField("owner", e.target.value)} />
-              <datalist id="drawer-user-list">
-                {users.map((u) => <option key={u} value={u} />)}
-              </datalist>
+              {local.owner && <span className="avatar sm" title={local.owner}>{initials(local.owner)}</span>}
+              <select
+                className="person-select"
+                value={local.owner || ""}
+                onChange={(e) => setField("owner", e.target.value)}
+              >
+                <option value="">Assign…</option>
+                {users.map((u) => <option key={u} value={u}>{u}</option>)}
+              </select>
             </div>
           </label>
           <label className="meta-field">

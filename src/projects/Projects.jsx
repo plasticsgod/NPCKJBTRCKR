@@ -88,7 +88,6 @@ export default function Projects({ userEmail }) {
   return (
     <div className="projects">
       <div className="toolbar">
-        <span className="count">{projects.length} {projects.length === 1 ? "project" : "projects"}</span>
         <button className="btn-accent push-right" onClick={() => setAddingProject(true)}>+ New Project</button>
       </div>
 
@@ -253,13 +252,15 @@ function TaskRow({ task, users, onOpen, onUpdate }) {
 function PersonPicker({ value, users, onChange }) {
   return (
     <div className="person-picker">
-      {value && <span className="avatar" title={value}>{initials(value)}</span>}
-      <input list="user-list" value={value || ""} placeholder="Assign…"
-        className="person-input"
-        onChange={(e) => onChange(e.target.value)} />
-      <datalist id="user-list">
-        {users.map((u) => <option key={u} value={u} />)}
-      </datalist>
+      {value && <span className="avatar sm" title={value}>{initials(value)}</span>}
+      <select
+        className="person-select"
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        <option value="">Assign…</option>
+        {users.map((u) => <option key={u} value={u}>{u}</option>)}
+      </select>
     </div>
   );
 }
