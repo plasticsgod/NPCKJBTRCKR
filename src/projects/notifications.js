@@ -11,10 +11,22 @@ async function notify(payload) {
   }
 }
 
+// Records an in-app notification row (drives the header bell). Fails soft too —
+// the email path and the in-app path are independent so one can't block the other.
+async function recordInApp(row) {
+  try {
+    const { error } = await supabase.from("notifications").insert(row);
+    if (error) console.warn("In-app notification failed:", error.message);
+  } catch (err) {
+    console.warn("In-app notification error:", err);
+  }
+}
+
 // Call when a task is assigned to someone.
 export function notifyAssignment({ to, task, project, assignedBy }) {
-  if (!to) return;
+  if (!to || to === assignedBy) return; // don't notify yourself
   notify({ type: "assignment", to, task, project, assignedBy });
+  recordInApp({ recipient: to, type: "assignment", actor: assignedBy, task, project });
 }
 
 // Call when someone is @mentioned in a post or reply.
@@ -22,6 +34,7 @@ export function notifyMentions({ mentions = [], task, project, mentionedBy, body
   for (const to of mentions) {
     if (to !== mentionedBy) {
       notify({ type: "mention", to, task, project, mentionedBy, body });
+      recordInApp({ recipient: to, type: "mention", actor: mentionedBy, task, project, body });
     }
   }
 }
