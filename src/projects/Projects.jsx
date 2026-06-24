@@ -529,11 +529,13 @@ function TaskRow({ task, users, userEmail, checked, onToggle, onOpen, onUpdate, 
           ) : (
             <span className="task-title" title="Double-click to rename" onDoubleClick={(e) => { e.stopPropagation(); setEditingTitle(true); }}>{task.title}</span>
           )}
-          <UpdatesBadge count={updates} unread={unread} />
         </div>
       </td>
       <td className="col-person" onClick={(e) => e.stopPropagation()}>
-        <MultiPersonPicker owners={owners} users={users} onToggle={toggleOwner} />
+        <div className="person-cell">
+          <UpdatesBadge count={updates} unread={unread} />
+          <MultiPersonPicker owners={owners} users={users} onToggle={toggleOwner} />
+        </div>
       </td>
       <td className="col-status" onClick={(e) => e.stopPropagation()}>
         <StatusPicker value={task.status} onChange={(s) => onUpdate(task.id, { status: s })} />
