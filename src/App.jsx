@@ -9,15 +9,34 @@ import PlasticsEstimator from "./components/PlasticsEstimator";
 import Projects from "./projects/Projects";
 import JobModal from "./components/JobModal";
 
+const PAGES = ["dashboard", "work_orders", "projects", "plastics"];
+
+function getPageFromHash() {
+  const h = window.location.hash.replace("#", "");
+  return PAGES.includes(h) ? h : "dashboard";
+}
+
 export default function App() {
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
 
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(null); // job being edited, {} for new, or null
-  const [page, setPage] = useState("dashboard"); // "dashboard" | "work_orders" | "plastics"
+  const [editing, setEditing] = useState(null);
+  const [page, setPageState] = useState(getPageFromHash);
   const [navOpen, setNavOpen] = useState(false);
+
+  function setPage(p) {
+    setPageState(p);
+    window.location.hash = p;
+  }
+
+  // Keep page in sync if user presses browser back/forward
+  useEffect(() => {
+    function onHashChange() { setPageState(getPageFromHash()); }
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
 
   // --- Auth -------------------------------------------------------------------
   useEffect(() => {
