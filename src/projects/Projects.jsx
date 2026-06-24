@@ -129,7 +129,7 @@ export default function Projects({ userEmail }) {
     );
   }
 
-  function openTask(taskId) {
+  function handleOpenTask(taskId) {
     markRead(taskId);
     setOpenTaskId(taskId);
   }
@@ -322,7 +322,7 @@ export default function Projects({ userEmail }) {
                 onToggleTask={toggleTask}
                 onUpdateName={updateProjectName}
                 onAddTask={addTask}
-                onOpenTask={openTask}
+                onOpenTask={handleOpenTask}
                 onUpdateTask={updateTask}
                 activity={activity}
                 reads={reads}
