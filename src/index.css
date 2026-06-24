@@ -1023,14 +1023,16 @@ button {
 .item-cell .task-title,
 .item-cell .task-title-input { flex: 1; min-width: 0; }
 .updates-badge {
-  flex-shrink: 0;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  height: 20px;
   line-height: 1;
+  overflow: hidden;
   color: var(--ink-3);
 }
-.updates-badge svg { width: 16px; height: 16px; flex: none; display: block; }
+.updates-badge svg { width: 16px !important; height: 16px !important; min-width: 16px; flex: 0 0 16px; display: block; }
 .updates-badge .updates-count { font-family: var(--mono); font-size: 11px; font-weight: 700; line-height: 1; }
 .updates-badge.unread { color: var(--accent); }
 .updates-badge.empty { opacity: 0.32; transition: opacity .12s; }
