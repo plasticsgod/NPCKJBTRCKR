@@ -35,6 +35,7 @@ export default function Projects({ userEmail }) {
   // project and individual tasks can both be selected at once.
   const [selProjects, setSelProjects] = useState(() => new Set());
   const [selTasks, setSelTasks] = useState(() => new Set());
+  const [pendingDelete, setPendingDelete] = useState(null);
   const users = useUsers();
   const newProjRef = useRef(null);
 
@@ -111,7 +112,7 @@ export default function Projects({ userEmail }) {
 
   const selectionCount = selProjects.size + selTasks.size;
 
-  async function deleteSelected() {
+  function requestDelete() {
     const projIds = [...selProjects];
     // Skip tasks whose whole project is being deleted (cascade handles them).
     const taskIds = [...selTasks].filter((id) => {
@@ -120,9 +121,15 @@ export default function Projects({ userEmail }) {
     });
     const total = projIds.length + taskIds.length;
     if (total === 0) return;
-    if (!confirm(`Delete ${total} selected item${total === 1 ? "" : "s"}? This cannot be undone.`)) return;
+    setPendingDelete({ projIds, taskIds, total });
+  }
+
+  async function confirmDeleteNow() {
+    if (!pendingDelete) return;
+    const { projIds, taskIds } = pendingDelete;
     if (projIds.length) await supabase.from("projects").delete().in("id", projIds);
     if (taskIds.length) await supabase.from("tasks").delete().in("id", taskIds);
+    setPendingDelete(null);
     clearSelection();
     setOpenTaskId(null);
     load();
@@ -317,7 +324,7 @@ export default function Projects({ userEmail }) {
             </svg>
             <span>Duplicate</span>
           </button>
-          <button className="sel-action danger" onClick={deleteSelected}>
+          <button className="sel-action danger" onClick={requestDelete}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <polyline points="3 6 5 6 21 6" />
@@ -335,6 +342,25 @@ export default function Projects({ userEmail }) {
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
+        </div>
+      )}
+
+      {pendingDelete && (
+        <div className="confirm-overlay" onClick={() => setPendingDelete(null)}>
+          <div className="confirm-bar" onClick={(e) => e.stopPropagation()}>
+            <svg className="confirm-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              <line x1="10" y1="11" x2="10" y2="17" />
+              <line x1="14" y1="11" x2="14" y2="17" />
+            </svg>
+            <span className="confirm-msg">
+              Delete {pendingDelete.total} item{pendingDelete.total === 1 ? "" : "s"}? This can't be undone.
+            </span>
+            <button className="confirm-cancel" onClick={() => setPendingDelete(null)}>Cancel</button>
+            <button className="confirm-delete" onClick={confirmDeleteNow}>Delete</button>
+          </div>
         </div>
       )}
     </div>
