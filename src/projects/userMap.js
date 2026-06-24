@@ -3,7 +3,7 @@
 export const USER_NAMES = {
   "eduardonutramedia@gmail.com": "Eduardo",
   "jeff.weisser@nutrapack.co":   "Jeff",
-  "taylor.know@nutrapack.co":    "TK",
+  "taylor.knox@nutrapack.co":    "TK",
   "cc@nutramedia.co":            "Christina",
 };
 
