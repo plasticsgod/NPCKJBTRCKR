@@ -312,12 +312,12 @@ button {
   color: var(--ink-2);
   border: 1px solid var(--hairline);
 }
-.pill-not-submitted       { background: #fff3ec; color: #b3402a; border-color: #f4c9b6; }
-.pill-in-queue            { background: #eef0ee; color: #4a4f4a; border-color: #d2d6d2; }
-.pill-waiting-for-proofs-and-approval { background: #eef1fb; color: #3b4ba0; border-color: #c7d0ef; }
-.pill-printing            { background: #fff8e6; color: #8a6d1f; border-color: #ecdca8; }
-.pill-shipped             { background: #eafaf0; color: #1f7a47; border-color: #b9e6cb; }
-.pill-delivered           { background: #eef0ee; color: #4a4f4a; border-color: #d2d6d2; }
+.pill-not-submitted                   { background: #eef0ee; color: #4a4f4a; border-color: #d2d6d2; }
+.pill-waiting-for-proofs-and-approval { background: #fff8e6; color: #8a6d1f; border-color: #ecdca8; }
+.pill-in-queue                        { background: #fce8f3; color: #9c2a6e; border-color: #f0b8d8; }
+.pill-printing                        { background: #fdeaea; color: #b32a2a; border-color: #f5b8b8; }
+.pill-shipped                         { background: #e8f1fb; color: #1a4f8a; border-color: #b8d0f0; }
+.pill-delivered                       { background: #eafaf0; color: #1f7a47; border-color: #b9e6cb; }
 
 /* ---- Board view ---------------------------------------------------------- */
 .board {
