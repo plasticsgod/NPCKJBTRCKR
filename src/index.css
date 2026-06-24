@@ -174,8 +174,9 @@ button {
   padding-left: 16px;
 }
 .notif { position: relative; display: flex; align-items: center; }
-.notif-bell { position: relative; background: transparent; border: none; cursor: pointer; font-size: 18px; line-height: 1; padding: 4px; border-radius: 8px; }
-.notif-bell:hover { background: var(--panel); }
+.notif-bell { position: relative; display: flex; align-items: center; justify-content: center; background: transparent; border: none; cursor: pointer; line-height: 1; padding: 6px; border-radius: 8px; color: var(--ink-2); }
+.notif-bell:hover { background: var(--panel); color: var(--ink); }
+.notif-icon { display: block; }
 .notif-badge { position: absolute; top: -2px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--accent); color: #fff; font-family: var(--mono); font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
 .notif-panel { position: absolute; top: calc(100% + 8px); right: 0; z-index: 300; width: 320px; max-width: 90vw; background: #fff; border: 1px solid var(--hairline); border-radius: 12px; box-shadow: 0 10px 36px rgba(0,0,0,.16); overflow: hidden; }
 .notif-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--hairline-soft); font-weight: 600; font-size: 14px; }
