@@ -4,6 +4,7 @@ import { TASK_STATUSES, statusClass } from "./constants";
 import { useUsers } from "./useUsers";
 import TaskDrawer from "./TaskDrawer";
 import { notifyAssignment } from "./notifications";
+import { displayName, nameInitials } from "./userMap";
 
 export default function Projects({ userEmail }) {
   const [projects, setProjects] = useState([]);
@@ -63,7 +64,9 @@ export default function Projects({ userEmail }) {
 
   async function addTask(projectId) {
     const { data } = await supabase.from("tasks").insert({
-      project_id: projectId, title: "New task", sort_order: tasks.filter(t => t.project_id === projectId).length
+      project_id: projectId, title: "New task",
+      owners: [],
+      sort_order: tasks.filter(t => t.project_id === projectId).length,
     }).select().single();
     load();
     if (data) setOpenTaskId(data.id);
@@ -117,18 +120,13 @@ export default function Projects({ userEmail }) {
               />
             );
           })}
-
           {addingProject && (
             <form className="proj-new-form" onSubmit={saveProject}>
-              <input
-                ref={newProjRef}
-                className="proj-new-input"
-                value={newProjectName}
-                onChange={(e) => setNewProjectName(e.target.value)}
+              <input ref={newProjRef} className="proj-new-input"
+                value={newProjectName} onChange={(e) => setNewProjectName(e.target.value)}
                 placeholder="Project name…"
                 onBlur={saveProject}
-                onKeyDown={(e) => e.key === "Escape" && setAddingProject(false)}
-              />
+                onKeyDown={(e) => e.key === "Escape" && setAddingProject(false)} />
             </form>
           )}
         </div>
@@ -178,7 +176,6 @@ function ProjectGroup({ project, tasks, users, userEmail, onUpdateName, onDelete
           <button className="link danger" onClick={() => onDelete(project.id)}>Delete</button>
         </div>
       </div>
-
       {!collapsed && (
         <div className="ptable-wrap">
           <table className="ptable">
@@ -212,12 +209,25 @@ function ProjectGroup({ project, tasks, users, userEmail, onUpdateName, onDelete
 function TaskRow({ task, users, userEmail, onOpen, onUpdate }) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [title, setTitle] = useState(task.title);
+  const owners = task.owners || (task.owner ? [task.owner] : []);
 
   useEffect(() => { setTitle(task.title); }, [task.title]);
 
   function saveTitle() {
     setEditingTitle(false);
     if (title.trim() && title !== task.title) onUpdate(task.id, { title: title.trim() });
+  }
+
+  function toggleOwner(email) {
+    const prev = task.owners || [];
+    const next = prev.includes(email)
+      ? prev.filter(e => e !== email)
+      : [...prev, email];
+    onUpdate(task.id, { owners: next });
+    // Notify newly added people only
+    if (!prev.includes(email)) {
+      notifyAssignment({ to: email, task: task.title, project: "", assignedBy: userEmail });
+    }
   }
 
   return (
@@ -234,13 +244,7 @@ function TaskRow({ task, users, userEmail, onOpen, onUpdate }) {
         )}
       </td>
       <td className="col-person" onClick={(e) => e.stopPropagation()}>
-        <PersonPicker value={task.owner} users={users}
-          onChange={(v) => {
-            onUpdate(task.id, { owner: v });
-            if (v && v !== task.owner) {
-              notifyAssignment({ to: v, task: task.title, project: "", assignedBy: userEmail });
-            }
-          }} />
+        <MultiPersonPicker owners={owners} users={users} onToggle={toggleOwner} />
       </td>
       <td className="col-status" onClick={(e) => e.stopPropagation()}>
         <select className={statusClass(task.status)} value={task.status || "To do"}
@@ -256,23 +260,51 @@ function TaskRow({ task, users, userEmail, onOpen, onUpdate }) {
   );
 }
 
-function PersonPicker({ value, users, onChange }) {
+function MultiPersonPicker({ owners, users, onToggle }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    function onClickOutside(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
   return (
-    <div className="person-picker">
-      {value && <span className="avatar sm" title={value}>{initials(value)}</span>}
-      <select
-        className="person-select"
-        value={value || ""}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        <option value="">Assign…</option>
-        {users.map((u) => <option key={u} value={u}>{u}</option>)}
-      </select>
+    <div className="multi-person" ref={ref}>
+      <div className="person-avatars" onClick={() => setOpen(!open)}>
+        {owners.length === 0
+          ? <span className="not-assigned">Not Assigned</span>
+          : owners.map(e => (
+            <span key={e} className="avatar sm" title={displayName(e)}>{nameInitials(e)}</span>
+          ))
+        }
+        <span className="assign-caret">▾</span>
+      </div>
+      {open && (
+        <div className="person-dropdown">
+          {users.map(u => (
+            <label key={u} className="person-option">
+              <input type="checkbox" checked={owners.includes(u)}
+                onChange={() => onToggle(u)} />
+              <span className="avatar sm">{nameInitials(u)}</span>
+              <span>{displayName(u)}</span>
+            </label>
+          ))}
+          {owners.length > 0 && (
+            <button className="link danger person-clear"
+              onClick={() => owners.forEach(e => onToggle(e))}>
+              Clear all
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 function initials(name) {
+  if (!name) return "?";
   const parts = name.replace(/@.*/, "").split(/[.\s_]+/).filter(Boolean);
   return ((parts[0]?.[0] || "") + (parts[1]?.[0] || "")).toUpperCase() || name[0]?.toUpperCase();
 }
