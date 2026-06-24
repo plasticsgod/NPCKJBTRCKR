@@ -1019,7 +1019,7 @@ button {
 .ptask-row:hover td { background: #faf9f7; }
 .ptask-row { cursor: pointer; }
 .col-item { width: 100%; padding: 12px 14px !important; }
-.item-cell { display: flex; align-items: center; gap: 10px; }
+.item-cell { display: flex; align-items: center; gap: 10px; min-width: 0; height: 22px; overflow: hidden; }
 .item-cell .task-title,
 .item-cell .task-title-input { flex: 1; min-width: 0; }
 .updates-badge {
@@ -1223,11 +1223,3 @@ button {
 .confirm-delete { background: #fff; color: #c0392b; border: none; border-radius: 999px; padding: 9px 20px; font-family: var(--ui); font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
 .confirm-delete:hover { background: #ffe6e0; }
 
-/* ===== TEMP DIAGNOSTIC — remove after we find the tall element ===== */
-.ptask-row > td { outline: 2px solid red !important; }
-.col-item .item-cell { outline: 2px solid blue !important; }
-.col-item .item-cell > * { outline: 2px solid limegreen !important; }
-.col-person .multi-person { outline: 2px solid orange !important; }
-.col-status .status-picker { outline: 2px solid magenta !important; }
-.col-date .dp-wrap { outline: 2px solid teal !important; }
-/* ===== END TEMP DIAGNOSTIC ===== */
