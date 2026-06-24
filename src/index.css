@@ -987,7 +987,7 @@ button {
 .avatar.sm { width: 22px; height: 22px; font-size: 9px; }
 
 /* ---- Task Drawer v2 ------------------------------------------------------ */
-.drawer-wide { width: 660px; }
+.drawer-wide { width: 900px; }
 .drawer-overlay { position: fixed; inset: 0; background: rgba(20,17,13,.4); display: flex; align-items: stretch; justify-content: flex-end; z-index: 100; }
 .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 520px; max-width: 96vw; background: var(--bg); border-left: 1px solid var(--hairline); display: flex; flex-direction: column; box-shadow: -8px 0 30px rgba(0,0,0,.12); }
 .drawer-head { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--hairline); flex-wrap: wrap; }
