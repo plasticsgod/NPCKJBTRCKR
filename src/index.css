@@ -1031,8 +1031,8 @@ button {
 }
 .updates-badge .updates-count { font-family: var(--mono); font-size: 11px; font-weight: 700; line-height: 1; }
 .updates-badge.unread { color: var(--accent); }
-.updates-badge.empty { opacity: 0; transition: opacity .12s; }
-.ptask-row:hover .updates-badge.empty { opacity: .4; }
+.updates-badge.empty { opacity: 0.32; transition: opacity .12s; }
+.ptask-row:hover .updates-badge.empty { opacity: 0.6; }
 .col-person { width: 150px; padding: 6px 10px !important; }
 .col-status { width: 175px; padding: 4px 6px !important; }
 .col-date { width: 120px; padding: 6px 10px !important; }
