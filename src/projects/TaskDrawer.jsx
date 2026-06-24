@@ -5,6 +5,11 @@ import { notifyAssignment, notifyMentions } from "./notifications";
 import { displayName, nameInitials } from "./userMap";
 import DatePicker from "../components/DatePicker";
 
+// Resizable task drawer — width is remembered per browser via localStorage.
+const DRAWER_WIDTH_KEY = "npck_task_drawer_width";
+const DRAWER_MIN_W = 420;
+const DRAWER_DEFAULT_W = 720;
+
 // Parse @mentions from text — returns array of emails mentioned
 function parseMentions(text, users) {
   const found = [];
@@ -80,6 +85,49 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
   const [newPost, setNewPost] = useState("");
   const [posting, setPosting] = useState(false);
 
+  // --- Resizable drawer width (remembered in this browser) -------------------
+  const [drawerWidth, setDrawerWidth] = useState(() => {
+    try {
+      const saved = parseInt(localStorage.getItem(DRAWER_WIDTH_KEY), 10);
+      if (saved && saved >= DRAWER_MIN_W) return saved;
+    } catch { /* localStorage unavailable — fall back to default */ }
+    return DRAWER_DEFAULT_W;
+  });
+  const widthRef = useRef(drawerWidth);
+  const resizingRef = useRef(false);
+  useEffect(() => { widthRef.current = drawerWidth; }, [drawerWidth]);
+
+  useEffect(() => {
+    function onMove(e) {
+      if (!resizingRef.current) return;
+      const maxW = Math.min(window.innerWidth - 40, window.innerWidth * 0.96);
+      // Drawer is pinned to the right edge, so its width is the distance from
+      // the cursor to the right side of the window.
+      const w = Math.max(DRAWER_MIN_W, Math.min(window.innerWidth - e.clientX, maxW));
+      setDrawerWidth(w);
+    }
+    function onUp() {
+      if (!resizingRef.current) return;
+      resizingRef.current = false;
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+      try { localStorage.setItem(DRAWER_WIDTH_KEY, String(Math.round(widthRef.current))); } catch { /* ignore */ }
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, []);
+
+  function startResize(e) {
+    e.preventDefault();
+    resizingRef.current = true;
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "ew-resize";
+  }
+
   useEffect(() => { setLocal({ ...task, owners: task.owners || [] }); }, [task]);
 
   const loadPosts = useCallback(async () => {
@@ -128,7 +176,8 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
 
   return (
     <div className="drawer-overlay" onClick={onClose}>
-      <aside className="drawer drawer-wide" onClick={(e) => e.stopPropagation()}>
+      <aside className="drawer drawer-wide" style={{ width: drawerWidth }} onClick={(e) => e.stopPropagation()}>
+        <div className="drawer-resize" onMouseDown={startResize} title="Drag to resize" />
         <div className="drawer-head">
           <div className="drawer-breadcrumb">{projectName && <span className="muted">{projectName} /</span>}</div>
           <input className="drawer-title" value={local.title}
@@ -185,7 +234,7 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
 
             {/* Compose new post */}
             <div className="compose-box">
-              <span className="avatar sm">{initials(userEmail)}</span>
+              <span className="avatar sm">{nameInitials(userEmail)}</span>
               <div className="compose-right">
                 <MentionTextarea value={newPost} onChange={setNewPost} users={users}
                   placeholder={`Write an update… Use @ to mention someone`} rows={2} />
@@ -244,9 +293,9 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, onDelete, on
   return (
     <div className="post-card">
       <div className="post-head">
-        <span className="avatar">{initials(post.author)}</span>
+        <span className="avatar">{nameInitials(post.author)}</span>
         <div className="post-meta">
-          <span className="post-author">{post.author}</span>
+          <span className="post-author">{displayName(post.author)}</span>
           <span className="post-time">{fmtTime(post.created_at)}</span>
         </div>
         {post.author === userEmail && (
@@ -262,10 +311,10 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, onDelete, on
         <div className="reply-thread">
           {replies.map((r) => (
             <div className="reply" key={r.id}>
-              <span className="avatar sm">{initials(r.author)}</span>
+              <span className="avatar sm">{nameInitials(r.author)}</span>
               <div className="reply-content">
                 <div className="reply-meta">
-                  <span className="post-author">{r.author}</span>
+                  <span className="post-author">{displayName(r.author)}</span>
                   <span className="post-time">{fmtTime(r.created_at)}</span>
                   {r.author === userEmail && (
                     <button className="link danger post-del" onClick={() => deleteReply(r.id)}>Delete</button>
@@ -286,7 +335,7 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, onDelete, on
       </div>
       {showReply && (
         <div className="reply-compose">
-          <span className="avatar sm">{initials(userEmail)}</span>
+          <span className="avatar sm">{nameInitials(userEmail)}</span>
           <div className="compose-right">
             <MentionTextarea value={reply} onChange={setReply} users={users}
               placeholder="Write a reply… Use @ to mention" rows={2} />
@@ -300,12 +349,6 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, onDelete, on
       )}
     </div>
   );
-}
-
-function initials(name) {
-  if (!name) return "?";
-  const parts = name.replace(/@.*/, "").split(/[.\s_]+/).filter(Boolean);
-  return ((parts[0]?.[0] || "") + (parts[1]?.[0] || "")).toUpperCase() || name[0]?.toUpperCase();
 }
 
 function fmtTime(iso) {
