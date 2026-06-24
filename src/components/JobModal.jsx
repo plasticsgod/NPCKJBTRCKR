@@ -145,7 +145,7 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
           </div>
         )}
 
-        {tab === "proofs" && <ProofsPanel jobId={job.id} />}
+        {tab === "proofs" && <ProofsPanel jobId={job.id} jobTitle={form.job_title} customer={form.brand} />}
         {tab === "artwork" && <ArtworkPanel jobId={job.id} />}
 
         <div className="modal-foot">
@@ -157,8 +157,8 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
   );
 }
 
-// ---- Proofs panel (file uploads) -------------------------------------------
-function ProofsPanel({ jobId }) {
+// ---- Proofs panel (file uploads with branded cover sheet) -----------------
+function ProofsPanel({ jobId, jobTitle, customer }) {
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [userEmail, setUserEmail] = useState("");
@@ -179,14 +179,59 @@ function ProofsPanel({ jobId }) {
     const picked = Array.from(e.target.files || []);
     if (!picked.length) return;
     setUploading(true);
+
+    // Lazy-import the cover generator so it only loads when needed.
+    const { buildProofPDF, mergeCoverWithPDF } = await import("../lib/proofCover.js");
+    const date = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+
     for (const file of picked) {
-      const path = `${jobId}/${Date.now()}-${file.name}`;
-      const { error: upErr } = await supabase.storage.from("job-files").upload(path, file);
-      if (upErr) { alert("Upload failed: " + upErr.message); continue; }
-      await supabase.from("job_files").insert({
-        job_id: jobId, name: file.name, size: file.size,
-        mime_type: file.type, storage_path: path, uploaded_by: userEmail,
-      });
+      try {
+        const coverBytes = await buildProofPDF({
+          jobTitle: jobTitle, customer, uploadedBy: userEmail, date,
+          fileName: file.name, logoUrl: "/images/favicon.png",
+        });
+
+        let finalBlob, finalName, finalMime;
+
+        if (file.type === "application/pdf") {
+          // Merge cover as page 1 of the proof PDF.
+          const mergedBytes = await mergeCoverWithPDF(coverBytes, file);
+          finalBlob = new Blob([mergedBytes], { type: "application/pdf" });
+          finalName = file.name;
+          finalMime = "application/pdf";
+        } else {
+          // Upload original file as-is, then upload cover as a companion PDF.
+          const origPath = `${jobId}/${Date.now()}-${file.name}`;
+          const { error: origErr } = await supabase.storage.from("job-files").upload(origPath, file);
+          if (!origErr) {
+            await supabase.from("job_files").insert({
+              job_id: jobId, name: file.name, size: file.size,
+              mime_type: file.type, storage_path: origPath, uploaded_by: userEmail,
+            });
+          }
+          // Companion cover sheet PDF.
+          finalBlob = new Blob([coverBytes], { type: "application/pdf" });
+          finalName = "NutraPack-Proof-Cover-" + file.name.replace(/\.[^.]+$/, "") + ".pdf";
+          finalMime = "application/pdf";
+        }
+
+        const path = `${jobId}/${Date.now()}-${finalName}`;
+        const { error: upErr } = await supabase.storage.from("job-files").upload(path, finalBlob);
+        if (upErr) { alert("Upload failed: " + upErr.message); continue; }
+        await supabase.from("job_files").insert({
+          job_id: jobId, name: finalName, size: finalBlob.size,
+          mime_type: finalMime, storage_path: path, uploaded_by: userEmail,
+        });
+      } catch (err) {
+        console.error("Proof cover error:", err);
+        // Fall back to uploading the original file without a cover.
+        const path = `${jobId}/${Date.now()}-${file.name}`;
+        const { error: upErr } = await supabase.storage.from("job-files").upload(path, file);
+        if (!upErr) await supabase.from("job_files").insert({
+          job_id: jobId, name: file.name, size: file.size,
+          mime_type: file.type, storage_path: path, uploaded_by: userEmail,
+        });
+      }
     }
     e.target.value = "";
     setUploading(false);
