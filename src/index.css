@@ -1095,3 +1095,5 @@ button {
 /* Compact date trigger for table rows */
 .col-date .dp-trigger { border: none; background: transparent; padding: 4px 6px; font-size: 12px; color: var(--ink-2); }
 .col-date .dp-trigger:hover { background: var(--panel); border-radius: 6px; }
+.col-date.due-overdue .dp-trigger { color: #c0392b; font-weight: 600; }
+.col-date.due-soon .dp-trigger { color: #b9770e; font-weight: 600; }
