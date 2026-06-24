@@ -5,6 +5,7 @@ import { useUsers } from "./useUsers";
 import TaskDrawer from "./TaskDrawer";
 import { notifyAssignment } from "./notifications";
 import { displayName, nameInitials } from "./userMap";
+import DatePicker from "../components/DatePicker";
 
 export default function Projects({ userEmail }) {
   const [projects, setProjects] = useState([]);
@@ -253,8 +254,7 @@ function TaskRow({ task, users, userEmail, onOpen, onUpdate }) {
         </select>
       </td>
       <td className="col-date" onClick={(e) => e.stopPropagation()}>
-        <input type="date" className="date-input" value={task.due_date || ""}
-          onChange={(e) => onUpdate(task.id, { due_date: e.target.value || null })} />
+        <DatePicker value={task.due_date || ""} onChange={(v) => onUpdate(task.id, { due_date: v || null })} placeholder="Set date" />
       </td>
     </tr>
   );

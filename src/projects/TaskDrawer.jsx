@@ -3,6 +3,7 @@ import { supabase } from "../supabaseClient";
 import { TASK_STATUSES } from "./constants";
 import { notifyAssignment, notifyMentions } from "./notifications";
 import { displayName, nameInitials } from "./userMap";
+import DatePicker from "../components/DatePicker";
 
 // Parse @mentions from text — returns array of emails mentioned
 function parseMentions(text, users) {
@@ -151,7 +152,7 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
               {(local.owners || []).length === 0
                 ? <span className="not-assigned">Not Assigned</span>
                 : (local.owners || []).map(e => (
-                  <span key={e} className="avatar" title={displayName(e)}>{nameInitials(e)}</span>
+                  <span key={e} className="avatar" title={e}>{nameInitials(e)}</span>
                 ))
               }
               <select className="person-select" value=""
@@ -182,7 +183,7 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
           </label>
           <label className="meta-field">
             <span>Due date</span>
-            <input type="date" value={local.due_date || ""} onChange={(e) => setField("due_date", e.target.value || null)} />
+            <DatePicker value={local.due_date || ""} onChange={(v) => setField("due_date", v || null)} />
           </label>
         </div>
 
