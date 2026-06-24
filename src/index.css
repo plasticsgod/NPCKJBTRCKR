@@ -329,6 +329,7 @@ button {
   background: #b8b8b8;
   color: #fff;
   border: none;
+  margin-right: 8px;
 }
 .pill-not-submitted                   { background: #b8b8b8; }
 .pill-waiting-for-proofs-and-approval { background: #f0b429; }
