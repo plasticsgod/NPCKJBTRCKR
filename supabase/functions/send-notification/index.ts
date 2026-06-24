@@ -127,3 +127,4 @@ Deno.serve(async (req) => {
     return json({ error: String(err) }, 500);
   }
 });
+Allow self-assignment emails
