@@ -1019,7 +1019,7 @@ button {
 .ptask-row:hover td { background: #faf9f7; }
 .ptask-row { cursor: pointer; }
 .col-item { width: 100%; padding: 12px 14px !important; }
-.item-cell { display: flex; align-items: center; gap: 10px; min-width: 0; height: 22px; overflow: hidden; }
+.item-cell { display: flex; align-items: center; gap: 10px; min-width: 0; height: 24px; overflow: hidden; }
 .item-cell .task-title,
 .item-cell .task-title-input { flex: 1; min-width: 0; }
 .updates-badge {
@@ -1035,8 +1035,8 @@ button {
 .updates-badge svg { width: 16px !important; height: 16px !important; min-width: 16px; flex: 0 0 16px; display: block; }
 .updates-badge .updates-count { font-family: var(--mono); font-size: 11px; font-weight: 700; line-height: 1; }
 .updates-badge.unread { color: var(--accent); }
-.updates-badge.empty { opacity: 0.32; transition: opacity .12s; }
-.ptask-row:hover .updates-badge.empty { opacity: 0.6; }
+.updates-badge.empty { opacity: 0.5; transition: opacity .12s; }
+.ptask-row:hover .updates-badge.empty { opacity: 0.8; }
 .col-person { width: 150px; padding: 6px 10px !important; }
 .col-status { width: 175px; padding: 4px 6px !important; }
 .col-date { width: 120px; padding: 6px 10px !important; }
