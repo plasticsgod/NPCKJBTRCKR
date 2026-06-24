@@ -933,7 +933,8 @@ button {
 .artwork-form .btn-accent { align-self: flex-start; }
 
 /* ---- Projects v2 (Monday-style) ----------------------------------------- */
-.projects { display: flex; flex-direction: column; gap: 24px; }
+.projects { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.proj-list { min-width: 0; }
 .proj-list { display: flex; flex-direction: column; gap: 20px; }
 
 .proj-group { background: #fff; border: 1px solid var(--hairline); border-radius: 12px; overflow: hidden; }
@@ -969,6 +970,8 @@ button {
 .person-picker { display: flex; align-items: center; gap: 6px; }
 .person-input { font-size: 12px; border: none; background: transparent; width: 110px; color: var(--ink-2); font-family: var(--ui); }
 .person-input:focus { outline: 1px solid var(--accent); border-radius: 4px; background: #fff; }
+.person-select { font-size: 12px; border: none; background: transparent; color: var(--ink-2); font-family: var(--ui); cursor: pointer; max-width: 140px; }
+.person-select:focus { outline: 1px solid var(--accent); border-radius: 4px; background: #fff; }
 .date-input { font-size: 12px; border: none; background: transparent; color: var(--ink-2); font-family: var(--ui); }
 .date-input:focus { outline: 1px solid var(--accent); border-radius: 4px; background: #fff; padding: 2px 4px; }
 
