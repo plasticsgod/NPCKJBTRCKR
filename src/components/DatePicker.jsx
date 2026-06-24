@@ -1,24 +1,59 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 
 const MONTHS = ["January","February","March","April","May","June",
                  "July","August","September","October","November","December"];
 const DAYS = ["Su","Mo","Tu","We","Th","Fr","Sa"];
 
+// Approx popup size, used to decide whether to flip left/up so it stays on screen.
+const POPUP_W = 272;
+const POPUP_H = 340;
+const GAP = 6;
+const EDGE = 8;
+
 // value: "YYYY-MM-DD" string or ""
 // onChange: (value: "YYYY-MM-DD" | "") => void
 export default function DatePicker({ value, onChange, placeholder = "Set date" }) {
   const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState(null); // { top, left } in viewport (fixed) coords
   const [view, setView] = useState(() => {
     const d = value ? new Date(value + "T12:00:00") : new Date();
     return { year: d.getFullYear(), month: d.getMonth() };
   });
   const ref = useRef(null);
+  const triggerRef = useRef(null);
 
   useEffect(() => {
     function onClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
+
+  // Position the popup against the viewport so it's never clipped by a scrolling
+  // container, and flip it left/up when it would run off an edge.
+  useLayoutEffect(() => {
+    if (!open) return;
+    function place() {
+      const el = triggerRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      let left = r.left;
+      if (left + POPUP_W > window.innerWidth - EDGE) left = r.right - POPUP_W; // right-align
+      left = Math.max(EDGE, left);
+      let top = r.bottom + GAP;
+      if (top + POPUP_H > window.innerHeight - EDGE) {
+        const up = r.top - GAP - POPUP_H;
+        top = up >= EDGE ? up : Math.max(EDGE, window.innerHeight - POPUP_H - EDGE);
+      }
+      setCoords({ top, left });
+    }
+    place();
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [open]);
 
   // Sync view when value changes externally
   useEffect(() => {
@@ -60,15 +95,15 @@ export default function DatePicker({ value, onChange, placeholder = "Set date" }
 
   return (
     <div className="dp-wrap" ref={ref}>
-      <button type="button" className="dp-trigger" onClick={() => setOpen(!open)}>
+      <button type="button" ref={triggerRef} className="dp-trigger" onClick={() => setOpen(!open)}>
         {displayValue || <span className="dp-placeholder">{placeholder}</span>}
         {displayValue && (
           <span className="dp-clear" onClick={(e) => { e.stopPropagation(); onChange(""); }}>✕</span>
         )}
       </button>
 
-      {open && (
-        <div className="dp-popup">
+      {open && coords && (
+        <div className="dp-popup" style={{ position: "fixed", top: coords.top, left: coords.left }}>
           <div className="dp-head">
             <button type="button" className="dp-nav" onClick={prevMonth}>‹</button>
             <span className="dp-month">{MONTHS[view.month]} {view.year}</span>
