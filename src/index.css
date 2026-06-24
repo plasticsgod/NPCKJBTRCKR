@@ -319,22 +319,23 @@ button {
 /* ---- Status pills -------------------------------------------------------- */
 .pill {
   display: inline-block;
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding: 4px 9px;
-  border-radius: 999px;
-  background: var(--panel);
-  color: var(--ink-2);
-  border: 1px solid var(--hairline);
+  font-family: var(--ui);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  padding: 6px 14px;
+  border-radius: 7px;
+  background: #b8b8b8;
+  color: #fff;
+  border: none;
 }
-.pill-not-submitted                   { background: #eef0ee; color: #4a4f4a; border-color: #d2d6d2; }
-.pill-waiting-for-proofs-and-approval { background: #fff8e6; color: #8a6d1f; border-color: #ecdca8; }
-.pill-in-queue                        { background: #fce8f3; color: #9c2a6e; border-color: #f0b8d8; }
-.pill-printing                        { background: #fdeaea; color: #b32a2a; border-color: #f5b8b8; }
-.pill-shipped                         { background: #e8f1fb; color: #1a4f8a; border-color: #b8d0f0; }
-.pill-delivered                       { background: #eafaf0; color: #1f7a47; border-color: #b9e6cb; }
+.pill-not-submitted                   { background: #b8b8b8; }
+.pill-waiting-for-proofs-and-approval { background: #f0b429; }
+.pill-in-queue                        { background: #e85aa0; }
+.pill-printing                        { background: #e2445c; }
+.pill-shipped                         { background: #3f8ae0; }
+.pill-delivered                       { background: #00c875; }
 
 /* ---- Board view ---------------------------------------------------------- */
 .board {
@@ -983,15 +984,15 @@ button {
 
 /* Task table */
 .ptable-wrap { overflow-x: auto; }
-.ptable { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 520px; }
+.ptable { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 520px; table-layout: fixed; }
 .ptable thead th { text-align: left; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); padding: 10px 12px; border-bottom: 1px solid var(--hairline-soft); background: var(--panel); }
 .ptask-row td { padding: 0; border-bottom: 1px solid var(--hairline-soft); vertical-align: middle; }
 .ptask-row:hover td { background: #faf9f7; }
 .ptask-row { cursor: pointer; }
 .col-item { width: 100%; padding: 12px 14px !important; }
-.col-person { width: 170px; padding: 6px 10px !important; }
-.col-status { width: 160px; padding: 4px 6px !important; }
-.col-date { width: 130px; padding: 6px 10px !important; }
+.col-person { width: 150px; padding: 6px 10px !important; }
+.col-status { width: 175px; padding: 4px 6px !important; }
+.col-date { width: 120px; padding: 6px 10px !important; }
 .task-title { display: block; font-size: 14px; }
 .task-title-input { width: 100%; font-size: 13px; border: 1px solid var(--accent); border-radius: 4px; padding: 3px 6px; font-family: var(--ui); }
 .add-item-row td { padding: 0 !important; border-bottom: none; }
