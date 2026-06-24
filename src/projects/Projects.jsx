@@ -236,8 +236,10 @@ function TaskRow({ task, users, userEmail, onOpen, onUpdate }) {
       <td className="col-person" onClick={(e) => e.stopPropagation()}>
         <PersonPicker value={task.owner} users={users}
           onChange={(v) => {
+            console.log("PersonPicker changed:", v, "prev:", task.owner, "userEmail:", userEmail);
             onUpdate(task.id, { owner: v });
             if (v && v !== task.owner) {
+              console.log("Firing notifyAssignment to:", v);
               notifyAssignment({ to: v, task: task.title, project: "", assignedBy: userEmail });
             }
           }} />
