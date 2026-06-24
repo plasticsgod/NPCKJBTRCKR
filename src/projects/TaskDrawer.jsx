@@ -155,7 +155,6 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
                   const next = prev.includes(email) ? prev.filter(x => x !== email) : [...prev, email];
                   setField("owners", next);
                   if (!prev.includes(email)) {
-                    console.log("[assign] drawer notifying", email, "by", userEmail);
                     notifyAssignment({ to: email, task: task.title, project: projectName || "", assignedBy: userEmail });
                   }
                 }}>
