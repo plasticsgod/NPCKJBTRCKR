@@ -108,9 +108,6 @@ Deno.serve(async (req) => {
     const { type, to } = body;
     if (!to || !type) return json({ error: "Missing to or type." }, 400);
 
-    // Don't email yourself.
-    if (to === user.email) return json({ skipped: "self-notification" });
-
     const apiKey = Deno.env.get("RESEND_API_KEY");
     if (!apiKey) return json({ error: "RESEND_API_KEY not configured." }, 500);
 
