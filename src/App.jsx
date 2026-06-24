@@ -19,6 +19,7 @@ function getPageFromHash() {
 export default function App() {
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
+  const [recovery, setRecovery] = useState(false);
 
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -44,7 +45,12 @@ export default function App() {
       setSession(data.session);
       setAuthReady(true);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      setSession(s);
+      // Arriving via a password-reset email link: show the "set new password"
+      // form instead of dropping the user straight into the app.
+      if (event === "PASSWORD_RECOVERY") setRecovery(true);
+    });
     return () => sub.subscription.unsubscribe();
   }, []);
 
@@ -126,6 +132,17 @@ export default function App() {
 
   // --- Render -----------------------------------------------------------------
   if (!authReady) return <div className="screen-center muted">Loading…</div>;
+  if (recovery)
+    return (
+      <Auth
+        recovery
+        onRecovered={() => {
+          setRecovery(false);
+          // Clean the recovery token out of the URL and land on the dashboard.
+          window.location.hash = "dashboard";
+        }}
+      />
+    );
   if (!session) return <Auth />;
 
   return (

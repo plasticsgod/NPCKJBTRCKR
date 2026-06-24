@@ -459,6 +459,33 @@ button {
   gap: 14px;
 }
 
+/* ---- Password field with show/hide eye toggle ---------------------------- */
+.password-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.password-wrap input {
+  width: 100%;
+  padding-right: 42px;
+}
+.pw-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.pw-toggle:hover { color: var(--ink); background: var(--panel); }
+
 /* ---- Auth card ----------------------------------------------------------- */
 .auth-card {
   width: 100%;
