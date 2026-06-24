@@ -1,3 +1,5 @@
+import NotificationBell from "./NotificationBell";
+
 const TITLES = { work_orders: "Work Orders", dashboard: "Dashboard", plastics: "Plastics Estimator", projects: "Projects" };
 
 export default function Header({ page, email, onMenu, onSignOut }) {
@@ -14,6 +16,7 @@ export default function Header({ page, email, onMenu, onSignOut }) {
       </div>
 
       <div className="header-right">
+        <NotificationBell userEmail={email} />
         <div className="account">
           <span className="account-email" title={email}>{email}</span>
           <button className="link" onClick={onSignOut}>Sign out</button>
