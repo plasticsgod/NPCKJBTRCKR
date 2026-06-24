@@ -670,6 +670,21 @@ button {
 .push-right {
   margin-left: auto;
 }
+.filter-select {
+  font-family: var(--ui);
+  font-size: 14px;
+  padding: 9px 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+}
+.filter-select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+  border-color: transparent;
+}
 
 /* ---- Dashboard ----------------------------------------------------------- */
 .dashboard {
