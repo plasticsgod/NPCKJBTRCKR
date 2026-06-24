@@ -1135,3 +1135,12 @@ button {
 .sel-action.danger:hover { background: rgba(192,57,43,.5); }
 .sel-x { display: flex; align-items: center; justify-content: center; background: transparent; border: none; color: #fff; cursor: pointer; padding: 10px; border-radius: 10px; opacity: .8; }
 .sel-x:hover { background: rgba(255,255,255,.12); opacity: 1; }
+
+.confirm-overlay { position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center; background: rgba(20,17,13,.4); }
+.confirm-bar { display: flex; align-items: center; gap: 12px; background: #c0392b; color: #fff; border-radius: 14px; padding: 14px 16px 14px 20px; box-shadow: 0 18px 50px rgba(0,0,0,.4); max-width: 92vw; }
+.confirm-icon { flex-shrink: 0; }
+.confirm-msg { font-size: 14px; font-weight: 600; margin-right: 6px; }
+.confirm-cancel { background: rgba(255,255,255,.18); color: #fff; border: none; border-radius: 999px; padding: 9px 18px; font-family: var(--ui); font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.confirm-cancel:hover { background: rgba(255,255,255,.3); }
+.confirm-delete { background: #fff; color: #c0392b; border: none; border-radius: 999px; padding: 9px 20px; font-family: var(--ui); font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.confirm-delete:hover { background: #ffe6e0; }
