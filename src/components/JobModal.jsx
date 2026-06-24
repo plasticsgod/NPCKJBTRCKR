@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../supabaseClient";
 import { STATUSES, FACILITIES } from "../supabaseClient";
+import DatePicker from "./DatePicker";
 
 const EMPTY = {
   job_title: "",
@@ -138,8 +139,7 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
             {form.files_delete_after && (
               <label className="field">
                 <span>Proof files auto-delete date <span className="field-hint">— change to extend</span></span>
-                <input type="date" value={form.files_delete_after}
-                  onChange={(e) => set("files_delete_after", e.target.value || null)} />
+                <DatePicker value={form.files_delete_after || ""} onChange={(v) => set("files_delete_after", v || null)} />
               </label>
             )}
           </div>
