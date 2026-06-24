@@ -7,6 +7,19 @@ import { notifyAssignment } from "./notifications";
 import { displayName, nameInitials } from "./userMap";
 import DatePicker from "../components/DatePicker";
 
+// Classifies a task's due date for highlighting and filtering.
+// Returns "overdue", "soon" (within 3 days), or null. Done tasks are never flagged.
+function dueState(task) {
+  if (!task.due_date) return null;
+  if ((task.status || "To do") === "Done") return null;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const due = new Date(task.due_date + "T00:00:00");
+  const diffDays = Math.round((due - today) / 86400000);
+  if (diffDays < 0) return "overdue";
+  if (diffDays <= 3) return "soon";
+  return null;
+}
+
 export default function Projects({ userEmail }) {
   const [projects, setProjects] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -17,6 +30,7 @@ export default function Projects({ userEmail }) {
   const [query, setQuery] = useState("");
   const [filterPerson, setFilterPerson] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [filterDue, setFilterDue] = useState("");
   const users = useUsers();
   const newProjRef = useRef(null);
 
@@ -95,15 +109,16 @@ export default function Projects({ userEmail }) {
 
   // --- Search + filter --------------------------------------------------------
   const q = query.trim().toLowerCase();
-  const anyActive = !!q || !!filterPerson || !!filterStatus;
+  const anyActive = !!q || !!filterPerson || !!filterStatus || !!filterDue;
 
   function visibleTasksFor(project, projTasks) {
     const nameHit = !!q && (project.name || "").toLowerCase().includes(q);
     return projTasks.filter((t) => {
       const personOK = !filterPerson || (t.owners || []).includes(filterPerson);
       const statusOK = !filterStatus || (t.status || "To do") === filterStatus;
+      const dueOK = !filterDue || dueState(t) === filterDue;
       const searchOK = !q || nameHit || (t.title || "").toLowerCase().includes(q);
-      return personOK && statusOK && searchOK;
+      return personOK && statusOK && dueOK && searchOK;
     });
   }
 
@@ -117,7 +132,7 @@ export default function Projects({ userEmail }) {
       else if (visTasks.length > 0) show = true;
       // a project whose name matches the search still shows (even if empty),
       // but only when no person/status filter is narrowing things down
-      else if (nameHit && !filterPerson && !filterStatus) show = true;
+      else if (nameHit && !filterPerson && !filterStatus && !filterDue) show = true;
       else show = false;
       return { proj, tasks: visTasks, show };
     })
@@ -155,8 +170,18 @@ export default function Projects({ userEmail }) {
             <option key={s} value={s}>{s}</option>
           ))}
         </select>
+        <select
+          className="filter-select"
+          value={filterDue}
+          onChange={(e) => setFilterDue(e.target.value)}
+          aria-label="Filter by due date"
+        >
+          <option value="">Any due date</option>
+          <option value="overdue">Overdue</option>
+          <option value="soon">Due soon (3 days)</option>
+        </select>
         {anyActive && (
-          <button className="link" onClick={() => { setQuery(""); setFilterPerson(""); setFilterStatus(""); }}>
+          <button className="link" onClick={() => { setQuery(""); setFilterPerson(""); setFilterStatus(""); setFilterDue(""); }}>
             Clear
           </button>
         )}
@@ -173,7 +198,7 @@ export default function Projects({ userEmail }) {
         <div className="empty">
           <p className="empty-title">No matches</p>
           <p className="muted">No projects or tasks match your search and filters.</p>
-          <button className="btn-accent" onClick={() => { setQuery(""); setFilterPerson(""); setFilterStatus(""); }}>
+          <button className="btn-accent" onClick={() => { setQuery(""); setFilterPerson(""); setFilterStatus(""); setFilterDue(""); }}>
             Clear search &amp; filters
           </button>
         </div>
@@ -327,7 +352,7 @@ function TaskRow({ task, users, userEmail, onOpen, onUpdate }) {
           {TASK_STATUSES.map((s) => <option key={s}>{s}</option>)}
         </select>
       </td>
-      <td className="col-date" onClick={(e) => e.stopPropagation()}>
+      <td className={"col-date" + (dueState(task) ? " due-" + dueState(task) : "")} onClick={(e) => e.stopPropagation()}>
         <DatePicker value={task.due_date || ""} onChange={(v) => onUpdate(task.id, { due_date: v || null })} placeholder="Set date" />
       </td>
     </tr>
