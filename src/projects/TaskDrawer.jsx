@@ -5,6 +5,11 @@ import { notifyAssignment, notifyMentions } from "./notifications";
 import { displayName, nameInitials } from "./userMap";
 import DatePicker from "../components/DatePicker";
 
+// Resizable task drawer — width is remembered per browser via localStorage.
+const DRAWER_WIDTH_KEY = "npck_task_drawer_width";
+const DRAWER_MIN_W = 420;
+const DRAWER_DEFAULT_W = 720;
+
 // Parse @mentions from text — returns array of emails mentioned
 function parseMentions(text, users) {
   const found = [];
@@ -80,6 +85,49 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
   const [newPost, setNewPost] = useState("");
   const [posting, setPosting] = useState(false);
 
+  // --- Resizable drawer width (remembered in this browser) -------------------
+  const [drawerWidth, setDrawerWidth] = useState(() => {
+    try {
+      const saved = parseInt(localStorage.getItem(DRAWER_WIDTH_KEY), 10);
+      if (saved && saved >= DRAWER_MIN_W) return saved;
+    } catch { /* localStorage unavailable — fall back to default */ }
+    return DRAWER_DEFAULT_W;
+  });
+  const widthRef = useRef(drawerWidth);
+  const resizingRef = useRef(false);
+  useEffect(() => { widthRef.current = drawerWidth; }, [drawerWidth]);
+
+  useEffect(() => {
+    function onMove(e) {
+      if (!resizingRef.current) return;
+      const maxW = Math.min(window.innerWidth - 40, window.innerWidth * 0.96);
+      // Drawer is pinned to the right edge, so its width is the distance from
+      // the cursor to the right side of the window.
+      const w = Math.max(DRAWER_MIN_W, Math.min(window.innerWidth - e.clientX, maxW));
+      setDrawerWidth(w);
+    }
+    function onUp() {
+      if (!resizingRef.current) return;
+      resizingRef.current = false;
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+      try { localStorage.setItem(DRAWER_WIDTH_KEY, String(Math.round(widthRef.current))); } catch { /* ignore */ }
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, []);
+
+  function startResize(e) {
+    e.preventDefault();
+    resizingRef.current = true;
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "ew-resize";
+  }
+
   useEffect(() => { setLocal({ ...task, owners: task.owners || [] }); }, [task]);
 
   const loadPosts = useCallback(async () => {
@@ -136,7 +184,8 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
 
   return (
     <div className="drawer-overlay" onClick={onClose}>
-      <aside className="drawer drawer-wide" onClick={(e) => e.stopPropagation()}>
+      <aside className="drawer drawer-wide" style={{ width: drawerWidth }} onClick={(e) => e.stopPropagation()}>
+        <div className="drawer-resize" onMouseDown={startResize} title="Drag to resize" />
         <div className="drawer-head">
           <div className="drawer-breadcrumb">{projectName && <span className="muted">{projectName} /</span>}</div>
           <input className="drawer-title" value={local.title}
