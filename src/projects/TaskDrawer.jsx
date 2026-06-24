@@ -193,7 +193,7 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
 
             {/* Compose new post */}
             <div className="compose-box">
-              <span className="avatar sm">{initials(userEmail)}</span>
+              <span className="avatar sm">{nameInitials(userEmail)}</span>
               <div className="compose-right">
                 <MentionTextarea value={newPost} onChange={setNewPost} users={users}
                   placeholder={`Write an update… Use @ to mention someone`} rows={2} />
@@ -252,9 +252,9 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, onDelete, on
   return (
     <div className="post-card">
       <div className="post-head">
-        <span className="avatar">{initials(post.author)}</span>
+        <span className="avatar">{nameInitials(post.author)}</span>
         <div className="post-meta">
-          <span className="post-author">{post.author}</span>
+          <span className="post-author">{displayName(post.author)}</span>
           <span className="post-time">{fmtTime(post.created_at)}</span>
         </div>
         {post.author === userEmail && (
@@ -270,10 +270,10 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, onDelete, on
         <div className="reply-thread">
           {replies.map((r) => (
             <div className="reply" key={r.id}>
-              <span className="avatar sm">{initials(r.author)}</span>
+              <span className="avatar sm">{nameInitials(r.author)}</span>
               <div className="reply-content">
                 <div className="reply-meta">
-                  <span className="post-author">{r.author}</span>
+                  <span className="post-author">{displayName(r.author)}</span>
                   <span className="post-time">{fmtTime(r.created_at)}</span>
                   {r.author === userEmail && (
                     <button className="link danger post-del" onClick={() => deleteReply(r.id)}>Delete</button>
@@ -294,7 +294,7 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, onDelete, on
       </div>
       {showReply && (
         <div className="reply-compose">
-          <span className="avatar sm">{initials(userEmail)}</span>
+          <span className="avatar sm">{nameInitials(userEmail)}</span>
           <div className="compose-right">
             <MentionTextarea value={reply} onChange={setReply} users={users}
               placeholder="Write a reply… Use @ to mention" rows={2} />
@@ -308,12 +308,6 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, onDelete, on
       )}
     </div>
   );
-}
-
-function initials(name) {
-  if (!name) return "?";
-  const parts = name.replace(/@.*/, "").split(/[.\s_]+/).filter(Boolean);
-  return ((parts[0]?.[0] || "") + (parts[1]?.[0] || "")).toUpperCase() || name[0]?.toUpperCase();
 }
 
 function fmtTime(iso) {
