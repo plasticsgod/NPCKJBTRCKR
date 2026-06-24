@@ -983,16 +983,16 @@ button {
 
 /* Task table */
 .ptable-wrap { overflow-x: auto; }
-.ptable { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 520px; }
-.ptable thead th { text-align: left; font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); padding: 8px 12px; border-bottom: 1px solid var(--hairline-soft); background: var(--panel); }
+.ptable { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 520px; }
+.ptable thead th { text-align: left; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); padding: 10px 12px; border-bottom: 1px solid var(--hairline-soft); background: var(--panel); }
 .ptask-row td { padding: 0; border-bottom: 1px solid var(--hairline-soft); vertical-align: middle; }
 .ptask-row:hover td { background: #faf9f7; }
 .ptask-row { cursor: pointer; }
-.col-item { width: 100%; padding: 10px 14px !important; }
-.col-person { width: 160px; padding: 6px 10px !important; }
-.col-status { width: 140px; padding: 6px 10px !important; }
+.col-item { width: 100%; padding: 12px 14px !important; }
+.col-person { width: 170px; padding: 6px 10px !important; }
+.col-status { width: 160px; padding: 4px 6px !important; }
 .col-date { width: 130px; padding: 6px 10px !important; }
-.task-title { display: block; font-size: 13px; }
+.task-title { display: block; font-size: 14px; }
 .task-title-input { width: 100%; font-size: 13px; border: 1px solid var(--accent); border-radius: 4px; padding: 3px 6px; font-family: var(--ui); }
 .add-item-row td { padding: 0 !important; border-bottom: none; }
 .add-item-btn { width: 100%; text-align: left; background: none; border: none; cursor: pointer; font-size: 13px; color: var(--ink-3); padding: 10px 14px; }
@@ -1008,11 +1008,11 @@ button {
 .date-input:focus { outline: 1px solid var(--accent); border-radius: 4px; background: #fff; padding: 2px 4px; }
 
 /* Status pills for project tasks */
-.tpill { font-family: var(--mono); font-size: 10px; letter-spacing: .04em; text-transform: uppercase; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--hairline); cursor: pointer; appearance: none; }
-.tpill-to-do        { background: var(--panel); color: var(--ink-2); }
-.tpill-in-progress  { background: #FAEEDA; color: #633806; border-color: #FAC775; }
-.tpill-stuck        { background: #FCEBEB; color: #A32D2D; border-color: #F7C1C1; }
-.tpill-done         { background: #EAF3DE; color: #27500A; border-color: #C0DD97; }
+.tpill { display: block; width: 100%; min-height: 34px; font-family: var(--ui); font-size: 13px; font-weight: 600; letter-spacing: .01em; text-transform: none; padding: 8px 10px; border-radius: 7px; border: none; cursor: pointer; appearance: none; -webkit-appearance: none; text-align: center; text-align-last: center; color: #fff; }
+.tpill-to-do        { background: #b8b8b8; }
+.tpill-in-progress  { background: #fdab3d; }
+.tpill-stuck        { background: #e2445c; }
+.tpill-done         { background: #00c875; }
 
 /* Avatar */
 .avatar { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: #CECBF6; color: #3C3489; font-size: 11px; font-weight: 700; flex-shrink: 0; }
@@ -1080,7 +1080,7 @@ button {
 .multi-person { position: relative; }
 .person-avatars { display: flex; align-items: center; gap: 4px; cursor: pointer; padding: 4px; border-radius: 6px; }
 .person-avatars:hover { background: var(--panel); }
-.not-assigned { font-size: 12px; color: var(--ink-3); }
+.not-assigned { font-size: 13px; color: var(--ink-3); }
 .assign-caret { font-size: 10px; color: var(--ink-3); margin-left: 2px; }
 .person-dropdown { position: absolute; top: 100%; left: 0; z-index: 200; background: #fff; border: 1px solid var(--hairline); border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.12); padding: 6px; min-width: 200px; }
 .person-option { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; }
@@ -1110,7 +1110,7 @@ button {
 .dp-foot { display: flex; justify-content: space-between; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--hairline-soft); }
 
 /* Compact date trigger for table rows */
-.col-date .dp-trigger { border: none; background: transparent; padding: 4px 6px; font-size: 12px; color: var(--ink-2); }
+.col-date .dp-trigger { border: none; background: transparent; padding: 4px 6px; font-size: 13px; color: var(--ink-2); }
 .col-date .dp-trigger:hover { background: var(--panel); border-radius: 6px; }
 .col-date.due-overdue .dp-trigger { color: #c0392b; font-weight: 600; }
 .col-date.due-soon .dp-trigger { color: #b9770e; font-weight: 600; }
