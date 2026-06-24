@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "../supabaseClient";
 import { TASK_STATUSES } from "./constants";
 import { notifyAssignment, notifyMentions } from "./notifications";
+import { displayName, nameInitials } from "./userMap";
 
 // Parse @mentions from text — returns array of emails mentioned
 function parseMentions(text, users) {
@@ -18,7 +19,8 @@ function RichText({ body, users }) {
     <span>
       {parts.map((p, i) => {
         const email = p.startsWith("@") ? p.slice(1) : null;
-        if (email && users.includes(email)) return <strong key={i} className="mention">{p}</strong>;
+        if (email && users.includes(email))
+          return <strong key={i} className="mention">@{displayName(email)}</strong>;
         return <span key={i}>{p}</span>;
       })}
     </span>
@@ -62,7 +64,7 @@ function MentionTextarea({ value, onChange, users, placeholder, rows = 3 }) {
         <ul className="mention-list">
           {suggestions.map((u) => (
             <li key={u} onMouseDown={(e) => { e.preventDefault(); pickSuggestion(u); }}>
-              <span className="avatar sm">{initials(u)}</span> {u}
+              <span className="avatar sm">{nameInitials(u)}</span> {displayName(u)}
             </li>
           ))}
         </ul>
@@ -72,12 +74,12 @@ function MentionTextarea({ value, onChange, users, placeholder, rows = 3 }) {
 }
 
 export default function TaskDrawer({ task, projectName, userEmail, users, onClose, onUpdate, onDelete }) {
-  const [local, setLocal] = useState(task);
+  const [local, setLocal] = useState({ ...task, owners: task.owners || [] });
   const [posts, setPosts] = useState([]);
   const [newPost, setNewPost] = useState("");
   const [posting, setPosting] = useState(false);
 
-  useEffect(() => { setLocal(task); }, [task]);
+  useEffect(() => { setLocal({ ...task, owners: task.owners || [] }); }, [task]);
 
   const loadPosts = useCallback(async () => {
     const { data } = await supabase
@@ -144,16 +146,31 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
 
         <div className="drawer-meta">
           <label className="meta-field">
-            <span>Assignee</span>
-            <div className="person-picker">
-              {local.owner && <span className="avatar sm" title={local.owner}>{initials(local.owner)}</span>}
-              <select
-                className="person-select"
-                value={local.owner || ""}
-                onChange={(e) => setField("owner", e.target.value)}
-              >
-                <option value="">Assign…</option>
-                {users.map((u) => <option key={u} value={u}>{u}</option>)}
+            <span>Assignees</span>
+            <div className="drawer-assignees">
+              {(local.owners || []).length === 0
+                ? <span className="not-assigned">Not Assigned</span>
+                : (local.owners || []).map(e => (
+                  <span key={e} className="avatar" title={displayName(e)}>{nameInitials(e)}</span>
+                ))
+              }
+              <select className="person-select" value=""
+                onChange={(e) => {
+                  const email = e.target.value;
+                  if (!email) return;
+                  const prev = local.owners || [];
+                  const next = prev.includes(email) ? prev.filter(x => x !== email) : [...prev, email];
+                  setField("owners", next);
+                  if (!prev.includes(email)) {
+                    notifyAssignment({ to: email, task: task.title, project: projectName || "", assignedBy: userEmail });
+                  }
+                }}>
+                <option value="">Add person…</option>
+                {users.map((u) => (
+                  <option key={u} value={u}>
+                    {(local.owners || []).includes(u) ? "✓ " : ""}{displayName(u)}
+                  </option>
+                ))}
               </select>
             </div>
           </label>
