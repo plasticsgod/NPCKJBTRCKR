@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "../supabaseClient";
 import { TASK_STATUSES } from "./constants";
+import { notifyAssignment, notifyMentions } from "./notifications";
 
 // Parse @mentions from text — returns array of emails mentioned
 function parseMentions(text, users) {
@@ -110,9 +111,18 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
     setPosting(true);
     const mentions = parseMentions(body, users);
     await supabase.from("task_posts").insert({ task_id: task.id, author: userEmail, body, mentions });
+    notifyMentions({ mentions, task: task.title, project: projectName || "", mentionedBy: userEmail, body });
     setNewPost("");
     setPosting(false);
     loadPosts();
+  }
+
+  function setField(key, value) {
+    setLocal((l) => ({ ...l, [key]: value }));
+    onUpdate(task.id, { [key]: value });
+    if (key === "owner" && value && value !== task.owner) {
+      notifyAssignment({ to: value, task: task.title, project: projectName || "", assignedBy: userEmail });
+    }
   }
 
   async function deletePost(id) {
@@ -182,6 +192,7 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
 
             {[...posts].reverse().map((post) => (
               <PostCard key={post.id} post={post} users={users} userEmail={userEmail}
+                taskTitle={task.title} projectName={projectName}
                 onDelete={deletePost} onReply={loadPosts} />
             ))}
           </div>
@@ -195,7 +206,7 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
   );
 }
 
-function PostCard({ post, users, userEmail, onDelete, onReply }) {
+function PostCard({ post, users, userEmail, taskTitle, projectName, onDelete, onReply }) {
   const [showReply, setShowReply] = useState(false);
   const [reply, setReply] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -207,6 +218,7 @@ function PostCard({ post, users, userEmail, onDelete, onReply }) {
     setSubmitting(true);
     const mentions = parseMentions(body, users);
     await supabase.from("task_replies").insert({ post_id: post.id, author: userEmail, body, mentions });
+    notifyMentions({ mentions, task: taskTitle, project: projectName || "", mentionedBy: userEmail, body });
     setReply("");
     setSubmitting(false);
     setShowReply(false);

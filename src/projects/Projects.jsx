@@ -3,6 +3,7 @@ import { supabase } from "../supabaseClient";
 import { TASK_STATUSES, statusClass } from "./constants";
 import { useUsers } from "./useUsers";
 import TaskDrawer from "./TaskDrawer";
+import { notifyAssignment } from "./notifications";
 
 export default function Projects({ userEmail }) {
   const [projects, setProjects] = useState([]);
@@ -107,6 +108,7 @@ export default function Projects({ userEmail }) {
                 project={proj}
                 tasks={projTasks}
                 users={users}
+                userEmail={userEmail}
                 onUpdateName={updateProjectName}
                 onDelete={deleteProject}
                 onAddTask={addTask}
@@ -147,7 +149,7 @@ export default function Projects({ userEmail }) {
   );
 }
 
-function ProjectGroup({ project, tasks, users, onUpdateName, onDelete, onAddTask, onOpenTask, onUpdateTask }) {
+function ProjectGroup({ project, tasks, users, userEmail, onUpdateName, onDelete, onAddTask, onOpenTask, onUpdateTask }) {
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState(project.name);
   const [collapsed, setCollapsed] = useState(false);
@@ -190,7 +192,7 @@ function ProjectGroup({ project, tasks, users, onUpdateName, onDelete, onAddTask
             </thead>
             <tbody>
               {tasks.map((t) => (
-                <TaskRow key={t.id} task={t} users={users}
+                <TaskRow key={t.id} task={t} users={users} userEmail={userEmail}
                   onOpen={() => onOpenTask(t.id)}
                   onUpdate={onUpdateTask} />
               ))}
@@ -207,7 +209,7 @@ function ProjectGroup({ project, tasks, users, onUpdateName, onDelete, onAddTask
   );
 }
 
-function TaskRow({ task, users, onOpen, onUpdate }) {
+function TaskRow({ task, users, userEmail, onOpen, onUpdate }) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [title, setTitle] = useState(task.title);
 
@@ -233,7 +235,12 @@ function TaskRow({ task, users, onOpen, onUpdate }) {
       </td>
       <td className="col-person" onClick={(e) => e.stopPropagation()}>
         <PersonPicker value={task.owner} users={users}
-          onChange={(v) => onUpdate(task.id, { owner: v })} />
+          onChange={(v) => {
+            onUpdate(task.id, { owner: v });
+            if (v && v !== task.owner) {
+              notifyAssignment({ to: v, task: task.title, project: "", assignedBy: userEmail });
+            }
+          }} />
       </td>
       <td className="col-status" onClick={(e) => e.stopPropagation()}>
         <select className={statusClass(task.status)} value={task.status || "To do"}
