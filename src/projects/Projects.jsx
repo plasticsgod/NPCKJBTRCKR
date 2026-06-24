@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useLayoutEffect } from "react";
 import { supabase } from "../supabaseClient";
 import { TASK_STATUSES, statusClass } from "./constants";
 import { useUsers } from "./useUsers";
@@ -31,6 +31,10 @@ export default function Projects({ userEmail }) {
   const [filterPerson, setFilterPerson] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterDue, setFilterDue] = useState("");
+  // Selection for the bottom action bar (Monday-style). Separate sets so a whole
+  // project and individual tasks can both be selected at once.
+  const [selProjects, setSelProjects] = useState(() => new Set());
+  const [selTasks, setSelTasks] = useState(() => new Set());
   const users = useUsers();
   const newProjRef = useRef(null);
 
@@ -74,12 +78,6 @@ export default function Projects({ userEmail }) {
     load();
   }
 
-  async function deleteProject(id) {
-    if (!confirm("Delete this project and all its tasks?")) return;
-    await supabase.from("projects").delete().eq("id", id);
-    load();
-  }
-
   async function addTask(projectId) {
     const { data } = await supabase.from("tasks").insert({
       project_id: projectId, title: "New task",
@@ -99,6 +97,65 @@ export default function Projects({ userEmail }) {
     if (!confirm("Delete this task?")) return;
     await supabase.from("tasks").delete().eq("id", id);
     setOpenTaskId(null);
+    load();
+  }
+
+  // --- Selection helpers ------------------------------------------------------
+  function toggleProject(id) {
+    setSelProjects((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+  function toggleTask(id) {
+    setSelTasks((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+  function clearSelection() { setSelProjects(new Set()); setSelTasks(new Set()); }
+
+  const selectionCount = selProjects.size + selTasks.size;
+
+  async function deleteSelected() {
+    const projIds = [...selProjects];
+    // Skip tasks whose whole project is being deleted (cascade handles them).
+    const taskIds = [...selTasks].filter((id) => {
+      const t = tasks.find((x) => x.id === id);
+      return t && !selProjects.has(t.project_id);
+    });
+    const total = projIds.length + taskIds.length;
+    if (total === 0) return;
+    if (!confirm(`Delete ${total} selected item${total === 1 ? "" : "s"}? This cannot be undone.`)) return;
+    if (projIds.length) await supabase.from("projects").delete().in("id", projIds);
+    if (taskIds.length) await supabase.from("tasks").delete().in("id", taskIds);
+    clearSelection();
+    setOpenTaskId(null);
+    load();
+  }
+
+  async function duplicateSelected() {
+    // Duplicate whole projects (with their tasks).
+    for (const pid of selProjects) {
+      const proj = projects.find((p) => p.id === pid);
+      if (!proj) continue;
+      const { data: newProj } = await supabase.from("projects")
+        .insert({ name: proj.name, sort_order: projects.length })
+        .select().single();
+      if (!newProj) continue;
+      const childTasks = tasks.filter((t) => t.project_id === pid);
+      if (childTasks.length) {
+        await supabase.from("tasks").insert(childTasks.map((t, i) => ({
+          project_id: newProj.id, title: t.title, owners: t.owners || [],
+          status: t.status || "To do", due_date: t.due_date || null, sort_order: i,
+        })));
+      }
+    }
+    // Duplicate individually-selected tasks (skip those inside a duplicated project).
+    for (const tid of selTasks) {
+      const t = tasks.find((x) => x.id === tid);
+      if (!t || selProjects.has(t.project_id)) continue;
+      await supabase.from("tasks").insert({
+        project_id: t.project_id, title: t.title, owners: t.owners || [],
+        status: t.status || "To do", due_date: t.due_date || null,
+        sort_order: tasks.filter((x) => x.project_id === t.project_id).length,
+      });
+    }
+    clearSelection();
     load();
   }
 
@@ -212,8 +269,11 @@ export default function Projects({ userEmail }) {
                 tasks={projTasks}
                 users={users}
                 userEmail={userEmail}
+                selected={selProjects.has(proj.id)}
+                onToggleSelect={toggleProject}
+                selectedTasks={selTasks}
+                onToggleTask={toggleTask}
                 onUpdateName={updateProjectName}
-                onDelete={deleteProject}
                 onAddTask={addTask}
                 onOpenTask={setOpenTaskId}
                 onUpdateTask={updateTask}
@@ -243,11 +303,21 @@ export default function Projects({ userEmail }) {
           onDelete={deleteTask}
         />
       )}
+
+      {selectionCount > 0 && (
+        <div className="sel-bar">
+          <span className="sel-count">{selectionCount}</span>
+          <span className="sel-label">selected</span>
+          <button className="sel-action" onClick={duplicateSelected}>Duplicate</button>
+          <button className="sel-action danger" onClick={deleteSelected}>Delete</button>
+          <button className="sel-x" onClick={clearSelection} aria-label="Clear selection">✕</button>
+        </div>
+      )}
     </div>
   );
 }
 
-function ProjectGroup({ project, tasks, users, userEmail, onUpdateName, onDelete, onAddTask, onOpenTask, onUpdateTask }) {
+function ProjectGroup({ project, tasks, users, userEmail, selected, onToggleSelect, selectedTasks, onToggleTask, onUpdateName, onAddTask, onOpenTask, onUpdateTask }) {
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState(project.name);
   const [collapsed, setCollapsed] = useState(false);
@@ -260,6 +330,14 @@ function ProjectGroup({ project, tasks, users, userEmail, onUpdateName, onDelete
   return (
     <div className="proj-group">
       <div className="proj-head">
+        <input
+          type="checkbox"
+          className="proj-check"
+          checked={selected}
+          onChange={() => onToggleSelect(project.id)}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Select project ${project.name}`}
+        />
         <button className="proj-collapse" onClick={() => setCollapsed(!collapsed)}>
           {collapsed ? "▶" : "▼"}
         </button>
@@ -269,18 +347,16 @@ function ProjectGroup({ project, tasks, users, userEmail, onUpdateName, onDelete
             onBlur={saveName}
             onKeyDown={(e) => { if (e.key === "Enter") saveName(); if (e.key === "Escape") { setName(project.name); setEditingName(false); } }} />
         ) : (
-          <span className="proj-name" onDoubleClick={() => setEditingName(true)}>{project.name}</span>
+          <span className="proj-name" title="Double-click to rename" onDoubleClick={() => setEditingName(true)}>{project.name}</span>
         )}
         <span className="proj-count">{tasks.length} {tasks.length === 1 ? "item" : "items"}</span>
-        <div className="proj-actions">
-          <button className="link danger" onClick={() => onDelete(project.id)}>Delete</button>
-        </div>
       </div>
       {!collapsed && (
         <div className="ptable-wrap">
           <table className="ptable">
             <thead>
               <tr>
+                <th className="col-check"></th>
                 <th>Item</th>
                 <th className="col-person">Person</th>
                 <th className="col-status">Status</th>
@@ -290,11 +366,13 @@ function ProjectGroup({ project, tasks, users, userEmail, onUpdateName, onDelete
             <tbody>
               {tasks.map((t) => (
                 <TaskRow key={t.id} task={t} users={users} userEmail={userEmail}
+                  checked={selectedTasks.has(t.id)}
+                  onToggle={onToggleTask}
                   onOpen={() => onOpenTask(t.id)}
                   onUpdate={onUpdateTask} />
               ))}
               <tr className="add-item-row">
-                <td colSpan={4}>
+                <td colSpan={5}>
                   <button className="add-item-btn" onClick={() => onAddTask(project.id)}>+ Add item</button>
                 </td>
               </tr>
@@ -306,7 +384,7 @@ function ProjectGroup({ project, tasks, users, userEmail, onUpdateName, onDelete
   );
 }
 
-function TaskRow({ task, users, userEmail, onOpen, onUpdate }) {
+function TaskRow({ task, users, userEmail, checked, onToggle, onOpen, onUpdate }) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [title, setTitle] = useState(task.title);
   const owners = task.owners || (task.owner ? [task.owner] : []);
@@ -331,7 +409,11 @@ function TaskRow({ task, users, userEmail, onOpen, onUpdate }) {
   }
 
   return (
-    <tr className="ptask-row" onClick={!editingTitle ? onOpen : undefined}>
+    <tr className={"ptask-row" + (checked ? " selected" : "")} onClick={!editingTitle ? onOpen : undefined}>
+      <td className="col-check" onClick={(e) => e.stopPropagation()}>
+        <input type="checkbox" checked={checked} onChange={() => onToggle(task.id)}
+          aria-label={`Select task ${task.title}`} />
+      </td>
       <td className="col-item">
         {editingTitle ? (
           <input className="task-title-input" value={title} autoFocus
@@ -340,7 +422,7 @@ function TaskRow({ task, users, userEmail, onOpen, onUpdate }) {
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => { if (e.key === "Enter") saveTitle(); if (e.key === "Escape") { setTitle(task.title); setEditingTitle(false); } }} />
         ) : (
-          <span className="task-title" onDoubleClick={(e) => { e.stopPropagation(); setEditingTitle(true); }}>{task.title}</span>
+          <span className="task-title" title="Double-click to rename" onDoubleClick={(e) => { e.stopPropagation(); setEditingTitle(true); }}>{task.title}</span>
         )}
       </td>
       <td className="col-person" onClick={(e) => e.stopPropagation()}>
@@ -361,7 +443,9 @@ function TaskRow({ task, users, userEmail, onOpen, onUpdate }) {
 
 function MultiPersonPicker({ owners, users, onToggle }) {
   const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState(null);
   const ref = useRef(null);
+  const triggerRef = useRef(null);
 
   useEffect(() => {
     function onClickOutside(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
@@ -369,9 +453,37 @@ function MultiPersonPicker({ owners, users, onToggle }) {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
+  // Position the dropdown against the viewport so it's never clipped by the
+  // table's scroll container, and flip it up/left near an edge.
+  useLayoutEffect(() => {
+    if (!open) return;
+    function place() {
+      const el = triggerRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const PW = 230, PH = 300, GAP = 6, EDGE = 8;
+      let left = r.left;
+      if (left + PW > window.innerWidth - EDGE) left = r.right - PW;
+      left = Math.max(EDGE, left);
+      let top = r.bottom + GAP;
+      if (top + PH > window.innerHeight - EDGE) {
+        const up = r.top - GAP - PH;
+        top = up >= EDGE ? up : Math.max(EDGE, window.innerHeight - PH - EDGE);
+      }
+      setCoords({ top, left });
+    }
+    place();
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [open]);
+
   return (
     <div className="multi-person" ref={ref}>
-      <div className="person-avatars" onClick={() => setOpen(!open)}>
+      <div className="person-avatars" ref={triggerRef} onClick={() => setOpen(!open)}>
         {owners.length === 0
           ? <span className="not-assigned">Not Assigned</span>
           : owners.map(e => (
@@ -380,8 +492,8 @@ function MultiPersonPicker({ owners, users, onToggle }) {
         }
         <span className="assign-caret">▾</span>
       </div>
-      {open && (
-        <div className="person-dropdown">
+      {open && coords && (
+        <div className="person-dropdown" style={{ position: "fixed", top: coords.top, left: coords.left }}>
           {users.map(u => (
             <label key={u} className="person-option">
               <input type="checkbox" checked={owners.includes(u)}
@@ -400,10 +512,4 @@ function MultiPersonPicker({ owners, users, onToggle }) {
       )}
     </div>
   );
-}
-
-function initials(name) {
-  if (!name) return "?";
-  const parts = name.replace(/@.*/, "").split(/[.\s_]+/).filter(Boolean);
-  return ((parts[0]?.[0] || "") + (parts[1]?.[0] || "")).toUpperCase() || name[0]?.toUpperCase();
 }
