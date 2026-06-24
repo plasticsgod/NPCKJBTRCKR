@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import JobTable from "./JobTable";
-import JobBoard from "./JobBoard";
 import { fetchSttarkStatuses } from "../sttark/status";
 import { mapSttarkStatus } from "../sttark/statusMap";
 import { supabase } from "../supabaseClient";
@@ -8,15 +7,12 @@ import { supabase } from "../supabaseClient";
 export default function WorkOrders({
   jobs, customers, onNew, onEdit, onDeleteMany, onStatus, onFacility,
 }) {
-  const [view, setView] = useState("table");
   const [query, setQuery] = useState("");
   const [deleteMode, setDeleteMode] = useState(false);
   const [selected, setSelected] = useState(new Set());
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [sttark, setSttark] = useState({}); // { [orderId]: { status_label, ... } }
+  const [sttark, setSttark] = useState({});
 
-  // Auto-refresh Sttark statuses whenever Work Orders opens / jobs change,
-  // and auto-update each linked job's own status from the mapped Sttark status.
   useEffect(() => {
     const linked = jobs.filter((j) => j.sttark_order_id);
     if (linked.length === 0) { setSttark({}); return; }
@@ -24,55 +20,32 @@ export default function WorkOrders({
     fetchSttarkStatuses(linked.map((j) => j.sttark_order_id)).then(async ({ statuses: s }) => {
       if (!active) return;
       setSttark(s);
-
-      // For each linked job, map Sttark's status to ours; write back any changes.
       const updates = [];
       for (const j of linked) {
-        const sttarkLabel = s[j.sttark_order_id]?.status_label;
-        const mapped = mapSttarkStatus(sttarkLabel);
-        if (mapped && mapped !== j.status) {
+        const mapped = mapSttarkStatus(s[j.sttark_order_id]?.status_label);
+        if (mapped && mapped !== j.status)
           updates.push(supabase.from("jobs").update({ status: mapped }).eq("id", j.id));
-        }
       }
-      if (updates.length > 0) {
-        await Promise.allSettled(updates);
-        // The jobs realtime subscription in App will refresh the table.
-      }
+      if (updates.length > 0) await Promise.allSettled(updates);
     });
     return () => { active = false; };
   }, [jobs]);
 
   const q = query.trim().toLowerCase();
-  const filtered = q
-    ? jobs.filter((j) => (j.brand || "").toLowerCase().includes(q))
-    : jobs;
+  const filtered = q ? jobs.filter((j) => (j.brand || "").toLowerCase().includes(q)) : jobs;
 
   function toggle(id) {
-    setSelected((s) => {
-      const n = new Set(s);
-      n.has(id) ? n.delete(id) : n.add(id);
-      return n;
-    });
+    setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }
   function toggleAll() {
-    setSelected((s) => {
-      if (filtered.every((j) => s.has(j.id))) return new Set();
-      return new Set(filtered.map((j) => j.id));
-    });
+    setSelected((s) => filtered.every((j) => s.has(j.id)) ? new Set() : new Set(filtered.map((j) => j.id)));
   }
-  function exitDeleteMode() {
-    setDeleteMode(false);
-    setSelected(new Set());
-  }
+  function exitDeleteMode() { setDeleteMode(false); setSelected(new Set()); }
   function onDeleteClick() {
-    if (!deleteMode) { setDeleteMode(true); return; } // first click: reveal checkboxes
-    if (selected.size > 0) setConfirmOpen(true);       // later clicks: confirm
+    if (!deleteMode) { setDeleteMode(true); return; }
+    if (selected.size > 0) setConfirmOpen(true);
   }
-  function confirmDelete() {
-    onDeleteMany([...selected]);
-    setConfirmOpen(false);
-    exitDeleteMode();
-  }
+  function confirmDelete() { onDeleteMany([...selected]); setConfirmOpen(false); exitDeleteMode(); }
 
   const count = selected.size;
   const allChecked = filtered.length > 0 && filtered.every((j) => selected.has(j.id));
@@ -80,11 +53,6 @@ export default function WorkOrders({
   return (
     <>
       <div className="toolbar">
-        <div className="toggle">
-          <button className={view === "table" ? "toggle-on" : ""} onClick={() => setView("table")}>Table</button>
-          <button className={view === "board" ? "toggle-on" : ""} onClick={() => setView("board")}>Board</button>
-        </div>
-
         <input
           className="search-input"
           type="search"
@@ -101,22 +69,14 @@ export default function WorkOrders({
 
         <button className="btn-accent push-right" onClick={onNew}>+ New Job</button>
 
-        {view === "table" && (
-          <>
-            {deleteMode && (
-              <button className="btn-ghost" onClick={exitDeleteMode}>Cancel</button>
-            )}
-            <button
-              className="btn-ghost del-btn"
-              disabled={deleteMode && count === 0}
-              onClick={onDeleteClick}
-            >
-              {deleteMode
-                ? (count ? `Delete (${count})` : "Select orders…")
-                : "Delete"}
-            </button>
-          </>
-        )}
+        {deleteMode && <button className="btn-ghost" onClick={exitDeleteMode}>Cancel</button>}
+        <button
+          className="btn-ghost del-btn"
+          disabled={deleteMode && count === 0}
+          onClick={onDeleteClick}
+        >
+          {deleteMode ? (count ? `Delete (${count})` : "Select orders…") : "Delete"}
+        </button>
       </div>
 
       {jobs.length === 0 ? (
@@ -128,9 +88,9 @@ export default function WorkOrders({
       ) : filtered.length === 0 ? (
         <div className="empty">
           <p className="empty-title">No matches</p>
-          <p className="muted">No orders have a customer matching “{query}”.</p>
+          <p className="muted">No orders have a customer matching "{query}".</p>
         </div>
-      ) : view === "table" ? (
+      ) : (
         <JobTable
           jobs={filtered}
           onEdit={onEdit}
@@ -141,8 +101,6 @@ export default function WorkOrders({
           onToggleAll={toggleAll}
           sttark={sttark}
         />
-      ) : (
-        <JobBoard jobs={filtered} onEdit={onEdit} onStatus={onStatus} onFacility={onFacility} />
       )}
 
       {confirmOpen && (
