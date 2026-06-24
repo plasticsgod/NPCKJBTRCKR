@@ -532,10 +532,7 @@ function TaskRow({ task, users, userEmail, checked, onToggle, onOpen, onUpdate, 
         </div>
       </td>
       <td className="col-person" onClick={(e) => e.stopPropagation()}>
-        <div className="person-cell">
-          <UpdatesBadge count={updates} unread={unread} />
-          <MultiPersonPicker owners={owners} users={users} onToggle={toggleOwner} />
-        </div>
+        <MultiPersonPicker owners={owners} users={users} onToggle={toggleOwner} />
       </td>
       <td className="col-status" onClick={(e) => e.stopPropagation()}>
         <StatusPicker value={task.status} onChange={(s) => onUpdate(task.id, { status: s })} />
