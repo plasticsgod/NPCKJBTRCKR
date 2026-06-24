@@ -14,6 +14,9 @@ export default function Projects({ userEmail }) {
   const [openTaskId, setOpenTaskId] = useState(null);
   const [addingProject, setAddingProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
+  const [query, setQuery] = useState("");
+  const [filterPerson, setFilterPerson] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
   const users = useUsers();
   const newProjRef = useRef(null);
 
@@ -90,9 +93,73 @@ export default function Projects({ userEmail }) {
   const openTask = tasks.find((t) => t.id === openTaskId) || null;
   const openProject = openTask ? projects.find(p => p.id === openTask.project_id) : null;
 
+  // --- Search + filter --------------------------------------------------------
+  const q = query.trim().toLowerCase();
+  const anyActive = !!q || !!filterPerson || !!filterStatus;
+
+  function visibleTasksFor(project, projTasks) {
+    const nameHit = !!q && (project.name || "").toLowerCase().includes(q);
+    return projTasks.filter((t) => {
+      const personOK = !filterPerson || (t.owners || []).includes(filterPerson);
+      const statusOK = !filterStatus || (t.status || "To do") === filterStatus;
+      const searchOK = !q || nameHit || (t.title || "").toLowerCase().includes(q);
+      return personOK && statusOK && searchOK;
+    });
+  }
+
+  const visibleProjects = projects
+    .map((proj) => {
+      const projTasks = tasks.filter((t) => t.project_id === proj.id);
+      const visTasks = visibleTasksFor(proj, projTasks);
+      const nameHit = !!q && (proj.name || "").toLowerCase().includes(q);
+      let show;
+      if (!anyActive) show = true;
+      else if (visTasks.length > 0) show = true;
+      // a project whose name matches the search still shows (even if empty),
+      // but only when no person/status filter is narrowing things down
+      else if (nameHit && !filterPerson && !filterStatus) show = true;
+      else show = false;
+      return { proj, tasks: visTasks, show };
+    })
+    .filter((x) => x.show);
+
   return (
     <div className="projects">
       <div className="toolbar">
+        <input
+          className="search-input"
+          type="search"
+          placeholder="Search projects & tasks…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <select
+          className="filter-select"
+          value={filterPerson}
+          onChange={(e) => setFilterPerson(e.target.value)}
+          aria-label="Filter by person"
+        >
+          <option value="">All people</option>
+          {users.map((u) => (
+            <option key={u} value={u}>{displayName(u)}</option>
+          ))}
+        </select>
+        <select
+          className="filter-select"
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          aria-label="Filter by status"
+        >
+          <option value="">All statuses</option>
+          {TASK_STATUSES.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        {anyActive && (
+          <button className="link" onClick={() => { setQuery(""); setFilterPerson(""); setFilterStatus(""); }}>
+            Clear
+          </button>
+        )}
         <button className="btn-accent push-right" onClick={() => setAddingProject(true)}>+ New Project</button>
       </div>
 
@@ -102,10 +169,17 @@ export default function Projects({ userEmail }) {
           <p className="muted">Create your first project to start adding tasks.</p>
           <button className="btn-accent" onClick={() => setAddingProject(true)}>+ New Project</button>
         </div>
+      ) : anyActive && visibleProjects.length === 0 ? (
+        <div className="empty">
+          <p className="empty-title">No matches</p>
+          <p className="muted">No projects or tasks match your search and filters.</p>
+          <button className="btn-accent" onClick={() => { setQuery(""); setFilterPerson(""); setFilterStatus(""); }}>
+            Clear search &amp; filters
+          </button>
+        </div>
       ) : (
         <div className="proj-list">
-          {projects.map((proj) => {
-            const projTasks = tasks.filter((t) => t.project_id === proj.id);
+          {visibleProjects.map(({ proj, tasks: projTasks }) => {
             return (
               <ProjectGroup
                 key={proj.id}
