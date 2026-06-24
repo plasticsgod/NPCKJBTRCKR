@@ -237,7 +237,44 @@ alter publication supabase_realtime add table public.task_replies;
 
 
 -- ============================================================================
--- 8. STORAGE BUCKET  (job-files — private; holds proof uploads)
+-- 9. NOTIFICATIONS  (in-app header bell — assignments & mentions)
+-- ============================================================================
+create table if not exists public.notifications (
+  id          uuid primary key default gen_random_uuid(),
+  created_at  timestamptz not null default now(),
+  recipient   text not null,          -- email of who should see it
+  type        text not null,          -- 'assignment' | 'mention'
+  actor       text,                   -- email of who triggered it
+  task        text,
+  project     text,
+  body        text,
+  read        boolean not null default false
+);
+create index if not exists notifications_recipient_idx
+  on public.notifications (recipient, created_at desc);
+
+alter table public.notifications enable row level security;
+drop policy if exists "Read own notifications"  on public.notifications;
+drop policy if exists "Anyone can create"        on public.notifications;
+drop policy if exists "Update own notifications" on public.notifications;
+drop policy if exists "Delete own notifications" on public.notifications;
+create policy "Read own notifications"
+  on public.notifications for select to authenticated
+  using (recipient = (auth.jwt() ->> 'email'));
+create policy "Anyone can create"
+  on public.notifications for insert to authenticated with check (true);
+create policy "Update own notifications"
+  on public.notifications for update to authenticated
+  using (recipient = (auth.jwt() ->> 'email'))
+  with check (recipient = (auth.jwt() ->> 'email'));
+create policy "Delete own notifications"
+  on public.notifications for delete to authenticated
+  using (recipient = (auth.jwt() ->> 'email'));
+alter publication supabase_realtime add table public.notifications;
+
+
+-- ============================================================================
+-- STORAGE BUCKET  (job-files — private; holds proof uploads)
 -- ============================================================================
 insert into storage.buckets (id, name, public)
   values ('job-files', 'job-files', false)
