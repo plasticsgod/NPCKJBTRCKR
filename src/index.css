@@ -918,16 +918,17 @@ button {
 /* ---- Sttark live status tag ---------------------------------------------- */
 .sttark-tag {
   display: inline-block;
-  margin-top: 5px;
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  padding: 3px 7px;
-  border-radius: 999px;
-  background: #eef1fb;
-  color: #3b4ba0;
-  border: 1px solid #c7d0ef;
+  margin-top: 6px;
+  font-family: var(--ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  padding: 5px 12px;
+  border-radius: 7px;
+  background: #8a76d6;
+  color: #fff;
+  border: none;
   white-space: nowrap;
 }
 .field-hint {
