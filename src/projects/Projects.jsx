@@ -36,6 +36,9 @@ export default function Projects({ userEmail }) {
   const [selProjects, setSelProjects] = useState(() => new Set());
   const [selTasks, setSelTasks] = useState(() => new Set());
   const [pendingDelete, setPendingDelete] = useState(null);
+  // Activity-feed indicator: per-task update counts + this user's read state.
+  const [activity, setActivity] = useState({}); // { [taskId]: { count, latest, latestAuthor } }
+  const [reads, setReads] = useState({});       // { [taskId]: last_read_at ISO }
   const users = useUsers();
   const newProjRef = useRef(null);
 
@@ -49,15 +52,36 @@ export default function Projects({ userEmail }) {
     setLoading(false);
   }, []);
 
+  // Counts updates (task_posts only — NOT replies/comments) per task, plus the
+  // newest update's time/author, and this user's last-read time per task.
+  const loadActivity = useCallback(async () => {
+    const [{ data: posts }, { data: rd }] = await Promise.all([
+      supabase.from("task_posts").select("task_id, created_at, author"),
+      supabase.from("task_reads").select("task_id, last_read_at").eq("user_email", userEmail),
+    ]);
+    const a = {};
+    for (const post of posts ?? []) {
+      const m = a[post.task_id] || (a[post.task_id] = { count: 0, latest: null, latestAuthor: null });
+      m.count += 1;
+      if (!m.latest || post.created_at > m.latest) { m.latest = post.created_at; m.latestAuthor = post.author; }
+    }
+    const r = {};
+    for (const row of rd ?? []) r[row.task_id] = row.last_read_at;
+    setActivity(a);
+    setReads(r);
+  }, [userEmail]);
+
   useEffect(() => {
     load();
+    loadActivity();
     const ch = supabase
       .channel("projects-v2")
       .on("postgres_changes", { event: "*", schema: "public", table: "projects" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "task_posts" }, loadActivity)
       .subscribe();
     return () => supabase.removeChannel(ch);
-  }, [load]);
+  }, [load, loadActivity]);
 
   useEffect(() => {
     if (addingProject) newProjRef.current?.focus();
@@ -92,6 +116,22 @@ export default function Projects({ userEmail }) {
   async function updateTask(id, fields) {
     await supabase.from("tasks").update(fields).eq("id", id);
     load();
+  }
+
+  // Marks a task's updates as read for the current user (optimistic + persisted).
+  async function markRead(taskId) {
+    if (!taskId) return;
+    const now = new Date().toISOString();
+    setReads((r) => ({ ...r, [taskId]: now }));
+    await supabase.from("task_reads").upsert(
+      { task_id: taskId, user_email: userEmail, last_read_at: now },
+      { onConflict: "task_id,user_email" }
+    );
+  }
+
+  function openTask(taskId) {
+    markRead(taskId);
+    setOpenTaskId(taskId);
   }
 
   async function deleteTask(id) {
@@ -282,8 +322,10 @@ export default function Projects({ userEmail }) {
                 onToggleTask={toggleTask}
                 onUpdateName={updateProjectName}
                 onAddTask={addTask}
-                onOpenTask={setOpenTaskId}
+                onOpenTask={openTask}
                 onUpdateTask={updateTask}
+                activity={activity}
+                reads={reads}
               />
             );
           })}
@@ -305,7 +347,7 @@ export default function Projects({ userEmail }) {
           projectName={openProject?.name}
           userEmail={userEmail}
           users={users}
-          onClose={() => setOpenTaskId(null)}
+          onClose={() => { markRead(openTaskId); setOpenTaskId(null); }}
           onUpdate={updateTask}
           onDelete={deleteTask}
         />
@@ -367,7 +409,7 @@ export default function Projects({ userEmail }) {
   );
 }
 
-function ProjectGroup({ project, tasks, users, userEmail, selected, onToggleSelect, selectedTasks, onToggleTask, onUpdateName, onAddTask, onOpenTask, onUpdateTask }) {
+function ProjectGroup({ project, tasks, users, userEmail, selected, onToggleSelect, selectedTasks, onToggleTask, onUpdateName, onAddTask, onOpenTask, onUpdateTask, activity, reads }) {
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState(project.name);
   const [collapsed, setCollapsed] = useState(false);
@@ -414,13 +456,25 @@ function ProjectGroup({ project, tasks, users, userEmail, selected, onToggleSele
               </tr>
             </thead>
             <tbody>
-              {tasks.map((t) => (
-                <TaskRow key={t.id} task={t} users={users} userEmail={userEmail}
-                  checked={selectedTasks.has(t.id)}
-                  onToggle={onToggleTask}
-                  onOpen={() => onOpenTask(t.id)}
-                  onUpdate={onUpdateTask} />
-              ))}
+              {tasks.map((t) => {
+                const meta = activity[t.id];
+                const count = meta?.count || 0;
+                const lastRead = reads[t.id];
+                // Unread when there are updates from someone else that are newer
+                // than this user's last view. Your own updates never flag you.
+                const unread = count > 0
+                  && meta.latestAuthor !== userEmail
+                  && (!lastRead || new Date(meta.latest) > new Date(lastRead));
+                return (
+                  <TaskRow key={t.id} task={t} users={users} userEmail={userEmail}
+                    checked={selectedTasks.has(t.id)}
+                    onToggle={onToggleTask}
+                    onOpen={() => onOpenTask(t.id)}
+                    onUpdate={onUpdateTask}
+                    updates={count}
+                    unread={unread} />
+                );
+              })}
               <tr className="add-item-row">
                 <td colSpan={5}>
                   <button className="add-item-btn" onClick={() => onAddTask(project.id)}>+ Add item</button>
@@ -434,7 +488,7 @@ function ProjectGroup({ project, tasks, users, userEmail, selected, onToggleSele
   );
 }
 
-function TaskRow({ task, users, userEmail, checked, onToggle, onOpen, onUpdate }) {
+function TaskRow({ task, users, userEmail, checked, onToggle, onOpen, onUpdate, updates = 0, unread = false }) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [title, setTitle] = useState(task.title);
   const owners = task.owners || (task.owner ? [task.owner] : []);
@@ -465,15 +519,18 @@ function TaskRow({ task, users, userEmail, checked, onToggle, onOpen, onUpdate }
           aria-label={`Select task ${task.title}`} />
       </td>
       <td className="col-item">
-        {editingTitle ? (
-          <input className="task-title-input" value={title} autoFocus
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={saveTitle}
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => { if (e.key === "Enter") saveTitle(); if (e.key === "Escape") { setTitle(task.title); setEditingTitle(false); } }} />
-        ) : (
-          <span className="task-title" title="Double-click to rename" onDoubleClick={(e) => { e.stopPropagation(); setEditingTitle(true); }}>{task.title}</span>
-        )}
+        <div className="item-cell">
+          {editingTitle ? (
+            <input className="task-title-input" value={title} autoFocus
+              onChange={(e) => setTitle(e.target.value)}
+              onBlur={saveTitle}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => { if (e.key === "Enter") saveTitle(); if (e.key === "Escape") { setTitle(task.title); setEditingTitle(false); } }} />
+          ) : (
+            <span className="task-title" title="Double-click to rename" onDoubleClick={(e) => { e.stopPropagation(); setEditingTitle(true); }}>{task.title}</span>
+          )}
+          <UpdatesBadge count={updates} unread={unread} />
+        </div>
       </td>
       <td className="col-person" onClick={(e) => e.stopPropagation()}>
         <MultiPersonPicker owners={owners} users={users} onToggle={toggleOwner} />
@@ -485,6 +542,25 @@ function TaskRow({ task, users, userEmail, checked, onToggle, onOpen, onUpdate }
         <DatePicker value={task.due_date || ""} onChange={(v) => onUpdate(task.id, { due_date: v || null })} placeholder="Set date" />
       </td>
     </tr>
+  );
+}
+
+function UpdatesBadge({ count, unread }) {
+  const label = count === 0
+    ? "No updates yet"
+    : `${count} update${count === 1 ? "" : "s"}${unread ? " · unread" : ""}`;
+  return (
+    <span
+      className={"updates-badge" + (unread ? " unread" : "") + (count === 0 ? " empty" : "")}
+      title={label}
+      aria-label={label}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+      </svg>
+      {count > 0 && <span className="updates-count">{count}</span>}
+    </span>
   );
 }
 
