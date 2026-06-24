@@ -987,9 +987,9 @@ button {
 .avatar.sm { width: 22px; height: 22px; font-size: 9px; }
 
 /* ---- Task Drawer v2 ------------------------------------------------------ */
-.drawer-wide { width: 580px; }
+.drawer-wide { width: 660px; }
 .drawer-overlay { position: fixed; inset: 0; background: rgba(20,17,13,.4); display: flex; align-items: stretch; justify-content: flex-end; z-index: 100; }
-.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 460px; max-width: 96vw; background: var(--bg); border-left: 1px solid var(--hairline); display: flex; flex-direction: column; box-shadow: -8px 0 30px rgba(0,0,0,.12); }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 520px; max-width: 96vw; background: var(--bg); border-left: 1px solid var(--hairline); display: flex; flex-direction: column; box-shadow: -8px 0 30px rgba(0,0,0,.12); }
 .drawer-head { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--hairline); flex-wrap: wrap; }
 .drawer-breadcrumb { font-size: 12px; color: var(--ink-3); width: 100%; margin-bottom: -4px; }
 .drawer-title { flex: 1; font-family: var(--display); font-size: 20px; text-transform: uppercase; border: none; background: transparent; color: var(--ink); min-width: 0; }
@@ -1053,3 +1053,27 @@ button {
 .person-option input[type="checkbox"] { accent-color: var(--accent); }
 .person-clear { display: block; width: 100%; text-align: center; padding: 6px; margin-top: 4px; border-top: 1px solid var(--hairline-soft); font-size: 12px; }
 .drawer-assignees { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+/* ---- Custom Date Picker -------------------------------------------------- */
+.dp-wrap { position: relative; display: inline-block; }
+.dp-trigger { display: flex; align-items: center; gap: 6px; background: #fff; border: 1px solid var(--hairline); border-radius: 8px; padding: 7px 12px; cursor: pointer; font-family: var(--ui); font-size: 13px; color: var(--ink); white-space: nowrap; }
+.dp-trigger:hover { border-color: var(--ink-3); }
+.dp-placeholder { color: var(--ink-3); }
+.dp-clear { color: var(--ink-3); font-size: 11px; margin-left: 4px; }
+.dp-clear:hover { color: var(--accent); }
+.dp-popup { position: absolute; top: calc(100% + 6px); left: 0; z-index: 300; background: #fff; border: 1px solid var(--hairline); border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,.14); padding: 14px; min-width: 260px; }
+.dp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.dp-month { font-family: var(--display); font-size: 14px; text-transform: uppercase; letter-spacing: .04em; }
+.dp-nav { background: none; border: none; cursor: pointer; font-size: 18px; color: var(--ink-2); padding: 4px 8px; border-radius: 6px; }
+.dp-nav:hover { background: var(--panel); }
+.dp-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.dp-dayname { text-align: center; font-family: var(--mono); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); padding: 4px 0; }
+.dp-day { background: none; border: none; cursor: pointer; font-size: 13px; font-family: var(--ui); padding: 6px; border-radius: 6px; text-align: center; color: var(--ink); }
+.dp-day:hover { background: var(--panel); }
+.dp-sel { background: var(--accent) !important; color: #fff !important; font-weight: 700; }
+.dp-today { color: var(--accent); font-weight: 600; }
+.dp-foot { display: flex; justify-content: space-between; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--hairline-soft); }
+
+/* Compact date trigger for table rows */
+.col-date .dp-trigger { border: none; background: transparent; padding: 4px 6px; font-size: 12px; color: var(--ink-2); }
+.col-date .dp-trigger:hover { background: var(--panel); border-radius: 6px; }
