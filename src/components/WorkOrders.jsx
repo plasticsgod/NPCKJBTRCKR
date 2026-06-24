@@ -32,7 +32,12 @@ export default function WorkOrders({
   }, [jobs]);
 
   const q = query.trim().toLowerCase();
-  const filtered = q ? jobs.filter((j) => (j.brand || "").toLowerCase().includes(q)) : jobs;
+  const filtered = q
+    ? jobs.filter((j) =>
+        [j.job_title, j.brand, j.po_number, j.sttark_order_id]
+          .some((v) => (v || "").toLowerCase().includes(q))
+      )
+    : jobs;
 
   function toggle(id) {
     setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -56,7 +61,7 @@ export default function WorkOrders({
         <input
           className="search-input"
           type="search"
-          placeholder="Search by customer…"
+          placeholder="Search by job, customer, PO, or Sttark ID…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           list="customers"
