@@ -479,15 +479,76 @@ function TaskRow({ task, users, userEmail, checked, onToggle, onOpen, onUpdate }
         <MultiPersonPicker owners={owners} users={users} onToggle={toggleOwner} />
       </td>
       <td className="col-status" onClick={(e) => e.stopPropagation()}>
-        <select className={statusClass(task.status)} value={task.status || "To do"}
-          onChange={(e) => onUpdate(task.id, { status: e.target.value })}>
-          {TASK_STATUSES.map((s) => <option key={s}>{s}</option>)}
-        </select>
+        <StatusPicker value={task.status} onChange={(s) => onUpdate(task.id, { status: s })} />
       </td>
       <td className={"col-date" + (dueState(task) ? " due-" + dueState(task) : "")} onClick={(e) => e.stopPropagation()}>
         <DatePicker value={task.due_date || ""} onChange={(v) => onUpdate(task.id, { due_date: v || null })} placeholder="Set date" />
       </td>
     </tr>
+  );
+}
+
+function StatusPicker({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState(null);
+  const ref = useRef(null);
+  const triggerRef = useRef(null);
+  const current = value || "To do";
+  const slug = (s) => s.toLowerCase().replace(/\s+/g, "-");
+
+  useEffect(() => {
+    function onClickOutside(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  // Position against the viewport so it's never clipped by the table's scroll
+  // container, flipping up near the bottom edge.
+  useLayoutEffect(() => {
+    if (!open) return;
+    function place() {
+      const el = triggerRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const PW = Math.max(180, r.width), PH = 230, GAP = 6, EDGE = 8;
+      let left = r.left;
+      if (left + PW > window.innerWidth - EDGE) left = r.right - PW;
+      left = Math.max(EDGE, left);
+      let top = r.bottom + GAP;
+      if (top + PH > window.innerHeight - EDGE) {
+        const up = r.top - GAP - PH;
+        top = up >= EDGE ? up : Math.max(EDGE, window.innerHeight - PH - EDGE);
+      }
+      setCoords({ top, left, width: r.width });
+    }
+    place();
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [open]);
+
+  return (
+    <div className="status-picker" ref={ref}>
+      <button type="button" ref={triggerRef} className={"tpill tpill-" + slug(current)}
+        onClick={() => setOpen((o) => !o)}>
+        {current}
+      </button>
+      {open && coords && (
+        <div className="status-menu"
+          style={{ position: "fixed", top: coords.top, left: coords.left, minWidth: coords.width }}>
+          {TASK_STATUSES.map((s) => (
+            <button key={s} type="button"
+              className={"status-option tpill-" + slug(s) + (s === current ? " is-current" : "")}
+              onClick={() => { onChange(s); setOpen(false); }}>
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
