@@ -1040,3 +1040,16 @@ button {
   .drawer-wide { width: 100vw; }
   .drawer-meta { gap: 10px; }
 }
+
+/* ---- Multi-person picker ------------------------------------------------- */
+.multi-person { position: relative; }
+.person-avatars { display: flex; align-items: center; gap: 4px; cursor: pointer; padding: 4px; border-radius: 6px; }
+.person-avatars:hover { background: var(--panel); }
+.not-assigned { font-size: 12px; color: var(--ink-3); }
+.assign-caret { font-size: 10px; color: var(--ink-3); margin-left: 2px; }
+.person-dropdown { position: absolute; top: 100%; left: 0; z-index: 200; background: #fff; border: 1px solid var(--hairline); border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.12); padding: 6px; min-width: 200px; }
+.person-option { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+.person-option:hover { background: var(--panel); }
+.person-option input[type="checkbox"] { accent-color: var(--accent); }
+.person-clear { display: block; width: 100%; text-align: center; padding: 6px; margin-top: 4px; border-top: 1px solid var(--hairline-soft); font-size: 12px; }
+.drawer-assignees { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
