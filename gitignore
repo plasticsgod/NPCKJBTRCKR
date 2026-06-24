@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Environment variables — keep your keys out of git
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+dist-ssr/
+
+# Supabase CLI local cache (machine state, not source)
+supabase/.temp/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor / OS junk
+.vscode/
+.idea/
+.DS_Store
+*.swp
