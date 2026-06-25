@@ -9,6 +9,7 @@ import PlasticsEstimator from "./components/PlasticsEstimator";
 import Projects from "./projects/Projects";
 import JobModal from "./components/JobModal";
 import { Toaster, toast } from "./components/Toaster";
+import SearchOverlay from "./components/SearchOverlay";
 
 const PAGES = ["dashboard", "work_orders", "projects", "plastics"];
 
@@ -27,6 +28,8 @@ export default function App() {
   const [editing, setEditing] = useState(null);
   const [page, setPageState] = useState(getPageFromHash);
   const [navOpen, setNavOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [focusTaskId, setFocusTaskId] = useState(null);
 
   function setPage(p) {
     setPageState(p);
@@ -39,6 +42,34 @@ export default function App() {
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
+
+  // ⌘K / Ctrl+K opens global search from anywhere.
+  useEffect(() => {
+    function onKey(e) {
+      if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) {
+        e.preventDefault();
+        setSearchOpen((v) => !v);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Search result handlers: close the palette and open the item on its page.
+  function openTaskFromSearch(taskId) {
+    setSearchOpen(false);
+    setPage("projects");
+    setFocusTaskId(taskId);
+  }
+  function openJobFromSearch(job) {
+    setSearchOpen(false);
+    setPage("work_orders");
+    setEditing(job);
+  }
+  function openProjectFromSearch() {
+    setSearchOpen(false);
+    setPage("projects");
+  }
 
   // --- Auth -------------------------------------------------------------------
   useEffect(() => {
@@ -153,6 +184,7 @@ export default function App() {
         email={session.user.email}
         onMenu={() => setNavOpen(true)}
         onSignOut={() => supabase.auth.signOut()}
+        onSearch={() => setSearchOpen(true)}
       />
 
       <Sidebar
@@ -169,7 +201,11 @@ export default function App() {
         {page === "plastics" ? (
           <PlasticsEstimator userEmail={session.user.email} />
         ) : page === "projects" ? (
-          <Projects userEmail={session.user.email} />
+          <Projects
+            userEmail={session.user.email}
+            focusTaskId={focusTaskId}
+            onTaskFocused={() => setFocusTaskId(null)}
+          />
         ) : loading ? (
           <div className="muted pad">Loading…</div>
         ) : page === "dashboard" ? (
@@ -197,6 +233,16 @@ export default function App() {
       )}
 
       <Toaster />
+
+      {searchOpen && (
+        <SearchOverlay
+          jobs={jobs}
+          onClose={() => setSearchOpen(false)}
+          onOpenTask={openTaskFromSearch}
+          onOpenJob={openJobFromSearch}
+          onOpenProject={openProjectFromSearch}
+        />
+      )}
     </div>
   );
 }
