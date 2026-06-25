@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "../supabaseClient";
 import NotificationBell from "./NotificationBell";
 import { displayName, nameInitials, avatarStyle } from "../projects/userMap";
@@ -112,7 +113,7 @@ function ChangeEmailModal({ currentEmail, onClose }) {
     setDone(true);
   }
 
-  return (
+  return createPortal(
     <div className="pm-overlay" onClick={onClose}>
       <div className="pm-modal" onClick={(e) => e.stopPropagation()}>
         {done ? (
@@ -154,6 +155,7 @@ function ChangeEmailModal({ currentEmail, onClose }) {
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
