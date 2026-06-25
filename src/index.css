@@ -1135,7 +1135,21 @@ button {
 .post-time { font-size: 11px; color: var(--ink-3); }
 .post-body { font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
 .post-del { font-size: 11px; }
-.post-actions { display: flex; gap: 12px; }
+.post-actions { display: flex; align-items: center; gap: 12px; }
+.reply-actions { display: flex; align-items: center; margin-top: 4px; }
+
+/* Like button — gray by default, accent-colored when you've liked it */
+.like-wrap { position: relative; display: inline-flex; }
+.like-btn { display: inline-flex; align-items: center; gap: 5px; background: transparent; border: none; cursor: pointer; color: var(--ink-3); font-family: var(--mono); font-size: 12px; font-weight: 700; padding: 4px 7px; border-radius: 8px; transition: color .12s, background .12s; }
+.like-btn svg { display: block; }
+.like-btn:hover { background: var(--hairline-soft); color: var(--ink-2); }
+.like-btn.liked { color: var(--accent); }
+.like-btn.liked:hover { color: var(--accent); }
+.like-count { line-height: 1; }
+/* Hover list of people who liked */
+.like-tip { position: absolute; bottom: calc(100% + 6px); left: 0; z-index: 70; background: var(--ink); color: #fff; border-radius: 8px; padding: 7px 10px; font-family: var(--ui); font-size: 12px; line-height: 1.55; box-shadow: 0 12px 32px rgba(0,0,0,.28); opacity: 0; visibility: hidden; transform: translateY(3px); transition: opacity .12s, transform .12s, visibility .12s; pointer-events: none; }
+.like-wrap:hover .like-tip { opacity: 1; visibility: visible; transform: translateY(0); }
+.like-tip-row { white-space: nowrap; }
 
 /* Reply thread */
 .reply-thread { display: flex; flex-direction: column; gap: 10px; border-left: 2px solid var(--hairline); padding-left: 14px; margin-left: 18px; }
