@@ -606,9 +606,13 @@ button {
   .header-right {
     width: 100%;
     margin-left: 0;
-    gap: 10px;
-    justify-content: space-between;
+    gap: 14px;
+    justify-content: flex-end;
   }
+  /* Anchor the notification dropdown to the header (not the off-center bell)
+     so it opens as a full-width sheet and never runs off-screen. */
+  .notif { position: static; }
+  .notif-panel { left: 8px; right: 8px; width: auto; max-width: none; }
   .account {
     border-left: none;
     padding-left: 0;
