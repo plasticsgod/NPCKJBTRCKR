@@ -29,12 +29,24 @@ export function notifyAssignment({ to, task, project, assignedBy }) {
   recordInApp({ recipient: to, type: "assignment", actor: assignedBy, task, project });
 }
 
-// Call when someone is @mentioned in a post or reply.
+// Call when someone @mentions people in a post or reply.
 export function notifyMentions({ mentions = [], task, project, mentionedBy, body }) {
   for (const to of mentions) {
     if (to !== mentionedBy) {
       notify({ type: "mention", to, task, project, mentionedBy, body });
       recordInApp({ recipient: to, type: "mention", actor: mentionedBy, task, project, body });
     }
+  }
+}
+
+// Call when someone posts a comment/reply on a task. Gives everyone ASSIGNED to
+// that task an in-app heads-up ("someone commented on a task you're on"),
+// skipping the author and anyone already @mentioned (they get a mention notice).
+// In-app only by design, so active discussions don't flood inboxes with email.
+export function notifyComment({ owners = [], author, task, project, body, mentions = [] }) {
+  const skip = new Set([author, ...mentions]);
+  for (const to of owners) {
+    if (!to || skip.has(to)) continue;
+    recordInApp({ recipient: to, type: "comment", actor: author, task, project, body });
   }
 }

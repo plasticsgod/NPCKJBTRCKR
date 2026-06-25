@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef, useLayoutEffect } from "react";
 import { supabase } from "../supabaseClient";
 import { TASK_STATUSES } from "./constants";
-import { notifyAssignment, notifyMentions } from "./notifications";
+import { notifyAssignment, notifyMentions, notifyComment } from "./notifications";
 import { displayName, nameInitials, avatarStyle } from "./userMap";
 import DatePicker from "../components/DatePicker";
 
@@ -253,6 +253,7 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
     const mentions = parseMentions(body, users);
     await supabase.from("task_posts").insert({ task_id: task.id, author: userEmail, body, mentions, images });
     notifyMentions({ mentions, task: task.title, project: projectName || "", mentionedBy: userEmail, body });
+    notifyComment({ owners: local.owners || [], author: userEmail, task: task.title, project: projectName || "", body, mentions });
     setNewPost("");
     setNewImages([]);
     setPosting(false);
@@ -335,7 +336,7 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
 
             {[...posts].reverse().map((post) => (
               <PostCard key={post.id} post={post} users={users} userEmail={userEmail}
-                taskTitle={task.title} projectName={projectName}
+                taskTitle={task.title} projectName={projectName} owners={local.owners || []}
                 likes={likes} onToggleLike={toggleLike}
                 onDelete={deletePost} onReply={loadPosts} />
             ))}
@@ -397,7 +398,7 @@ function KebabMenu({ onEdit, onDelete }) {
   );
 }
 
-function PostCard({ post, users, userEmail, taskTitle, projectName, likes, onToggleLike, onDelete, onReply }) {
+function PostCard({ post, users, userEmail, taskTitle, projectName, owners, likes, onToggleLike, onDelete, onReply }) {
   const [showReply, setShowReply] = useState(false);
   const [reply, setReply] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -416,6 +417,7 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, likes, onTog
     const mentions = parseMentions(body, users);
     await supabase.from("task_replies").insert({ post_id: post.id, author: userEmail, body, mentions, images });
     notifyMentions({ mentions, task: taskTitle, project: projectName || "", mentionedBy: userEmail, body });
+    notifyComment({ owners: owners || [], author: userEmail, task: taskTitle, project: projectName || "", body, mentions });
     setReply("");
     setReplyImages([]);
     setSubmitting(false);
