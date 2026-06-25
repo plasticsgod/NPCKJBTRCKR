@@ -5,6 +5,60 @@ import { notifyAssignment, notifyMentions } from "./notifications";
 import { displayName, nameInitials, avatarStyle } from "./userMap";
 import DatePicker from "../components/DatePicker";
 
+// --- Image attachments -------------------------------------------------------
+const IMG_BUCKET = "task-images";
+const MAX_IMAGES = 4;
+
+function publicUrl(path) {
+  return supabase.storage.from(IMG_BUCKET).getPublicUrl(path).data.publicUrl;
+}
+
+// Resize + compress an image in the browser before upload so it stays small
+// (protects Supabase storage + bandwidth). Returns a JPEG blob.
+async function compressImage(file, maxDim = 1600, quality = 0.8) {
+  if (!file.type?.startsWith("image/")) return file;
+  try {
+    const dataUrl = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+    const img = await new Promise((res, rej) => {
+      const i = new Image();
+      i.onload = () => res(i);
+      i.onerror = rej;
+      i.src = dataUrl;
+    });
+    let { width, height } = img;
+    if (width > maxDim || height > maxDim) {
+      const scale = Math.min(maxDim / width, maxDim / height);
+      width = Math.round(width * scale);
+      height = Math.round(height * scale);
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = width; canvas.height = height;
+    canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+    const blob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", quality));
+    return blob || file;
+  } catch {
+    return file; // if anything fails, fall back to the original file
+  }
+}
+
+// Compress + upload a list of files to storage; returns the stored paths.
+async function uploadImages(files, taskId) {
+  const paths = [];
+  for (const file of files) {
+    const blob = await compressImage(file);
+    const path = `${taskId}/${crypto.randomUUID()}.jpg`;
+    const { error } = await supabase.storage.from(IMG_BUCKET)
+      .upload(path, blob, { contentType: "image/jpeg", upsert: false });
+    if (!error) paths.push(path);
+  }
+  return paths;
+}
+
 // Resizable task drawer — width is remembered per browser via localStorage.
 const DRAWER_WIDTH_KEY = "npck_task_drawer_width";
 const DRAWER_MIN_W = 420;
@@ -93,6 +147,7 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
   const [posts, setPosts] = useState([]);
   const [likes, setLikes] = useState({}); // { [target_id]: [user_email, ...] }
   const [newPost, setNewPost] = useState("");
+  const [newImages, setNewImages] = useState([]);
   const [posting, setPosting] = useState(false);
 
   // --- Resizable drawer width (remembered in this browser) -------------------
@@ -192,18 +247,21 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
 
   async function submitPost() {
     const body = newPost.trim();
-    if (!body) return;
+    if (!body && newImages.length === 0) return;
     setPosting(true);
+    const images = newImages.length ? await uploadImages(newImages, task.id) : [];
     const mentions = parseMentions(body, users);
-    await supabase.from("task_posts").insert({ task_id: task.id, author: userEmail, body, mentions });
+    await supabase.from("task_posts").insert({ task_id: task.id, author: userEmail, body, mentions, images });
     notifyMentions({ mentions, task: task.title, project: projectName || "", mentionedBy: userEmail, body });
     setNewPost("");
+    setNewImages([]);
     setPosting(false);
     loadPosts();
   }
 
-  async function deletePost(id) {
+  async function deletePost(id, images) {
     if (!confirm("Delete this update?")) return;
+    if (images?.length) await supabase.storage.from(IMG_BUCKET).remove(images);
     await supabase.from("task_posts").delete().eq("id", id);
     loadPosts();
   }
@@ -264,8 +322,9 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
               <div className="compose-right">
                 <MentionTextarea value={newPost} onChange={setNewPost} users={users}
                   placeholder={`Write an update… Use @ to mention someone`} rows={2} />
+                <ImageAttach files={newImages} setFiles={setNewImages} disabled={posting} />
                 <div className="compose-foot">
-                  <button className="btn-accent" onClick={submitPost} disabled={!newPost.trim() || posting}>
+                  <button className="btn-accent" onClick={submitPost} disabled={(!newPost.trim() && newImages.length === 0) || posting}>
                     {posting ? "Posting…" : "Post update"}
                   </button>
                 </div>
@@ -345,24 +404,28 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, likes, onTog
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(post.body);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [replyImages, setReplyImages] = useState([]);
   const replies = post.task_replies ?? [];
   const mine = post.author === userEmail;
 
   async function submitReply() {
     const body = reply.trim();
-    if (!body) return;
+    if (!body && replyImages.length === 0) return;
     setSubmitting(true);
+    const images = replyImages.length ? await uploadImages(replyImages, post.task_id) : [];
     const mentions = parseMentions(body, users);
-    await supabase.from("task_replies").insert({ post_id: post.id, author: userEmail, body, mentions });
+    await supabase.from("task_replies").insert({ post_id: post.id, author: userEmail, body, mentions, images });
     notifyMentions({ mentions, task: taskTitle, project: projectName || "", mentionedBy: userEmail, body });
     setReply("");
+    setReplyImages([]);
     setSubmitting(false);
     setShowReply(false);
     onReply();
   }
 
-  async function deleteReply(id) {
+  async function deleteReply(id, images) {
     if (!confirm("Delete this reply?")) return;
+    if (images?.length) await supabase.storage.from(IMG_BUCKET).remove(images);
     await supabase.from("task_replies").delete().eq("id", id);
     onReply();
   }
@@ -388,7 +451,7 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, likes, onTog
           <span className="post-time">{fmtTime(post.created_at)}</span>
         </div>
         {mine && !editing && (
-          <KebabMenu onEdit={startEdit} onDelete={() => onDelete(post.id)} />
+          <KebabMenu onEdit={startEdit} onDelete={() => onDelete(post.id, post.images)} />
         )}
       </div>
 
@@ -407,6 +470,7 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, likes, onTog
           <RichText body={post.body} users={users} />
         </div>
       )}
+      <ImageGrid paths={post.images} />
 
       {/* Replies */}
       {replies.length > 0 && (
@@ -433,8 +497,9 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, likes, onTog
           <div className="compose-right">
             <MentionTextarea value={reply} onChange={setReply} users={users}
               placeholder="Write a reply… Use @ to mention" rows={2} />
+            <ImageAttach files={replyImages} setFiles={setReplyImages} disabled={submitting} />
             <div className="compose-foot">
-              <button className="btn-accent" onClick={submitReply} disabled={!reply.trim() || submitting}>
+              <button className="btn-accent" onClick={submitReply} disabled={(!reply.trim() && replyImages.length === 0) || submitting}>
                 {submitting ? "…" : "Reply"}
               </button>
             </div>
@@ -470,7 +535,7 @@ function ReplyItem({ reply, users, userEmail, likers, onToggleLike, onChanged, o
           <span className="post-time">{fmtTime(reply.created_at)}</span>
           {mine && !editing && (
             <KebabMenu onEdit={() => { setDraft(reply.body); setEditing(true); }}
-              onDelete={() => onDelete(reply.id)} />
+              onDelete={() => onDelete(reply.id, reply.images)} />
           )}
         </div>
         {editing ? (
@@ -486,6 +551,7 @@ function ReplyItem({ reply, users, userEmail, likers, onToggleLike, onChanged, o
         ) : (
           <>
             <RichText body={reply.body} users={users} />
+            <ImageGrid paths={reply.images} />
             <div className="reply-actions">
               <LikeButton targetType="reply" targetId={reply.id} likers={likers}
                 userEmail={userEmail} onToggle={onToggleLike} />
@@ -526,6 +592,64 @@ function LikeButton({ targetType, targetId, likers, userEmail, onToggle }) {
         </div>
       )}
     </div>
+  );
+}
+
+// Image attach control for the composer: pick images, preview, remove before posting.
+function ImageAttach({ files, setFiles, disabled }) {
+  const inputRef = useRef(null);
+  function pick(e) {
+    const chosen = Array.from(e.target.files || []).filter((f) => f.type.startsWith("image/"));
+    setFiles((prev) => [...prev, ...chosen].slice(0, MAX_IMAGES));
+    e.target.value = "";
+  }
+  function removeAt(i) { setFiles((prev) => prev.filter((_, idx) => idx !== i)); }
+  const full = files.length >= MAX_IMAGES;
+  return (
+    <div className="img-attach">
+      <input ref={inputRef} type="file" accept="image/*" multiple hidden onChange={pick} />
+      <button type="button" className="attach-btn" onClick={() => inputRef.current?.click()}
+        disabled={disabled || full} title={full ? `Up to ${MAX_IMAGES} images` : "Attach image"}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" />
+          <path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21" />
+        </svg>
+        {full ? `Max ${MAX_IMAGES}` : "Add image"}
+      </button>
+      {files.length > 0 && (
+        <div className="attach-previews">
+          {files.map((f, i) => (
+            <div className="attach-preview" key={i}>
+              <img src={URL.createObjectURL(f)} alt="" />
+              <button type="button" className="attach-remove" onClick={() => removeAt(i)} aria-label="Remove">✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Thumbnails of a comment's images, with a click-to-zoom lightbox.
+function ImageGrid({ paths }) {
+  const [zoom, setZoom] = useState(null);
+  if (!paths || paths.length === 0) return null;
+  return (
+    <>
+      <div className="img-grid">
+        {paths.map((p) => (
+          <button key={p} type="button" className="img-thumb" onClick={() => setZoom(publicUrl(p))}>
+            <img src={publicUrl(p)} alt="" loading="lazy" />
+          </button>
+        ))}
+      </div>
+      {zoom && (
+        <div className="img-lightbox" onClick={() => setZoom(null)} role="dialog" aria-modal="true">
+          <img src={zoom} alt="" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
+    </>
   );
 }
 
