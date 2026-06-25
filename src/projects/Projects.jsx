@@ -4,7 +4,7 @@ import { TASK_STATUSES, statusClass } from "./constants";
 import { useUsers } from "./useUsers";
 import TaskDrawer from "./TaskDrawer";
 import { notifyAssignment } from "./notifications";
-import { displayName, nameInitials } from "./userMap";
+import { displayName, nameInitials, avatarStyle } from "./userMap";
 import DatePicker from "../components/DatePicker";
 
 // Classifies a task's due date for highlighting and filtering.
@@ -673,7 +673,7 @@ function MultiPersonPicker({ owners, users, onToggle }) {
         {owners.length === 0
           ? <span className="not-assigned">Not Assigned</span>
           : owners.map(e => (
-            <span key={e} className="avatar sm" title={displayName(e)}>{nameInitials(e)}</span>
+            <span key={e} className="avatar sm" title={displayName(e)} style={avatarStyle(e)}>{nameInitials(e)}</span>
           ))
         }
         <span className="assign-caret">▾</span>
@@ -684,7 +684,7 @@ function MultiPersonPicker({ owners, users, onToggle }) {
             <label key={u} className="person-option">
               <input type="checkbox" checked={owners.includes(u)}
                 onChange={() => onToggle(u)} />
-              <span className="avatar sm">{nameInitials(u)}</span>
+              <span className="avatar sm" style={avatarStyle(u)}>{nameInitials(u)}</span>
               <span>{displayName(u)}</span>
             </label>
           ))}

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef, useLayoutEffect } from "react
 import { supabase } from "../supabaseClient";
 import { TASK_STATUSES } from "./constants";
 import { notifyAssignment, notifyMentions } from "./notifications";
-import { displayName, nameInitials } from "./userMap";
+import { displayName, nameInitials, avatarStyle } from "./userMap";
 import DatePicker from "../components/DatePicker";
 
 // Resizable task drawer — width is remembered per browser via localStorage.
@@ -79,7 +79,7 @@ function MentionTextarea({ value, onChange, users, placeholder, rows = 3 }) {
         <ul className="mention-list">
           {suggestions.map((u) => (
             <li key={u} onMouseDown={(e) => { e.preventDefault(); pickSuggestion(u); }}>
-              <span className="avatar sm">{nameInitials(u)}</span> {displayName(u)}
+              <span className="avatar sm" style={avatarStyle(u)}>{nameInitials(u)}</span> {displayName(u)}
             </li>
           ))}
         </ul>
@@ -227,7 +227,7 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
 
             {/* Compose new post */}
             <div className="compose-box">
-              <span className="avatar sm">{nameInitials(userEmail)}</span>
+              <span className="avatar sm" style={avatarStyle(userEmail)}>{nameInitials(userEmail)}</span>
               <div className="compose-right">
                 <MentionTextarea value={newPost} onChange={setNewPost} users={users}
                   placeholder={`Write an update… Use @ to mention someone`} rows={2} />
@@ -349,7 +349,7 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, onDelete, on
   return (
     <div className="post-card">
       <div className="post-head">
-        <span className="avatar">{nameInitials(post.author)}</span>
+        <span className="avatar" style={avatarStyle(post.author)}>{nameInitials(post.author)}</span>
         <div className="post-meta">
           <span className="post-author">{displayName(post.author)}</span>
           <span className="post-time">{fmtTime(post.created_at)}</span>
@@ -393,7 +393,7 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, onDelete, on
       </div>
       {showReply && (
         <div className="reply-compose">
-          <span className="avatar sm">{nameInitials(userEmail)}</span>
+          <span className="avatar sm" style={avatarStyle(userEmail)}>{nameInitials(userEmail)}</span>
           <div className="compose-right">
             <MentionTextarea value={reply} onChange={setReply} users={users}
               placeholder="Write a reply… Use @ to mention" rows={2} />
@@ -427,7 +427,7 @@ function ReplyItem({ reply, users, userEmail, onChanged, onDelete }) {
 
   return (
     <div className="reply">
-      <span className="avatar sm">{nameInitials(reply.author)}</span>
+      <span className="avatar sm" style={avatarStyle(reply.author)}>{nameInitials(reply.author)}</span>
       <div className="reply-content">
         <div className="reply-meta">
           <span className="post-author">{displayName(reply.author)}</span>
@@ -569,7 +569,7 @@ function MultiPersonPicker({ owners, users, onToggle }) {
         {owners.length === 0
           ? <span className="not-assigned">Not Assigned</span>
           : owners.map(e => (
-            <span key={e} className="avatar sm" title={displayName(e)}>{nameInitials(e)}</span>
+            <span key={e} className="avatar sm" title={displayName(e)} style={avatarStyle(e)}>{nameInitials(e)}</span>
           ))
         }
         <span className="assign-caret">▾</span>
@@ -580,7 +580,7 @@ function MultiPersonPicker({ owners, users, onToggle }) {
             <label key={u} className="person-option">
               <input type="checkbox" checked={owners.includes(u)}
                 onChange={() => onToggle(u)} />
-              <span className="avatar sm">{nameInitials(u)}</span>
+              <span className="avatar sm" style={avatarStyle(u)}>{nameInitials(u)}</span>
               <span>{displayName(u)}</span>
             </label>
           ))}
