@@ -21,7 +21,7 @@ function dueState(task) {
   return null;
 }
 
-export default function Projects({ userEmail }) {
+export default function Projects({ userEmail, focusTaskId, onTaskFocused }) {
   const [projects, setProjects] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -159,6 +159,15 @@ export default function Projects({ userEmail }) {
     markRead(taskId);
     setOpenTaskId(taskId);
   }
+
+  // Open a task requested from global search, once tasks have loaded. Clearing
+  // the request in App prevents it re-opening when you later revisit Projects.
+  useEffect(() => {
+    if (focusTaskId && tasks.some((t) => t.id === focusTaskId)) {
+      handleOpenTask(focusTaskId);
+      onTaskFocused && onTaskFocused();
+    }
+  }, [focusTaskId, tasks]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function deleteTask(id) {
     if (!confirm("Delete this task?")) return;
