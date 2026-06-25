@@ -15,10 +15,17 @@ It's one app with four sections:
   a branded cover sheet) and **Artwork** (links to approved files).
 - **Projects** — a Monday.com-style task tracker: projects, tasks, multiple
   assignees, due dates, and a per-task activity feed with posts, threaded replies,
-  and `@mentions` that send email notifications.
+  likes, image **and file attachments**, and `@mentions`. Tasks can be filtered to
+  **My tasks**, **sorted** (due date / status / name), **dragged between projects**,
+  and each project shows a **progress bar**.
 - **Plastics Estimator** — a tub/lid pricing and quoting tool: signed, versioned
   pricing; freight-lane and tariff math; a live price list; a quote builder; and a
   branded PDF quote export.
+
+Across every page: a **global search** palette (the header search button or
+**⌘K / Ctrl+K**) that jumps to any task, project, or work order; an in-app
+**notification bell** (assignments, mentions, and comments); and brief **toast**
+confirmations for saves, moves, and deletes.
 
 This guide assumes you've never deployed a site before. Follow it top to bottom
 once and you'll have a live, password-protected app your team can use.
@@ -73,11 +80,19 @@ next.
 8. `add_projects.sql` — projects and tasks.
 9. `add_multi_assignee.sql` — upgrades tasks to support multiple assignees.
 10. `add_projects_v2.sql` — adds the posts/replies activity feed.
+11. `add_notifications.sql` — the in-app notification bell table.
+12. `add_task_reads.sql` — per-user read tracking for task updates.
+13. `add_task_images.sql` — image attachments: the **`task-images`** storage bucket
+    (public) and `images` columns on posts/replies.
+14. `add_task_likes.sql` — likes on posts/replies.
+15. `add_task_files.sql` — file attachments (`files` columns; reuses the
+    `task-images` bucket under a `files/` subpath).
 
 > **Why so many files?** These are the database changes as they were built up over
 > time. Steps 8 → 9 → 10 in particular *must* run in order: step 10 removes things
-> step 8 created. (If you'd like, this can all be consolidated into one file later —
-> see "Maintenance ideas" at the end.)
+> step 8 created. Steps 11–15 are additive and can be run in the order shown.
+> A consolidated `schema-consolidated.sql` exists as a from-scratch reference, but
+> the live database was built from these individual files.
 
 ### 1c. Create the storage bucket (for proof files)
 
@@ -305,6 +320,11 @@ nutrapack-app/
 │  ├─ add_projects.sql                           │
 │  ├─ add_multi_assignee.sql                     │
 │  ├─ add_projects_v2.sql       posts + replies ─┘
+│  ├─ add_notifications.sql     in-app bell
+│  ├─ add_task_reads.sql        read tracking
+│  ├─ add_task_images.sql       image attach + task-images bucket
+│  ├─ add_task_likes.sql        likes
+│  ├─ add_task_files.sql        file attach
 │  └─ functions/
 │     ├─ send-notification/     assignment & mention emails (Resend)
 │     ├─ cleanup-files/         daily proof-file cleanup (cron)
@@ -316,8 +336,11 @@ nutrapack-app/
    ├─ index.css                 all styling (NutraPack look)
    ├─ components/
    │  ├─ Auth.jsx               sign in / sign up
-   │  ├─ Header.jsx             top bar (brand, account, sign out)
+   │  ├─ Header.jsx             top bar (brand, search, notifications, account menu)
    │  ├─ Sidebar.jsx            slide-out navigation between the four pages
+   │  ├─ SearchOverlay.jsx      global ⌘K search (tasks, projects, work orders)
+   │  ├─ NotificationBell.jsx   in-app notifications dropdown
+   │  ├─ Toaster.jsx            global toast() messages (mounted once in App)
    │  ├─ Dashboard.jsx          YTD stats + orders-by-status
    │  ├─ WorkOrders.jsx         job list, search, bulk delete, Sttark sync
    │  ├─ JobTable.jsx           the work-orders table
@@ -360,10 +383,15 @@ The tables the app uses, and what each is for:
 | `profiles` | registered users, so Projects can list and `@mention` people |
 | `projects` | project groups in the Projects page |
 | `tasks` | tasks within a project (multiple assignees via `owners`) |
-| `task_posts` | activity-feed posts on a task |
-| `task_replies` | threaded replies to a post |
+| `task_posts` | activity-feed posts on a task (incl. `images` text[] + `files` jsonb) |
+| `task_replies` | threaded replies to a post (incl. `images` text[] + `files` jsonb) |
+| `task_reads` | per-user "last read" time per task (drives unread indicators) |
+| `task_likes` | likes on posts/replies |
+| `notifications` | in-app notification bell rows (assignments, mentions, comments) |
 
-Plus a private **storage bucket** named `job-files` for the actual proof files.
+Plus two **storage buckets**: a private `job-files` bucket for proof files, and a
+public `task-images` bucket for comment image **and file** attachments (files live
+under a `files/` subpath).
 
 ---
 
