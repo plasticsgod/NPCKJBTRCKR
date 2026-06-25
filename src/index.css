@@ -1123,7 +1123,7 @@ button {
 /* Compose box */
 .compose-box, .reply-compose { display: flex; gap: 10px; align-items: flex-start; }
 .compose-right { flex: 1; display: flex; flex-direction: column; gap: 8px; }
-.compose-ta { width: 100%; font-family: var(--ui); font-size: 14px; padding: 10px 12px; border: 1px solid var(--hairline); border-radius: 8px; resize: vertical; }
+.compose-ta { width: 100%; font-family: var(--ui); font-size: 14px; padding: 10px 12px; border: 1px solid var(--hairline); border-radius: 8px; resize: none; overflow-y: auto; min-height: 44px; max-height: 260px; box-sizing: border-box; }
 .compose-ta:focus { outline: 2px solid var(--accent); border-color: transparent; }
 .compose-foot { display: flex; justify-content: space-between; align-items: center; }
 
@@ -1142,6 +1142,24 @@ button {
 .reply { display: flex; gap: 8px; align-items: flex-start; }
 .reply-content { flex: 1; }
 .reply-meta { display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px; flex-wrap: wrap; }
+
+/* "•••" menu on posts/replies — matches the dark selection-bar look */
+.kebab { position: relative; display: inline-flex; margin-left: auto; align-self: center; }
+.kebab-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: none; background: transparent; color: var(--ink-3); cursor: pointer; border-radius: 8px; transition: background .12s, color .12s; }
+.kebab-btn:hover { background: var(--hairline-soft); color: var(--ink); }
+.kebab-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 60; min-width: 156px; background: var(--ink); color: #fff; border-radius: 12px; padding: 6px; box-shadow: 0 16px 44px rgba(0,0,0,.32); display: flex; flex-direction: column; gap: 2px; transform-origin: top right; animation: kebabIn .12s ease; }
+@keyframes kebabIn { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.kebab-item { display: flex; align-items: center; gap: 10px; width: 100%; background: transparent; border: none; color: #fff; cursor: pointer; font-family: var(--ui); font-size: 13px; font-weight: 600; padding: 9px 12px; border-radius: 8px; text-align: left; }
+.kebab-item svg { display: block; opacity: .85; flex: 0 0 auto; }
+.kebab-item:hover { background: rgba(255,255,255,.12); }
+.kebab-item.danger { color: #ff9a8b; }
+.kebab-item.danger:hover { background: rgba(192,57,43,.55); color: #fff; }
+
+/* Inline edit mode for a post/reply */
+.post-edit { margin-top: 6px; }
+.edit-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 8px; }
+.btn-accent.sm { padding: 6px 16px; font-size: 13px; }
+
 
 /* @mention autocomplete */
 .mention-wrap { position: relative; width: 100%; }
