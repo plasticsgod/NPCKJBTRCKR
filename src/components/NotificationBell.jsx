@@ -16,7 +16,7 @@ export default function NotificationBell({ userEmail }) {
       .select("*")
       .eq("recipient", userEmail)
       .order("created_at", { ascending: false })
-      .limit(30);
+      .limit(50);
     setItems(data ?? []);
   }, [userEmail]);
 
@@ -89,7 +89,7 @@ export default function NotificationBell({ userEmail }) {
           </div>
 
           {items.length === 0 ? (
-            <p className="notif-empty muted">You're all caught up.</p>
+            <p className="notif-empty muted">No notifications yet.</p>
           ) : (
             <ul className="notif-list">
               {items.map((n) => (
