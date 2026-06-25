@@ -6,6 +6,7 @@ import TaskDrawer from "./TaskDrawer";
 import { notifyAssignment } from "./notifications";
 import { displayName, nameInitials, avatarStyle } from "./userMap";
 import DatePicker from "../components/DatePicker";
+import { toast } from "../components/Toaster";
 
 // Classifies a task's due date for highlighting and filtering.
 // Returns "overdue", "soon" (within 3 days), or null. Done tasks are never flagged.
@@ -127,11 +128,19 @@ export default function Projects({ userEmail }) {
   async function moveTaskToProject(taskId, targetProjectId) {
     const t = tasks.find((x) => x.id === taskId);
     if (!t || t.project_id === targetProjectId) return;
+    const targetName = projects.find((p) => p.id === targetProjectId)?.name || "project";
     const newOrder = tasks.filter((x) => x.project_id === targetProjectId).length;
     setTasks((prev) => prev.map((x) =>
       x.id === taskId ? { ...x, project_id: targetProjectId, sort_order: newOrder } : x
     ));
-    await supabase.from("tasks").update({ project_id: targetProjectId, sort_order: newOrder }).eq("id", taskId);
+    const { error } = await supabase.from("tasks")
+      .update({ project_id: targetProjectId, sort_order: newOrder }).eq("id", taskId);
+    if (error) {
+      toast.error("Couldn't move task — " + error.message);
+      load(); // reload to undo the optimistic move
+      return;
+    }
+    toast.success(`Moved "${t.title}" to ${targetName}`);
     load();
   }
 
@@ -153,8 +162,10 @@ export default function Projects({ userEmail }) {
 
   async function deleteTask(id) {
     if (!confirm("Delete this task?")) return;
-    await supabase.from("tasks").delete().eq("id", id);
+    const { error } = await supabase.from("tasks").delete().eq("id", id);
+    if (error) { toast.error("Couldn't delete task — " + error.message); return; }
     setOpenTaskId(null);
+    toast.success("Task deleted");
     load();
   }
 
@@ -184,11 +195,17 @@ export default function Projects({ userEmail }) {
   async function confirmDeleteNow() {
     if (!pendingDelete) return;
     const { projIds, taskIds } = pendingDelete;
-    if (projIds.length) await supabase.from("projects").delete().in("id", projIds);
-    if (taskIds.length) await supabase.from("tasks").delete().in("id", taskIds);
+    let err = null;
+    if (projIds.length) { const r = await supabase.from("projects").delete().in("id", projIds); err = err || r.error; }
+    if (taskIds.length) { const r = await supabase.from("tasks").delete().in("id", taskIds); err = err || r.error; }
     setPendingDelete(null);
     clearSelection();
     setOpenTaskId(null);
+    if (err) { toast.error("Delete failed — " + err.message); load(); return; }
+    const parts = [];
+    if (projIds.length) parts.push(`${projIds.length} project${projIds.length === 1 ? "" : "s"}`);
+    if (taskIds.length) parts.push(`${taskIds.length} task${taskIds.length === 1 ? "" : "s"}`);
+    toast.success("Deleted " + parts.join(" & "));
     load();
   }
 
@@ -220,6 +237,7 @@ export default function Projects({ userEmail }) {
       });
     }
     clearSelection();
+    toast.success("Duplicated selection");
     load();
   }
 
