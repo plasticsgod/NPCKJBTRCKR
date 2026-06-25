@@ -31,6 +31,8 @@ export default function Projects({ userEmail }) {
   const [filterPerson, setFilterPerson] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterDue, setFilterDue] = useState("");
+  const [mineOnly, setMineOnly] = useState(false);   // "My tasks" toggle
+  const [sortBy, setSortBy] = useState("manual");    // manual | due | status | name
   // Selection for the bottom action bar (Monday-style). Separate sets so a whole
   // project and individual tasks can both be selected at once.
   const [selProjects, setSelProjects] = useState(() => new Set());
@@ -39,6 +41,8 @@ export default function Projects({ userEmail }) {
   // Activity-feed indicator: per-task update counts + this user's read state.
   const [activity, setActivity] = useState({}); // { [taskId]: { count, latest, latestAuthor } }
   const [reads, setReads] = useState({});       // { [taskId]: last_read_at ISO }
+  const [draggingTaskId, setDraggingTaskId] = useState(null); // task being dragged
+  const [dragOverProject, setDragOverProject] = useState(null); // project being hovered
   const users = useUsers();
   const newProjRef = useRef(null);
 
@@ -115,6 +119,19 @@ export default function Projects({ userEmail }) {
 
   async function updateTask(id, fields) {
     await supabase.from("tasks").update(fields).eq("id", id);
+    load();
+  }
+
+  // Drag-and-drop: move a task into a different project. Appends to the end of
+  // the target project's list. Optimistic, then reload to reconcile.
+  async function moveTaskToProject(taskId, targetProjectId) {
+    const t = tasks.find((x) => x.id === taskId);
+    if (!t || t.project_id === targetProjectId) return;
+    const newOrder = tasks.filter((x) => x.project_id === targetProjectId).length;
+    setTasks((prev) => prev.map((x) =>
+      x.id === taskId ? { ...x, project_id: targetProjectId, sort_order: newOrder } : x
+    ));
+    await supabase.from("tasks").update({ project_id: targetProjectId, sort_order: newOrder }).eq("id", taskId);
     load();
   }
 
@@ -213,7 +230,7 @@ export default function Projects({ userEmail }) {
 
   // --- Search + filter --------------------------------------------------------
   const q = query.trim().toLowerCase();
-  const anyActive = !!q || !!filterPerson || !!filterStatus || !!filterDue;
+  const anyActive = !!q || !!filterPerson || !!filterStatus || !!filterDue || mineOnly;
 
   function visibleTasksFor(project, projTasks) {
     const nameHit = !!q && (project.name || "").toLowerCase().includes(q);
@@ -221,24 +238,45 @@ export default function Projects({ userEmail }) {
       const personOK = !filterPerson || (t.owners || []).includes(filterPerson);
       const statusOK = !filterStatus || (t.status || "To do") === filterStatus;
       const dueOK = !filterDue || dueState(t) === filterDue;
+      const mineOK = !mineOnly || (t.owners || []).includes(userEmail);
       const searchOK = !q || nameHit || (t.title || "").toLowerCase().includes(q);
-      return personOK && statusOK && dueOK && searchOK;
+      return personOK && statusOK && dueOK && mineOK && searchOK;
     });
+  }
+
+  // Sort tasks within a project. "manual" keeps the saved sort_order (as loaded).
+  const STATUS_ORDER = { "To do": 0, "In progress": 1, "Stuck": 2, "Done": 3 };
+  function sortTasks(list) {
+    if (sortBy === "manual") return list;
+    const arr = [...list];
+    if (sortBy === "due") {
+      arr.sort((a, b) => {
+        const da = a.due_date ? new Date(a.due_date).getTime() : Infinity;
+        const db = b.due_date ? new Date(b.due_date).getTime() : Infinity;
+        return da - db;
+      });
+    } else if (sortBy === "status") {
+      arr.sort((a, b) => (STATUS_ORDER[a.status ?? "To do"] ?? 0) - (STATUS_ORDER[b.status ?? "To do"] ?? 0));
+    } else if (sortBy === "name") {
+      arr.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+    }
+    return arr;
   }
 
   const visibleProjects = projects
     .map((proj) => {
       const projTasks = tasks.filter((t) => t.project_id === proj.id);
-      const visTasks = visibleTasksFor(proj, projTasks);
+      const visTasks = sortTasks(visibleTasksFor(proj, projTasks));
       const nameHit = !!q && (proj.name || "").toLowerCase().includes(q);
+      const done = projTasks.filter((t) => (t.status || "To do") === "Done").length;
       let show;
       if (!anyActive) show = true;
       else if (visTasks.length > 0) show = true;
       // a project whose name matches the search still shows (even if empty),
       // but only when no person/status filter is narrowing things down
-      else if (nameHit && !filterPerson && !filterStatus && !filterDue) show = true;
+      else if (nameHit && !filterPerson && !filterStatus && !filterDue && !mineOnly) show = true;
       else show = false;
-      return { proj, tasks: visTasks, show };
+      return { proj, tasks: visTasks, show, progress: { done, total: projTasks.length } };
     })
     .filter((x) => x.show);
 
@@ -284,8 +322,27 @@ export default function Projects({ userEmail }) {
           <option value="overdue">Overdue</option>
           <option value="soon">Due soon (3 days)</option>
         </select>
+        <button
+          className={"mine-toggle" + (mineOnly ? " on" : "")}
+          onClick={() => setMineOnly((v) => !v)}
+          aria-pressed={mineOnly}
+          title="Show only tasks assigned to me"
+        >
+          My tasks
+        </button>
+        <select
+          className="filter-select sort-select"
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          aria-label="Sort tasks"
+        >
+          <option value="manual">Sort: Manual</option>
+          <option value="due">Sort: Due date</option>
+          <option value="status">Sort: Status</option>
+          <option value="name">Sort: Name</option>
+        </select>
         {anyActive && (
-          <button className="link" onClick={() => { setQuery(""); setFilterPerson(""); setFilterStatus(""); setFilterDue(""); }}>
+          <button className="link" onClick={() => { setQuery(""); setFilterPerson(""); setFilterStatus(""); setFilterDue(""); setMineOnly(false); }}>
             Clear
           </button>
         )}
@@ -302,13 +359,13 @@ export default function Projects({ userEmail }) {
         <div className="empty">
           <p className="empty-title">No matches</p>
           <p className="muted">No projects or tasks match your search and filters.</p>
-          <button className="btn-accent" onClick={() => { setQuery(""); setFilterPerson(""); setFilterStatus(""); setFilterDue(""); }}>
+          <button className="btn-accent" onClick={() => { setQuery(""); setFilterPerson(""); setFilterStatus(""); setFilterDue(""); setMineOnly(false); }}>
             Clear search &amp; filters
           </button>
         </div>
       ) : (
         <div className="proj-list">
-          {visibleProjects.map(({ proj, tasks: projTasks }) => {
+          {visibleProjects.map(({ proj, tasks: projTasks, progress }) => {
             return (
               <ProjectGroup
                 key={proj.id}
@@ -316,6 +373,7 @@ export default function Projects({ userEmail }) {
                 tasks={projTasks}
                 users={users}
                 userEmail={userEmail}
+                progress={progress}
                 selected={selProjects.has(proj.id)}
                 onToggleSelect={toggleProject}
                 selectedTasks={selTasks}
@@ -326,6 +384,12 @@ export default function Projects({ userEmail }) {
                 onUpdateTask={updateTask}
                 activity={activity}
                 reads={reads}
+                draggingTaskId={draggingTaskId}
+                onDragTaskStart={setDraggingTaskId}
+                onDragTaskEnd={() => { setDraggingTaskId(null); setDragOverProject(null); }}
+                isDropTarget={dragOverProject === proj.id}
+                onDragOverProject={setDragOverProject}
+                onDropTask={moveTaskToProject}
               />
             );
           })}
@@ -409,7 +473,7 @@ export default function Projects({ userEmail }) {
   );
 }
 
-function ProjectGroup({ project, tasks, users, userEmail, selected, onToggleSelect, selectedTasks, onToggleTask, onUpdateName, onAddTask, onOpenTask, onUpdateTask, activity, reads }) {
+function ProjectGroup({ project, tasks, users, userEmail, progress, selected, onToggleSelect, selectedTasks, onToggleTask, onUpdateName, onAddTask, onOpenTask, onUpdateTask, activity, reads, draggingTaskId, onDragTaskStart, onDragTaskEnd, isDropTarget, onDragOverProject, onDropTask }) {
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState(project.name);
   const [collapsed, setCollapsed] = useState(false);
@@ -419,8 +483,32 @@ function ProjectGroup({ project, tasks, users, userEmail, selected, onToggleSele
     onUpdateName(project.id, name);
   }
 
+  const done = progress?.done || 0;
+  const total = progress?.total || 0;
+  const pct = total ? Math.round((done / total) * 100) : 0;
+
+  // This group is the source of the current drag (don't show a drop cue on it).
+  const isSource = draggingTaskId != null && tasks.some((t) => t.id === draggingTaskId);
+  const showDrop = isDropTarget && draggingTaskId != null && !isSource;
+
+  function handleDragOver(e) {
+    if (draggingTaskId == null) return;
+    e.preventDefault();                 // allow drop
+    e.dataTransfer.dropEffect = "move";
+    onDragOverProject(project.id);
+  }
+  function handleDrop(e) {
+    if (draggingTaskId == null) return;
+    e.preventDefault();
+    onDropTask(draggingTaskId, project.id);
+  }
+
   return (
-    <div className="proj-group">
+    <div
+      className={"proj-group" + (showDrop ? " drop-target" : "")}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       <div className="proj-head">
         <input
           type="checkbox"
@@ -442,6 +530,14 @@ function ProjectGroup({ project, tasks, users, userEmail, selected, onToggleSele
           <span className="proj-name" title="Double-click to rename" onDoubleClick={() => setEditingName(true)}>{project.name}</span>
         )}
         <span className="proj-count">{tasks.length} {tasks.length === 1 ? "item" : "items"}</span>
+        {total > 0 && (
+          <span className="proj-progress" title={`${done} of ${total} done`}>
+            <span className="proj-progress-bar">
+              <span className="proj-progress-fill" style={{ width: pct + "%" }} />
+            </span>
+            <span className="proj-progress-label">{done}/{total}</span>
+          </span>
+        )}
       </div>
       {!collapsed && (
         <div className="ptable-wrap">
@@ -456,6 +552,11 @@ function ProjectGroup({ project, tasks, users, userEmail, selected, onToggleSele
               </tr>
             </thead>
             <tbody>
+              {tasks.length === 0 && (
+                <tr className="empty-task-row">
+                  <td colSpan={5}>Nothing here yet — add your first item below.</td>
+                </tr>
+              )}
               {tasks.map((t) => {
                 const meta = activity[t.id];
                 const count = meta?.count || 0;
@@ -472,7 +573,10 @@ function ProjectGroup({ project, tasks, users, userEmail, selected, onToggleSele
                     onOpen={() => onOpenTask(t.id)}
                     onUpdate={onUpdateTask}
                     updates={count}
-                    unread={unread} />
+                    unread={unread}
+                    dragging={draggingTaskId === t.id}
+                    onDragStart={onDragTaskStart}
+                    onDragEnd={onDragTaskEnd} />
                 );
               })}
               <tr className="add-item-row">
@@ -488,7 +592,7 @@ function ProjectGroup({ project, tasks, users, userEmail, selected, onToggleSele
   );
 }
 
-function TaskRow({ task, users, userEmail, checked, onToggle, onOpen, onUpdate, updates = 0, unread = false }) {
+function TaskRow({ task, users, userEmail, checked, onToggle, onOpen, onUpdate, updates = 0, unread = false, dragging = false, onDragStart, onDragEnd }) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [title, setTitle] = useState(task.title);
   const owners = task.owners || (task.owner ? [task.owner] : []);
@@ -513,7 +617,18 @@ function TaskRow({ task, users, userEmail, checked, onToggle, onOpen, onUpdate, 
   }
 
   return (
-    <tr className={"ptask-row" + (checked ? " selected" : "")} onClick={!editingTitle ? onOpen : undefined}>
+    <tr
+      className={"ptask-row" + (checked ? " selected" : "") + (dragging ? " dragging" : "")}
+      onClick={!editingTitle ? onOpen : undefined}
+      draggable={!editingTitle}
+      onDragStart={(e) => {
+        if (editingTitle) return;
+        e.dataTransfer.effectAllowed = "move";
+        try { e.dataTransfer.setData("text/plain", task.id); } catch {}
+        onDragStart && onDragStart(task.id);
+      }}
+      onDragEnd={() => onDragEnd && onDragEnd()}
+    >
       <td className="col-check" onClick={(e) => e.stopPropagation()}>
         <input type="checkbox" checked={checked} onChange={() => onToggle(task.id)}
           aria-label={`Select task ${task.title}`} />
