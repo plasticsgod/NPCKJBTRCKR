@@ -251,6 +251,18 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused }) {
     load();
   }
 
+  // Close the filter dropdown on outside-click / Esc. Declared before any early
+  // return so the hook order stays stable across renders.
+  const filterRef = useRef(null);
+  useEffect(() => {
+    if (!filterOpen) return;
+    function onDown(e) { if (filterRef.current && !filterRef.current.contains(e.target)) setFilterOpen(false); }
+    function onEsc(e) { if (e.key === "Escape") setFilterOpen(false); }
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onEsc);
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onEsc); };
+  }, [filterOpen]);
+
   if (loading) return <div className="muted pad">Loading projects…</div>;
 
   const openTask = tasks.find((t) => t.id === openTaskId) || null;
@@ -262,16 +274,6 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused }) {
   // Number of active filters (excludes the search box) — shown as a badge.
   const activeFilterCount =
     (filterPerson ? 1 : 0) + (filterStatus ? 1 : 0) + (filterDue ? 1 : 0) + (mineOnly ? 1 : 0);
-
-  const filterRef = useRef(null);
-  useEffect(() => {
-    if (!filterOpen) return;
-    function onDown(e) { if (filterRef.current && !filterRef.current.contains(e.target)) setFilterOpen(false); }
-    function onEsc(e) { if (e.key === "Escape") setFilterOpen(false); }
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onEsc);
-    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onEsc); };
-  }, [filterOpen]);
 
   function clearFilters() {
     setFilterPerson(""); setFilterStatus(""); setFilterDue(""); setMineOnly(false);
