@@ -66,6 +66,7 @@ export default function NotificationBell({ userEmail }) {
   function label(n) {
     const who = displayName(n.actor) || "Someone";
     if (n.type === "assignment") return `${who} assigned you to "${n.task}"`;
+    if (n.type === "comment") return `${who} commented on "${n.task}"`;
     return `${who} mentioned you in "${n.task}"`;
   }
 
