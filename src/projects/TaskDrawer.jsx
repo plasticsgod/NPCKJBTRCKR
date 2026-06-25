@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useLayoutEffect } from "react";
 import { supabase } from "../supabaseClient";
 import { TASK_STATUSES } from "./constants";
 import { notifyAssignment, notifyMentions } from "./notifications";
@@ -165,6 +165,17 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
     onUpdate(task.id, { [key]: value });
   }
 
+  // Add/remove an assignee, notifying the person when newly added.
+  function toggleOwner(email) {
+    const prev = local.owners || [];
+    const adding = !prev.includes(email);
+    const next = adding ? [...prev, email] : prev.filter((x) => x !== email);
+    setField("owners", next);
+    if (adding) {
+      notifyAssignment({ to: email, task: task.title, project: projectName || "", assignedBy: userEmail });
+    }
+  }
+
   async function submitPost() {
     const body = newPost.trim();
     if (!body) return;
@@ -196,41 +207,14 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
         </div>
 
         <div className="drawer-meta">
-          <label className="meta-field">
+          <div className="meta-field">
             <span>Assignees</span>
-            <div className="drawer-assignees">
-              {(local.owners || []).length === 0
-                ? <span className="not-assigned">Not Assigned</span>
-                : (local.owners || []).map(e => (
-                  <span key={e} className="avatar" title={e}>{nameInitials(e)}</span>
-                ))
-              }
-              <select className="person-select" value=""
-                onChange={(e) => {
-                  const email = e.target.value;
-                  if (!email) return;
-                  const prev = local.owners || [];
-                  const next = prev.includes(email) ? prev.filter(x => x !== email) : [...prev, email];
-                  setField("owners", next);
-                  if (!prev.includes(email)) {
-                    notifyAssignment({ to: email, task: task.title, project: projectName || "", assignedBy: userEmail });
-                  }
-                }}>
-                <option value="">Add person…</option>
-                {users.map((u) => (
-                  <option key={u} value={u}>
-                    {(local.owners || []).includes(u) ? "✓ " : ""}{displayName(u)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </label>
-          <label className="meta-field">
+            <MultiPersonPicker owners={local.owners || []} users={users} onToggle={toggleOwner} />
+          </div>
+          <div className="meta-field">
             <span>Status</span>
-            <select value={local.status || "To do"} onChange={(e) => setField("status", e.target.value)}>
-              {TASK_STATUSES.map((s) => <option key={s}>{s}</option>)}
-            </select>
-          </label>
+            <StatusPicker value={local.status || "To do"} onChange={(s) => setField("status", s)} />
+          </div>
           <label className="meta-field">
             <span>Due date</span>
             <DatePicker value={local.due_date || ""} onChange={(v) => setField("due_date", v || null)} />
@@ -475,4 +459,139 @@ function fmtTime(iso) {
   const d = new Date(iso);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " · " +
     d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+// Colored status dropdown — identical to the one in the projects table.
+function StatusPicker({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState(null);
+  const ref = useRef(null);
+  const triggerRef = useRef(null);
+  const current = value || "To do";
+  const slug = (s) => s.toLowerCase().replace(/\s+/g, "-");
+
+  useEffect(() => {
+    function onClickOutside(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    function place() {
+      const el = triggerRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const PW = Math.max(180, r.width), PH = 230, GAP = 6, EDGE = 8;
+      let left = r.left;
+      if (left + PW > window.innerWidth - EDGE) left = r.right - PW;
+      left = Math.max(EDGE, left);
+      let top = r.bottom + GAP;
+      if (top + PH > window.innerHeight - EDGE) {
+        const up = r.top - GAP - PH;
+        top = up >= EDGE ? up : Math.max(EDGE, window.innerHeight - PH - EDGE);
+      }
+      setCoords({ top, left, width: r.width });
+    }
+    place();
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [open]);
+
+  return (
+    <div className="status-picker" ref={ref}>
+      <button type="button" ref={triggerRef} className={"tpill tpill-" + slug(current)}
+        onClick={() => setOpen((o) => !o)}>
+        {current}
+      </button>
+      {open && coords && (
+        <div className="status-menu"
+          style={{ position: "fixed", top: coords.top, left: coords.left, minWidth: coords.width }}>
+          {TASK_STATUSES.map((s) => (
+            <button key={s} type="button"
+              className={"status-option tpill-" + slug(s) + (s === current ? " is-current" : "")}
+              onClick={() => { onChange(s); setOpen(false); }}>
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Multi-assignee picker — identical to the one in the projects table.
+function MultiPersonPicker({ owners, users, onToggle }) {
+  const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState(null);
+  const ref = useRef(null);
+  const triggerRef = useRef(null);
+
+  useEffect(() => {
+    function onClickOutside(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    function place() {
+      const el = triggerRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const PW = 230, PH = 300, GAP = 6, EDGE = 8;
+      let left = r.left;
+      if (left + PW > window.innerWidth - EDGE) left = r.right - PW;
+      left = Math.max(EDGE, left);
+      let top = r.bottom + GAP;
+      if (top + PH > window.innerHeight - EDGE) {
+        const up = r.top - GAP - PH;
+        top = up >= EDGE ? up : Math.max(EDGE, window.innerHeight - PH - EDGE);
+      }
+      setCoords({ top, left });
+    }
+    place();
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [open]);
+
+  return (
+    <div className="multi-person" ref={ref}>
+      <div className="person-avatars" ref={triggerRef} onClick={() => setOpen(!open)}>
+        {owners.length === 0
+          ? <span className="not-assigned">Not Assigned</span>
+          : owners.map(e => (
+            <span key={e} className="avatar sm" title={displayName(e)}>{nameInitials(e)}</span>
+          ))
+        }
+        <span className="assign-caret">▾</span>
+      </div>
+      {open && coords && (
+        <div className="person-dropdown" style={{ position: "fixed", top: coords.top, left: coords.left }}>
+          {users.map(u => (
+            <label key={u} className="person-option">
+              <input type="checkbox" checked={owners.includes(u)}
+                onChange={() => onToggle(u)} />
+              <span className="avatar sm">{nameInitials(u)}</span>
+              <span>{displayName(u)}</span>
+            </label>
+          ))}
+          {owners.length > 0 && (
+            <button className="link danger person-clear"
+              onClick={() => owners.forEach(e => onToggle(e))}>
+              Clear all
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
