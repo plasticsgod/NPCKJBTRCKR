@@ -59,6 +59,32 @@ async function uploadImages(files, taskId) {
   return paths;
 }
 
+// --- File attachments (documents, PDFs, etc.) --------------------------------
+// Reuses the same bucket under a files/ subpath (no compression). Each entry
+// keeps its original name so we can show + download it. Returns metadata:
+// { path, name, type, size }.
+const MAX_FILES = 4;
+
+async function uploadFiles(files, taskId) {
+  const out = [];
+  for (const file of files) {
+    const dot = file.name.lastIndexOf(".");
+    const ext = dot >= 0 ? file.name.slice(dot) : "";
+    const path = `${taskId}/files/${crypto.randomUUID()}${ext}`;
+    const { error } = await supabase.storage.from(IMG_BUCKET)
+      .upload(path, file, { contentType: file.type || "application/octet-stream", upsert: false });
+    if (!error) out.push({ path, name: file.name, type: file.type || "", size: file.size });
+  }
+  return out;
+}
+
+function formatBytes(n) {
+  if (n == null) return "";
+  if (n < 1024) return n + " B";
+  if (n < 1024 * 1024) return Math.round(n / 1024) + " KB";
+  return (n / (1024 * 1024)).toFixed(1) + " MB";
+}
+
 // Resizable task drawer — width is remembered per browser via localStorage.
 const DRAWER_WIDTH_KEY = "npck_task_drawer_width";
 const DRAWER_MIN_W = 420;
@@ -148,6 +174,7 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
   const [likes, setLikes] = useState({}); // { [target_id]: [user_email, ...] }
   const [newPost, setNewPost] = useState("");
   const [newImages, setNewImages] = useState([]);
+  const [newFiles, setNewFiles] = useState([]);
   const [posting, setPosting] = useState(false);
 
   // --- Resizable drawer width (remembered in this browser) -------------------
@@ -247,22 +274,25 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
 
   async function submitPost() {
     const body = newPost.trim();
-    if (!body && newImages.length === 0) return;
+    if (!body && newImages.length === 0 && newFiles.length === 0) return;
     setPosting(true);
     const images = newImages.length ? await uploadImages(newImages, task.id) : [];
+    const files = newFiles.length ? await uploadFiles(newFiles, task.id) : [];
     const mentions = parseMentions(body, users);
-    await supabase.from("task_posts").insert({ task_id: task.id, author: userEmail, body, mentions, images });
+    await supabase.from("task_posts").insert({ task_id: task.id, author: userEmail, body, mentions, images, files });
     notifyMentions({ mentions, task: task.title, project: projectName || "", mentionedBy: userEmail, body });
     notifyComment({ owners: local.owners || [], author: userEmail, task: task.title, project: projectName || "", body, mentions });
     setNewPost("");
     setNewImages([]);
+    setNewFiles([]);
     setPosting(false);
     loadPosts();
   }
 
-  async function deletePost(id, images) {
+  async function deletePost(id, images, files) {
     if (!confirm("Delete this update?")) return;
     if (images?.length) await supabase.storage.from(IMG_BUCKET).remove(images);
+    if (files?.length) await supabase.storage.from(IMG_BUCKET).remove(files.map((f) => f.path));
     await supabase.from("task_posts").delete().eq("id", id);
     loadPosts();
   }
@@ -324,8 +354,9 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
                 <MentionTextarea value={newPost} onChange={setNewPost} users={users}
                   placeholder={`Write an update… Use @ to mention someone`} rows={2} />
                 <ImageAttach files={newImages} setFiles={setNewImages} disabled={posting} />
+                <FileAttach files={newFiles} setFiles={setNewFiles} disabled={posting} />
                 <div className="compose-foot">
-                  <button className="btn-accent" onClick={submitPost} disabled={(!newPost.trim() && newImages.length === 0) || posting}>
+                  <button className="btn-accent" onClick={submitPost} disabled={(!newPost.trim() && newImages.length === 0 && newFiles.length === 0) || posting}>
                     {posting ? "Posting…" : "Post update"}
                   </button>
                 </div>
@@ -406,28 +437,32 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, owners, like
   const [draft, setDraft] = useState(post.body);
   const [savingEdit, setSavingEdit] = useState(false);
   const [replyImages, setReplyImages] = useState([]);
+  const [replyFiles, setReplyFiles] = useState([]);
   const replies = post.task_replies ?? [];
   const mine = post.author === userEmail;
 
   async function submitReply() {
     const body = reply.trim();
-    if (!body && replyImages.length === 0) return;
+    if (!body && replyImages.length === 0 && replyFiles.length === 0) return;
     setSubmitting(true);
     const images = replyImages.length ? await uploadImages(replyImages, post.task_id) : [];
+    const files = replyFiles.length ? await uploadFiles(replyFiles, post.task_id) : [];
     const mentions = parseMentions(body, users);
-    await supabase.from("task_replies").insert({ post_id: post.id, author: userEmail, body, mentions, images });
+    await supabase.from("task_replies").insert({ post_id: post.id, author: userEmail, body, mentions, images, files });
     notifyMentions({ mentions, task: taskTitle, project: projectName || "", mentionedBy: userEmail, body });
     notifyComment({ owners: owners || [], author: userEmail, task: taskTitle, project: projectName || "", body, mentions });
     setReply("");
     setReplyImages([]);
+    setReplyFiles([]);
     setSubmitting(false);
     setShowReply(false);
     onReply();
   }
 
-  async function deleteReply(id, images) {
+  async function deleteReply(id, images, files) {
     if (!confirm("Delete this reply?")) return;
     if (images?.length) await supabase.storage.from(IMG_BUCKET).remove(images);
+    if (files?.length) await supabase.storage.from(IMG_BUCKET).remove(files.map((f) => f.path));
     await supabase.from("task_replies").delete().eq("id", id);
     onReply();
   }
@@ -453,7 +488,7 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, owners, like
           <span className="post-time">{fmtTime(post.created_at)}</span>
         </div>
         {mine && !editing && (
-          <KebabMenu onEdit={startEdit} onDelete={() => onDelete(post.id, post.images)} />
+          <KebabMenu onEdit={startEdit} onDelete={() => onDelete(post.id, post.images, post.files)} />
         )}
       </div>
 
@@ -473,6 +508,7 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, owners, like
         </div>
       )}
       <ImageGrid paths={post.images} />
+      <FileList files={post.files} />
 
       {/* Replies */}
       {replies.length > 0 && (
@@ -500,8 +536,9 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, owners, like
             <MentionTextarea value={reply} onChange={setReply} users={users}
               placeholder="Write a reply… Use @ to mention" rows={2} />
             <ImageAttach files={replyImages} setFiles={setReplyImages} disabled={submitting} />
+            <FileAttach files={replyFiles} setFiles={setReplyFiles} disabled={submitting} />
             <div className="compose-foot">
-              <button className="btn-accent" onClick={submitReply} disabled={(!reply.trim() && replyImages.length === 0) || submitting}>
+              <button className="btn-accent" onClick={submitReply} disabled={(!reply.trim() && replyImages.length === 0 && replyFiles.length === 0) || submitting}>
                 {submitting ? "…" : "Reply"}
               </button>
             </div>
@@ -537,7 +574,7 @@ function ReplyItem({ reply, users, userEmail, likers, onToggleLike, onChanged, o
           <span className="post-time">{fmtTime(reply.created_at)}</span>
           {mine && !editing && (
             <KebabMenu onEdit={() => { setDraft(reply.body); setEditing(true); }}
-              onDelete={() => onDelete(reply.id, reply.images)} />
+              onDelete={() => onDelete(reply.id, reply.images, reply.files)} />
           )}
         </div>
         {editing ? (
@@ -554,6 +591,7 @@ function ReplyItem({ reply, users, userEmail, likers, onToggleLike, onChanged, o
           <>
             <RichText body={reply.body} users={users} />
             <ImageGrid paths={reply.images} />
+            <FileList files={reply.files} />
             <div className="reply-actions">
               <LikeButton targetType="reply" targetId={reply.id} likers={likers}
                 userEmail={userEmail} onToggle={onToggleLike} />
@@ -652,6 +690,61 @@ function ImageGrid({ paths }) {
         </div>
       )}
     </>
+  );
+}
+
+// File attach control for the composer: pick documents, list + remove before posting.
+function FileAttach({ files, setFiles, disabled }) {
+  const inputRef = useRef(null);
+  function pick(e) {
+    const chosen = Array.from(e.target.files || []);
+    setFiles((prev) => [...prev, ...chosen].slice(0, MAX_FILES));
+    e.target.value = "";
+  }
+  function removeAt(i) { setFiles((prev) => prev.filter((_, idx) => idx !== i)); }
+  const full = files.length >= MAX_FILES;
+  return (
+    <div className="file-attach">
+      <input ref={inputRef} type="file" multiple hidden onChange={pick} />
+      <button type="button" className="attach-btn" onClick={() => inputRef.current?.click()}
+        disabled={disabled || full} title={full ? `Up to ${MAX_FILES} files` : "Attach a file"}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+        </svg>
+        {full ? `Max ${MAX_FILES}` : "Attach file"}
+      </button>
+      {files.length > 0 && (
+        <div className="file-pending">
+          {files.map((f, i) => (
+            <span className="file-chip pending" key={i}>
+              <span className="file-chip-name">{f.name}</span>
+              <button type="button" className="file-chip-x" onClick={() => removeAt(i)} aria-label="Remove">✕</button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Stored file attachments shown as downloadable chips.
+function FileList({ files }) {
+  if (!files || files.length === 0) return null;
+  return (
+    <div className="file-list">
+      {files.map((f, i) => (
+        <a key={i} className="file-chip" href={publicUrl(f.path)} target="_blank"
+          rel="noopener noreferrer" download={f.name} title={f.name}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" />
+          </svg>
+          <span className="file-chip-name">{f.name}</span>
+          {f.size != null && <span className="file-chip-size">{formatBytes(f.size)}</span>}
+        </a>
+      ))}
+    </div>
   );
 }
 
