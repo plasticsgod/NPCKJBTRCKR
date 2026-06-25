@@ -34,6 +34,7 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused }) {
   const [filterDue, setFilterDue] = useState("");
   const [mineOnly, setMineOnly] = useState(false);   // "My tasks" toggle
   const [sortBy, setSortBy] = useState("manual");    // manual | due | status | name
+  const [filterOpen, setFilterOpen] = useState(false); // filter dropdown panel
   // Selection for the bottom action bar (Monday-style). Separate sets so a whole
   // project and individual tasks can both be selected at once.
   const [selProjects, setSelProjects] = useState(() => new Set());
@@ -258,6 +259,23 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused }) {
   // --- Search + filter --------------------------------------------------------
   const q = query.trim().toLowerCase();
   const anyActive = !!q || !!filterPerson || !!filterStatus || !!filterDue || mineOnly;
+  // Number of active filters (excludes the search box) — shown as a badge.
+  const activeFilterCount =
+    (filterPerson ? 1 : 0) + (filterStatus ? 1 : 0) + (filterDue ? 1 : 0) + (mineOnly ? 1 : 0);
+
+  const filterRef = useRef(null);
+  useEffect(() => {
+    if (!filterOpen) return;
+    function onDown(e) { if (filterRef.current && !filterRef.current.contains(e.target)) setFilterOpen(false); }
+    function onEsc(e) { if (e.key === "Escape") setFilterOpen(false); }
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onEsc);
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onEsc); };
+  }, [filterOpen]);
+
+  function clearFilters() {
+    setFilterPerson(""); setFilterStatus(""); setFilterDue(""); setMineOnly(false);
+  }
 
   function visibleTasksFor(project, projTasks) {
     const nameHit = !!q && (project.name || "").toLowerCase().includes(q);
@@ -317,62 +335,77 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <select
-          className="filter-select"
-          value={filterPerson}
-          onChange={(e) => setFilterPerson(e.target.value)}
-          aria-label="Filter by person"
-        >
-          <option value="">All people</option>
-          {users.map((u) => (
-            <option key={u} value={u}>{displayName(u)}</option>
-          ))}
-        </select>
-        <select
-          className="filter-select"
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          aria-label="Filter by status"
-        >
-          <option value="">All statuses</option>
-          {TASK_STATUSES.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-        <select
-          className="filter-select"
-          value={filterDue}
-          onChange={(e) => setFilterDue(e.target.value)}
-          aria-label="Filter by due date"
-        >
-          <option value="">Any due date</option>
-          <option value="overdue">Overdue</option>
-          <option value="soon">Due soon (3 days)</option>
-        </select>
-        <button
-          className={"mine-toggle" + (mineOnly ? " on" : "")}
-          onClick={() => setMineOnly((v) => !v)}
-          aria-pressed={mineOnly}
-          title="Show only tasks assigned to me"
-        >
-          My tasks
-        </button>
-        <select
-          className="filter-select sort-select"
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          aria-label="Sort tasks"
-        >
-          <option value="manual">Sort: Manual</option>
-          <option value="due">Sort: Due date</option>
-          <option value="status">Sort: Status</option>
-          <option value="name">Sort: Name</option>
-        </select>
-        {anyActive && (
-          <button className="link" onClick={() => { setQuery(""); setFilterPerson(""); setFilterStatus(""); setFilterDue(""); setMineOnly(false); }}>
-            Clear
+
+        <div className="filter-wrap" ref={filterRef}>
+          <button
+            className={"filter-trigger" + (activeFilterCount > 0 ? " active" : "") + (filterOpen ? " open" : "")}
+            onClick={() => setFilterOpen((v) => !v)}
+            aria-expanded={filterOpen}
+            title="Filter & sort"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M3 4h18l-7 8v6l-4 2v-8z" />
+            </svg>
+            Filter
+            {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
           </button>
-        )}
+
+          {filterOpen && (
+            <div className="filter-menu">
+              <label className="filter-field">
+                <span className="filter-field-label">Person</span>
+                <select className="filter-field-select" value={filterPerson} onChange={(e) => setFilterPerson(e.target.value)}>
+                  <option value="">All people</option>
+                  {users.map((u) => (<option key={u} value={u}>{displayName(u)}</option>))}
+                </select>
+              </label>
+
+              <label className="filter-field">
+                <span className="filter-field-label">Status</span>
+                <select className="filter-field-select" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+                  <option value="">All statuses</option>
+                  {TASK_STATUSES.map((s) => (<option key={s} value={s}>{s}</option>))}
+                </select>
+              </label>
+
+              <label className="filter-field">
+                <span className="filter-field-label">Due date</span>
+                <select className="filter-field-select" value={filterDue} onChange={(e) => setFilterDue(e.target.value)}>
+                  <option value="">Any due date</option>
+                  <option value="overdue">Overdue</option>
+                  <option value="soon">Due soon (3 days)</option>
+                </select>
+              </label>
+
+              <button
+                className={"filter-mine" + (mineOnly ? " on" : "")}
+                onClick={() => setMineOnly((v) => !v)}
+                aria-pressed={mineOnly}
+              >
+                <span className="filter-field-label">My tasks only</span>
+                <span className="filter-switch" aria-hidden="true" />
+              </button>
+
+              <div className="filter-divider" />
+
+              <label className="filter-field">
+                <span className="filter-field-label">Sort by</span>
+                <select className="filter-field-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                  <option value="manual">Manual</option>
+                  <option value="due">Due date</option>
+                  <option value="status">Status</option>
+                  <option value="name">Name</option>
+                </select>
+              </label>
+
+              {activeFilterCount > 0 && (
+                <button className="filter-clear" onClick={clearFilters}>Clear filters</button>
+              )}
+            </div>
+          )}
+        </div>
+
         <button className="btn-accent push-right" onClick={() => setAddingProject(true)}>+ New Project</button>
       </div>
 
