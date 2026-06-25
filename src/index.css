@@ -1231,6 +1231,30 @@ button {
 .img-lightbox { position: fixed; inset: 0; z-index: 600; background: rgba(20,17,13,.82); display: flex; align-items: center; justify-content: center; padding: 24px; cursor: zoom-out; }
 .img-lightbox img { max-width: 92vw; max-height: 92vh; border-radius: 8px; box-shadow: 0 20px 60px rgba(0,0,0,.5); cursor: default; }
 
+/* Posted file attachments: downloadable chips */
+.file-attach { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.file-pending { display: flex; flex-wrap: wrap; gap: 6px; }
+.file-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.file-chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  max-width: 260px;
+  padding: 7px 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--ink);
+  font-family: var(--ui); font-size: 12px;
+  text-decoration: none;
+}
+a.file-chip:hover { border-color: var(--accent); color: var(--accent); }
+.file-chip svg { flex: 0 0 auto; color: var(--ink-3); }
+a.file-chip:hover svg { color: var(--accent); }
+.file-chip-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-chip-size { flex: 0 0 auto; font-family: var(--mono); font-size: 10px; color: var(--ink-3); }
+.file-chip.pending { background: #fff; border-style: dashed; }
+.file-chip-x { background: none; border: none; color: var(--ink-3); cursor: pointer; font-size: 11px; line-height: 1; padding: 0 0 0 2px; }
+.file-chip-x:hover { color: var(--accent); }
+
 /* Reply thread */
 .reply-thread { display: flex; flex-direction: column; gap: 10px; border-left: 2px solid var(--hairline); padding-left: 14px; margin-left: 18px; }
 .reply { display: flex; gap: 8px; align-items: flex-start; }
