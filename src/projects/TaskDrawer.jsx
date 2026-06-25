@@ -91,6 +91,7 @@ function MentionTextarea({ value, onChange, users, placeholder, rows = 3 }) {
 export default function TaskDrawer({ task, projectName, userEmail, users, onClose, onUpdate, onDelete }) {
   const [local, setLocal] = useState({ ...task, owners: task.owners || [] });
   const [posts, setPosts] = useState([]);
+  const [likes, setLikes] = useState({}); // { [target_id]: [user_email, ...] }
   const [newPost, setNewPost] = useState("");
   const [posting, setPosting] = useState(false);
 
@@ -142,7 +143,19 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
   const loadPosts = useCallback(async () => {
     const { data } = await supabase
       .from("task_posts").select("*, task_replies(*)").eq("task_id", task.id).order("created_at");
-    setPosts(data ?? []);
+    const list = data ?? [];
+    setPosts(list);
+    // Collect every post + reply id, then pull their likes in one query.
+    const ids = [];
+    list.forEach((p) => { ids.push(p.id); (p.task_replies ?? []).forEach((r) => ids.push(r.id)); });
+    if (ids.length === 0) { setLikes({}); return; }
+    const { data: likeRows } = await supabase
+      .from("task_likes").select("target_id, user_email").in("target_id", ids);
+    const map = {};
+    (likeRows ?? []).forEach((row) => {
+      (map[row.target_id] = map[row.target_id] || []).push(row.user_email);
+    });
+    setLikes(map);
   }, [task.id]);
 
   useEffect(() => {
@@ -150,6 +163,7 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
     const ch = supabase.channel("posts-" + task.id)
       .on("postgres_changes", { event: "*", schema: "public", table: "task_posts", filter: "task_id=eq." + task.id }, loadPosts)
       .on("postgres_changes", { event: "*", schema: "public", table: "task_replies" }, loadPosts)
+      .on("postgres_changes", { event: "*", schema: "public", table: "task_likes" }, loadPosts)
       .subscribe();
     return () => supabase.removeChannel(ch);
   }, [task.id, loadPosts]);
@@ -192,6 +206,25 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
     if (!confirm("Delete this update?")) return;
     await supabase.from("task_posts").delete().eq("id", id);
     loadPosts();
+  }
+
+  // Like / unlike a post or reply. Updates the UI immediately, then persists;
+  // the realtime subscription keeps everyone else in sync.
+  async function toggleLike(targetType, targetId) {
+    const current = likes[targetId] || [];
+    const liked = current.includes(userEmail);
+    setLikes((m) => {
+      const list = m[targetId] || [];
+      const next = liked ? list.filter((e) => e !== userEmail) : [...list, userEmail];
+      return { ...m, [targetId]: next };
+    });
+    if (liked) {
+      await supabase.from("task_likes").delete()
+        .eq("target_type", targetType).eq("target_id", targetId).eq("user_email", userEmail);
+    } else {
+      await supabase.from("task_likes")
+        .insert({ target_type: targetType, target_id: targetId, user_email: userEmail });
+    }
   }
 
   return (
@@ -244,6 +277,7 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
             {[...posts].reverse().map((post) => (
               <PostCard key={post.id} post={post} users={users} userEmail={userEmail}
                 taskTitle={task.title} projectName={projectName}
+                likes={likes} onToggleLike={toggleLike}
                 onDelete={deletePost} onReply={loadPosts} />
             ))}
           </div>
@@ -304,7 +338,7 @@ function KebabMenu({ onEdit, onDelete }) {
   );
 }
 
-function PostCard({ post, users, userEmail, taskTitle, projectName, onDelete, onReply }) {
+function PostCard({ post, users, userEmail, taskTitle, projectName, likes, onToggleLike, onDelete, onReply }) {
   const [showReply, setShowReply] = useState(false);
   const [reply, setReply] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -379,13 +413,16 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, onDelete, on
         <div className="reply-thread">
           {replies.map((r) => (
             <ReplyItem key={r.id} reply={r} users={users} userEmail={userEmail}
+              likers={likes[r.id] || []} onToggleLike={onToggleLike}
               onChanged={onReply} onDelete={deleteReply} />
           ))}
         </div>
       )}
 
-      {/* Reply compose */}
+      {/* Like + reply actions */}
       <div className="post-actions">
+        <LikeButton targetType="post" targetId={post.id} likers={likes[post.id] || []}
+          userEmail={userEmail} onToggle={onToggleLike} />
         <button className="link" onClick={() => setShowReply(!showReply)}>
           {showReply ? "Cancel" : `Reply${replies.length ? ` (${replies.length})` : ""}`}
         </button>
@@ -408,7 +445,7 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, onDelete, on
   );
 }
 
-function ReplyItem({ reply, users, userEmail, onChanged, onDelete }) {
+function ReplyItem({ reply, users, userEmail, likers, onToggleLike, onChanged, onDelete }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(reply.body);
   const [saving, setSaving] = useState(false);
@@ -447,7 +484,13 @@ function ReplyItem({ reply, users, userEmail, onChanged, onDelete }) {
             </div>
           </div>
         ) : (
-          <RichText body={reply.body} users={users} />
+          <>
+            <RichText body={reply.body} users={users} />
+            <div className="reply-actions">
+              <LikeButton targetType="reply" targetId={reply.id} likers={likers}
+                userEmail={userEmail} onToggle={onToggleLike} />
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -458,6 +501,32 @@ function fmtTime(iso) {
   const d = new Date(iso);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " · " +
     d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+// Like button: gray thumbs-up that turns orange with a count when you've liked.
+// Hovering reveals the list of people who liked this update/comment.
+function LikeButton({ targetType, targetId, likers, userEmail, onToggle }) {
+  const liked = likers.includes(userEmail);
+  const count = likers.length;
+  return (
+    <div className="like-wrap">
+      <button type="button" className={"like-btn" + (liked ? " liked" : "")}
+        onClick={() => onToggle(targetType, targetId)}
+        aria-pressed={liked} aria-label={liked ? "Remove like" : "Like"}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill={liked ? "currentColor" : "none"}
+          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M7 10v12" />
+          <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z" />
+        </svg>
+        {count > 0 && <span className="like-count">{count}</span>}
+      </button>
+      {count > 0 && (
+        <div className="like-tip" role="tooltip">
+          {likers.map((e) => <div key={e} className="like-tip-row">{displayName(e)}</div>)}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // Colored status dropdown — identical to the one in the projects table.
