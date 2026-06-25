@@ -8,6 +8,7 @@ import Dashboard from "./components/Dashboard";
 import PlasticsEstimator from "./components/PlasticsEstimator";
 import Projects from "./projects/Projects";
 import JobModal from "./components/JobModal";
+import { Toaster, toast } from "./components/Toaster";
 
 const PAGES = ["dashboard", "work_orders", "projects", "plastics"];
 
@@ -92,10 +93,10 @@ export default function App() {
     if (job.id) {
       const { id, created_at, ...fields } = job;
       const { error } = await supabase.from("jobs").update(fields).eq("id", id);
-      if (error) return alert("Could not save changes: " + error.message);
+      if (error) return toast.error("Could not save changes: " + error.message);
     } else {
       const { error } = await supabase.from("jobs").insert(job);
-      if (error) return alert("Could not create the job: " + error.message);
+      if (error) return toast.error("Could not create the job: " + error.message);
     }
     setEditing(null);
     loadJobs();
@@ -104,26 +105,26 @@ export default function App() {
   async function deleteJob(id) {
     if (!confirm("Delete this job? This cannot be undone.")) return;
     const { error } = await supabase.from("jobs").delete().eq("id", id);
-    if (error) return alert("Could not delete: " + error.message);
+    if (error) return toast.error("Could not delete: " + error.message);
     loadJobs();
   }
 
   // Bulk delete (the Work Orders page shows its own confirm popup first)
   async function deleteJobs(ids) {
     const { error } = await supabase.from("jobs").delete().in("id", ids);
-    if (error) return alert("Could not delete: " + error.message);
+    if (error) return toast.error("Could not delete: " + error.message);
     loadJobs();
   }
 
   async function changeStatus(id, status) {
     const { error } = await supabase.from("jobs").update({ status }).eq("id", id);
-    if (error) alert("Could not update status: " + error.message);
+    if (error) toast.error("Could not update status: " + error.message);
     else loadJobs();
   }
 
   async function changeFacility(id, printing_facility) {
     const { error } = await supabase.from("jobs").update({ printing_facility }).eq("id", id);
-    if (error) alert("Could not update facility: " + error.message);
+    if (error) toast.error("Could not update facility: " + error.message);
     else loadJobs();
   }
 
@@ -194,6 +195,8 @@ export default function App() {
           onClose={() => setEditing(null)}
         />
       )}
+
+      <Toaster />
     </div>
   );
 }
