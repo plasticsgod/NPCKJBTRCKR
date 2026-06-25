@@ -232,7 +232,6 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
                 <MentionTextarea value={newPost} onChange={setNewPost} users={users}
                   placeholder={`Write an update… Use @ to mention someone`} rows={2} />
                 <div className="compose-foot">
-                  <span className="muted small">⌘/Ctrl + Enter to post</span>
                   <button className="btn-accent" onClick={submitPost} disabled={!newPost.trim() || posting}>
                     {posting ? "Posting…" : "Post update"}
                   </button>
