@@ -1151,6 +1151,25 @@ button {
 .like-wrap:hover .like-tip { opacity: 1; visibility: visible; transform: translateY(0); }
 .like-tip-row { white-space: nowrap; }
 
+/* Image attach (composer) */
+.img-attach { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.attach-btn { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 1px solid var(--hairline); color: var(--ink-2); border-radius: 8px; padding: 6px 11px; font-family: var(--ui); font-size: 12px; font-weight: 600; cursor: pointer; }
+.attach-btn svg { display: block; }
+.attach-btn:hover:not(:disabled) { border-color: var(--ink-3); color: var(--ink); }
+.attach-btn:disabled { opacity: .45; cursor: not-allowed; }
+.attach-previews { display: flex; flex-wrap: wrap; gap: 8px; }
+.attach-preview { position: relative; width: 64px; height: 64px; border-radius: 8px; overflow: hidden; border: 1px solid var(--hairline); }
+.attach-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.attach-remove { position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; border-radius: 50%; border: none; background: rgba(0,0,0,.6); color: #fff; font-size: 10px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.attach-remove:hover { background: rgba(0,0,0,.85); }
+
+/* Posted images: thumbnails + click-to-zoom lightbox */
+.img-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.img-thumb { padding: 0; border: 1px solid var(--hairline); border-radius: 10px; overflow: hidden; cursor: zoom-in; background: none; width: 120px; height: 120px; }
+.img-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.img-lightbox { position: fixed; inset: 0; z-index: 600; background: rgba(20,17,13,.82); display: flex; align-items: center; justify-content: center; padding: 24px; cursor: zoom-out; }
+.img-lightbox img { max-width: 92vw; max-height: 92vh; border-radius: 8px; box-shadow: 0 20px 60px rgba(0,0,0,.5); cursor: default; }
+
 /* Reply thread */
 .reply-thread { display: flex; flex-direction: column; gap: 10px; border-left: 2px solid var(--hairline); padding-left: 14px; margin-left: 18px; }
 .reply { display: flex; gap: 8px; align-items: flex-start; }
