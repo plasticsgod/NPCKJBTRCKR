@@ -353,8 +353,7 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
               <div className="compose-right">
                 <MentionTextarea value={newPost} onChange={setNewPost} users={users}
                   placeholder={`Write an update… Use @ to mention someone`} rows={2} />
-                <ImageAttach files={newImages} setFiles={setNewImages} disabled={posting} />
-                <FileAttach files={newFiles} setFiles={setNewFiles} disabled={posting} />
+                <Attach images={newImages} setImages={setNewImages} files={newFiles} setFiles={setNewFiles} disabled={posting} />
                 <div className="compose-foot">
                   <button className="btn-accent" onClick={submitPost} disabled={(!newPost.trim() && newImages.length === 0 && newFiles.length === 0) || posting}>
                     {posting ? "Posting…" : "Post update"}
@@ -535,8 +534,7 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, owners, like
           <div className="compose-right">
             <MentionTextarea value={reply} onChange={setReply} users={users}
               placeholder="Write a reply… Use @ to mention" rows={2} />
-            <ImageAttach files={replyImages} setFiles={setReplyImages} disabled={submitting} />
-            <FileAttach files={replyFiles} setFiles={setReplyFiles} disabled={submitting} />
+            <Attach images={replyImages} setImages={setReplyImages} files={replyFiles} setFiles={setReplyFiles} disabled={submitting} />
             <div className="compose-foot">
               <button className="btn-accent" onClick={submitReply} disabled={(!reply.trim() && replyImages.length === 0 && replyFiles.length === 0) || submitting}>
                 {submitting ? "…" : "Reply"}
@@ -636,34 +634,46 @@ function LikeButton({ targetType, targetId, likers, userEmail, onToggle }) {
 }
 
 // Image attach control for the composer: pick images, preview, remove before posting.
-function ImageAttach({ files, setFiles, disabled }) {
+// Unified attach control: pick images and/or documents in one go. Images are
+// routed to the compress + thumbnail path; everything else becomes a file chip.
+function Attach({ images, setImages, files, setFiles, disabled }) {
   const inputRef = useRef(null);
   function pick(e) {
-    const chosen = Array.from(e.target.files || []).filter((f) => f.type.startsWith("image/"));
-    setFiles((prev) => [...prev, ...chosen].slice(0, MAX_IMAGES));
+    const chosen = Array.from(e.target.files || []);
+    const imgs = chosen.filter((f) => f.type.startsWith("image/"));
+    const docs = chosen.filter((f) => !f.type.startsWith("image/"));
+    if (imgs.length) setImages((prev) => [...prev, ...imgs].slice(0, MAX_IMAGES));
+    if (docs.length) setFiles((prev) => [...prev, ...docs].slice(0, MAX_FILES));
     e.target.value = "";
   }
-  function removeAt(i) { setFiles((prev) => prev.filter((_, idx) => idx !== i)); }
-  const full = files.length >= MAX_IMAGES;
+  function removeImage(i) { setImages((prev) => prev.filter((_, idx) => idx !== i)); }
+  function removeFile(i) { setFiles((prev) => prev.filter((_, idx) => idx !== i)); }
+  const full = images.length >= MAX_IMAGES && files.length >= MAX_FILES;
+  const hasAny = images.length > 0 || files.length > 0;
   return (
-    <div className="img-attach">
-      <input ref={inputRef} type="file" accept="image/*" multiple hidden onChange={pick} />
+    <div className="attach">
+      <input ref={inputRef} type="file" multiple hidden onChange={pick} />
       <button type="button" className="attach-btn" onClick={() => inputRef.current?.click()}
-        disabled={disabled || full} title={full ? `Up to ${MAX_IMAGES} images` : "Attach image"}>
+        disabled={disabled || full} title={full ? "Attachment limit reached" : "Attach an image or file"}>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" />
-          <path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21" />
+          <path d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
         </svg>
-        {full ? `Max ${MAX_IMAGES}` : "Add image"}
+        {full ? "Max reached" : "Attach"}
       </button>
-      {files.length > 0 && (
+      {hasAny && (
         <div className="attach-previews">
-          {files.map((f, i) => (
-            <div className="attach-preview" key={i}>
+          {images.map((f, i) => (
+            <div className="attach-preview" key={"img" + i}>
               <img src={URL.createObjectURL(f)} alt="" />
-              <button type="button" className="attach-remove" onClick={() => removeAt(i)} aria-label="Remove">✕</button>
+              <button type="button" className="attach-remove" onClick={() => removeImage(i)} aria-label="Remove">✕</button>
             </div>
+          ))}
+          {files.map((f, i) => (
+            <span className="file-chip pending" key={"file" + i}>
+              <span className="file-chip-name">{f.name}</span>
+              <button type="button" className="file-chip-x" onClick={() => removeFile(i)} aria-label="Remove">✕</button>
+            </span>
           ))}
         </div>
       )}
@@ -690,41 +700,6 @@ function ImageGrid({ paths }) {
         </div>
       )}
     </>
-  );
-}
-
-// File attach control for the composer: pick documents, list + remove before posting.
-function FileAttach({ files, setFiles, disabled }) {
-  const inputRef = useRef(null);
-  function pick(e) {
-    const chosen = Array.from(e.target.files || []);
-    setFiles((prev) => [...prev, ...chosen].slice(0, MAX_FILES));
-    e.target.value = "";
-  }
-  function removeAt(i) { setFiles((prev) => prev.filter((_, idx) => idx !== i)); }
-  const full = files.length >= MAX_FILES;
-  return (
-    <div className="file-attach">
-      <input ref={inputRef} type="file" multiple hidden onChange={pick} />
-      <button type="button" className="attach-btn" onClick={() => inputRef.current?.click()}
-        disabled={disabled || full} title={full ? `Up to ${MAX_FILES} files` : "Attach a file"}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-        </svg>
-        {full ? `Max ${MAX_FILES}` : "Attach file"}
-      </button>
-      {files.length > 0 && (
-        <div className="file-pending">
-          {files.map((f, i) => (
-            <span className="file-chip pending" key={i}>
-              <span className="file-chip-name">{f.name}</span>
-              <button type="button" className="file-chip-x" onClick={() => removeAt(i)} aria-label="Remove">✕</button>
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
   );
 }
 
