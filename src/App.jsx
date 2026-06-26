@@ -6,12 +6,13 @@ import Sidebar from "./components/Sidebar";
 import WorkOrders from "./components/WorkOrders";
 import Dashboard from "./components/Dashboard";
 import PlasticsEstimator from "./components/PlasticsEstimator";
+import PlasticQuotes from "./components/PlasticQuotes";
 import Projects from "./projects/Projects";
 import JobModal from "./components/JobModal";
 import { Toaster, toast } from "./components/Toaster";
 import SearchOverlay from "./components/SearchOverlay";
 
-const PAGES = ["dashboard", "work_orders", "projects", "plastics"];
+const PAGES = ["dashboard", "work_orders", "projects", "plastics", "plastic_quotes"];
 
 function getPageFromHash() {
   const h = window.location.hash.replace("#", "");
@@ -92,6 +93,7 @@ export default function App() {
       dashboard: "Dashboard",
       work_orders: "Work Orders",
       plastics: "Plastics Estimator",
+      plastic_quotes: "Plastic Quotes",
       projects: "Projects",
     };
     document.title = `${names[page] || "NutraPack"} · NutraPack App`;
@@ -200,6 +202,8 @@ export default function App() {
       <main className="main">
         {page === "plastics" ? (
           <PlasticsEstimator userEmail={session.user.email} />
+        ) : page === "plastic_quotes" ? (
+          <PlasticQuotes />
         ) : page === "projects" ? (
           <Projects
             userEmail={session.user.email}
