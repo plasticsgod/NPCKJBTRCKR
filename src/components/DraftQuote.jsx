@@ -1,6 +1,6 @@
 import { money, money2 } from "../lib/pricing";
 
-export default function DraftQuote({ quote, setQuote, onPdf }) {
+export default function DraftQuote({ quote, setQuote, onPdf, onSave }) {
   function removeLine(i) {
     setQuote((qu) => ({ ...qu, lines: qu.lines.filter((_, idx) => idx !== i) }));
   }
@@ -36,9 +36,14 @@ export default function DraftQuote({ quote, setQuote, onPdf }) {
 
       <div className="qfoot">
         <span className="qtotal">Total <b>{quote.lines.length ? money2(total) : "—"}</b></span>
-        <button className="btn-accent" disabled={quote.lines.length === 0} onClick={onPdf}>
-          Export branded PDF
-        </button>
+        <div className="qfoot-actions">
+          <button className="btn-ghost" disabled={quote.lines.length === 0} onClick={onSave}>
+            Save quote
+          </button>
+          <button className="btn-accent" disabled={quote.lines.length === 0} onClick={onPdf}>
+            Export branded PDF
+          </button>
+        </div>
       </div>
     </section>
   );

@@ -9,6 +9,7 @@ import PriceList from "./PriceList";
 import DraftQuote from "./DraftQuote";
 import PricingEditor from "./PricingEditor";
 import { buildQuotePDF } from "../lib/quotePdf";
+import { toast } from "./Toaster";
 
 export default function PlasticsEstimator({ userEmail }) {
   const [versions, setVersions] = useState([]);
@@ -109,6 +110,20 @@ export default function PlasticsEstimator({ userEmail }) {
     const l = currentLine();
     if (!l) return;
     setQuote((qu) => ({ ...qu, lines: [...qu.lines, l] }));
+  }
+
+  // Save the current draft basket to the Plastic Quotes history.
+  async function saveQuote() {
+    if (quote.lines.length === 0) return;
+    const total = quote.lines.reduce((a, l) => a + l.total, 0);
+    const { error } = await supabase.from("plastic_quotes").insert({
+      created_by: userEmail,
+      customer: quote.customer || null,
+      lines: quote.lines,
+      total,
+    });
+    if (error) { toast.error("Couldn't save quote — " + error.message); return; }
+    toast.success(`Quote saved${quote.customer ? " for " + quote.customer : ""}`);
   }
 
   // Result panel data
@@ -234,6 +249,7 @@ export default function PlasticsEstimator({ userEmail }) {
             quote={quote}
             setQuote={setQuote}
             onPdf={() => buildQuotePDF(quote)}
+            onSave={saveQuote}
           />
         </div>
       </div>
