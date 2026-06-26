@@ -1764,7 +1764,7 @@ a.file-chip:hover svg { color: var(--accent); }
 .quote-lines td { padding: 8px; border-bottom: 1px solid var(--hairline-soft); color: var(--ink); }
 .quote-lines th.num, .quote-lines td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .quote-detail-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
-.quote-actions { display: flex; gap: 10px; }
+.quote-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
 @media (max-width: 640px) {
   .quote-row { grid-template-columns: 50px 1fr auto 18px; }

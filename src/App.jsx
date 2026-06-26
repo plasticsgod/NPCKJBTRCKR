@@ -152,11 +152,14 @@ export default function App() {
       const { id, created_at, ...fields } = job;
       const { error } = await supabase.from("jobs").update(fields).eq("id", id);
       if (error) return toast.error("Could not save changes: " + error.message);
+      setEditing(null);
     } else {
-      const { error } = await supabase.from("jobs").insert(job);
+      const { data, error } = await supabase.from("jobs").insert(job).select().single();
       if (error) return toast.error("Could not create the job: " + error.message);
+      // Keep the modal open in edit mode so Proofs & Artwork become available now.
+      setEditing(data);
+      toast.success("Job created — you can now add proofs & artwork");
     }
-    setEditing(null);
     loadJobs();
   }
 
@@ -285,6 +288,7 @@ export default function App() {
 
       {editing !== null && (
         <JobModal
+          key={editing.id || "new"}
           job={editing}
           customers={customers}
           onSave={saveJob}
