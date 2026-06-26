@@ -38,6 +38,26 @@ export default function PlasticQuotes() {
     buildQuotePDF({ customer: q.customer, lines: q.lines || [] });
   }
 
+  // Create a plastics work order from a saved quote, carrying over what we know.
+  // The user fills in PO, shipping, etc. on the work order afterward.
+  async function sendToWorkOrders(q) {
+    const lines = q.lines || [];
+    const qty = lines.reduce((s, l) => s + (Number(l.units) || 0), 0);
+    const description = lines.map((l) => `${(l.units || 0).toLocaleString()} × ${l.name}`).join("\n");
+    const { error } = await supabase.from("plastic_jobs").insert({
+      job_title: `Quote #${q.quote_no}${q.customer ? " — " + q.customer : ""}`,
+      brand: q.customer || null,
+      description,
+      qty,
+      qty_unit: "tubs",
+      revenue: q.total || 0,
+      status: "Submitted",
+      created_by: q.created_by || null,
+    });
+    if (error) { toast.error("Couldn't send — " + error.message); return; }
+    toast.success("Sent to Plastics Work Orders — open it there to add PO & shipping");
+  }
+
   if (quotes === null) return <div className="muted pad">Loading quotes…</div>;
 
   const q = query.trim().toLowerCase();
@@ -120,6 +140,7 @@ export default function PlasticQuotes() {
                       <span className="muted">Saved by {displayName(row.created_by) || "—"}</span>
                       <div className="quote-actions">
                         <button className="btn-ghost" onClick={() => remove(row.id)}>Delete</button>
+                        <button className="btn-ghost" onClick={() => sendToWorkOrders(row)}>Send to plastics work orders</button>
                         <button className="btn-accent" onClick={() => download(row)}>Download PDF</button>
                       </div>
                     </div>
