@@ -5,6 +5,7 @@ import { useUsers } from "./useUsers";
 import TaskDrawer from "./TaskDrawer";
 import { notifyAssignment } from "./notifications";
 import { displayName, nameInitials, avatarStyle } from "./userMap";
+import Avatar from "./Avatar";
 import DatePicker from "../components/DatePicker";
 import { toast } from "../components/Toaster";
 
@@ -850,7 +851,7 @@ function MultiPersonPicker({ owners, users, onToggle }) {
         {owners.length === 0
           ? <span className="not-assigned">Not Assigned</span>
           : owners.map(e => (
-            <span key={e} className="avatar sm" title={displayName(e)} style={avatarStyle(e)}>{nameInitials(e)}</span>
+            <Avatar key={e} email={e} size="sm" />
           ))
         }
         <span className="assign-caret">▾</span>

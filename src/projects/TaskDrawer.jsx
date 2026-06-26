@@ -3,6 +3,7 @@ import { supabase } from "../supabaseClient";
 import { TASK_STATUSES } from "./constants";
 import { notifyAssignment, notifyMentions, notifyComment } from "./notifications";
 import { displayName, nameInitials, avatarStyle } from "./userMap";
+import Avatar from "./Avatar";
 import DatePicker from "../components/DatePicker";
 
 // --- Image attachments -------------------------------------------------------
@@ -484,7 +485,7 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, owners, reac
   return (
     <div className="post-card">
       <div className="post-head">
-        <span className="avatar" style={avatarStyle(post.author)}>{nameInitials(post.author)}</span>
+        <Avatar email={post.author} />
         <div className="post-meta">
           <span className="post-author">{displayName(post.author)}</span>
           <span className="post-time">{fmtTime(post.created_at)}</span>
@@ -568,7 +569,7 @@ function ReplyItem({ reply, users, userEmail, reactions, onToggleReaction, onCha
 
   return (
     <div className="reply">
-      <span className="avatar sm" style={avatarStyle(reply.author)}>{nameInitials(reply.author)}</span>
+      <Avatar email={reply.author} size="sm" />
       <div className="reply-content">
         <div className="reply-meta">
           <span className="post-author">{displayName(reply.author)}</span>
@@ -867,7 +868,7 @@ function MultiPersonPicker({ owners, users, onToggle }) {
         {owners.length === 0
           ? <span className="not-assigned">Not Assigned</span>
           : owners.map(e => (
-            <span key={e} className="avatar sm" title={displayName(e)} style={avatarStyle(e)}>{nameInitials(e)}</span>
+            <Avatar key={e} email={e} size="sm" />
           ))
         }
         <span className="assign-caret">▾</span>
