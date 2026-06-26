@@ -1,7 +1,8 @@
 const NAV = [
   { id: "dashboard", label: "Dashboard" },
-  { id: "work_orders", label: "Work Orders" },
   { id: "projects", label: "Projects" },
+  { id: "work_orders", label: "Label Work Orders" },
+  { id: "plastic_work_orders", label: "Plastics Work Orders" },
   { id: "plastics", label: "Plastics Estimator" },
   { id: "plastic_quotes", label: "Plastic Quotes" },
 ];
