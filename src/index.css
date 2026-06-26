@@ -367,6 +367,9 @@ button {
 .pill-printing                        { background: #e2445c; }
 .pill-shipped                         { background: #3f8ae0; }
 .pill-delivered                       { background: #00c875; }
+/* Plastics work-order statuses (same palette as labels) */
+.pill-submitted                       { background: #f0b429; }
+.pill-in-production                   { background: #e2445c; }
 
 /* ---- Board view ---------------------------------------------------------- */
 .board {
@@ -1772,3 +1775,8 @@ a.file-chip:hover svg { color: var(--accent); }
 /* Live profit hint in the work-order form */
 .profit-hint { font-size: 13px; color: var(--ink-2); margin: -2px 0 2px; }
 .profit-hint b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* Quantity + unit field (plastics work orders) */
+.qty-input { display: flex; gap: 6px; }
+.qty-input input { flex: 1; min-width: 0; }
+.qty-input select { flex: 0 0 auto; width: auto; }

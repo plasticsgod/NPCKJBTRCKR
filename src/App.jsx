@@ -4,15 +4,17 @@ import Auth from "./components/Auth";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import WorkOrders from "./components/WorkOrders";
+import PlasticWorkOrders from "./components/PlasticWorkOrders";
 import Dashboard from "./components/Dashboard";
 import PlasticsEstimator from "./components/PlasticsEstimator";
 import PlasticQuotes from "./components/PlasticQuotes";
 import Projects from "./projects/Projects";
 import JobModal from "./components/JobModal";
+import PlasticJobModal from "./components/PlasticJobModal";
 import { Toaster, toast } from "./components/Toaster";
 import SearchOverlay from "./components/SearchOverlay";
 
-const PAGES = ["dashboard", "work_orders", "projects", "plastics", "plastic_quotes"];
+const PAGES = ["dashboard", "work_orders", "plastic_work_orders", "projects", "plastics", "plastic_quotes"];
 
 function getPageFromHash() {
   const h = window.location.hash.replace("#", "");
@@ -25,8 +27,10 @@ export default function App() {
   const [recovery, setRecovery] = useState(false);
 
   const [jobs, setJobs] = useState([]);
+  const [plasticJobs, setPlasticJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
+  const [editingPlastic, setEditingPlastic] = useState(null);
   const [page, setPageState] = useState(getPageFromHash);
   const [navOpen, setNavOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -91,7 +95,8 @@ export default function App() {
   useEffect(() => {
     const names = {
       dashboard: "Dashboard",
-      work_orders: "Work Orders",
+      work_orders: "Label Work Orders",
+      plastic_work_orders: "Plastics Work Orders",
       plastics: "Plastics Estimator",
       plastic_quotes: "Plastic Quotes",
       projects: "Projects",
@@ -120,6 +125,26 @@ export default function App() {
       .subscribe();
     return () => supabase.removeChannel(channel);
   }, [session, loadJobs]);
+
+  // --- Plastics work orders (separate table, no Sttark) -----------------------
+  const loadPlasticJobs = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("plastic_jobs")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) console.error("Could not load plastic jobs:", error.message);
+    else setPlasticJobs(data ?? []);
+  }, []);
+
+  useEffect(() => {
+    if (!session) return;
+    loadPlasticJobs();
+    const channel = supabase
+      .channel("plastic-jobs-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "plastic_jobs" }, loadPlasticJobs)
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [session, loadPlasticJobs]);
 
   // --- Create / update / delete ----------------------------------------------
   async function saveJob(job) {
@@ -164,6 +189,29 @@ export default function App() {
   // List of existing customers (for the combobox dropdown)
   const customers = [...new Set(jobs.map((j) => j.brand).filter(Boolean))].sort();
 
+  // --- Plastics: save / delete (mirrors jobs, separate table) -----------------
+  async function savePlasticJob(job) {
+    if (job.id) {
+      const { id, created_at, ...fields } = job;
+      const { error } = await supabase.from("plastic_jobs").update(fields).eq("id", id);
+      if (error) return toast.error("Could not save changes: " + error.message);
+    } else {
+      const { error } = await supabase.from("plastic_jobs").insert({ ...job, created_by: session.user.email });
+      if (error) return toast.error("Could not create the order: " + error.message);
+    }
+    setEditingPlastic(null);
+    loadPlasticJobs();
+  }
+
+  async function deletePlasticJobs(ids) {
+    const { error } = await supabase.from("plastic_jobs").delete().in("id", ids);
+    if (error) return toast.error("Could not delete: " + error.message);
+    loadPlasticJobs();
+  }
+
+  // Plastics customers are derived only from plastic_jobs — kept separate from labels.
+  const plasticCustomers = [...new Set(plasticJobs.map((j) => j.brand).filter(Boolean))].sort();
+
   // --- Render -----------------------------------------------------------------
   if (!authReady) return <div className="screen-center muted">Loading…</div>;
   if (recovery)
@@ -204,6 +252,14 @@ export default function App() {
           <PlasticsEstimator userEmail={session.user.email} />
         ) : page === "plastic_quotes" ? (
           <PlasticQuotes />
+        ) : page === "plastic_work_orders" ? (
+          <PlasticWorkOrders
+            jobs={plasticJobs}
+            customers={plasticCustomers}
+            onNew={() => setEditingPlastic({})}
+            onEdit={setEditingPlastic}
+            onDeleteMany={deletePlasticJobs}
+          />
         ) : page === "projects" ? (
           <Projects
             userEmail={session.user.email}
@@ -233,6 +289,15 @@ export default function App() {
           customers={customers}
           onSave={saveJob}
           onClose={() => setEditing(null)}
+        />
+      )}
+
+      {editingPlastic !== null && (
+        <PlasticJobModal
+          job={editingPlastic}
+          customers={plasticCustomers}
+          onSave={savePlasticJob}
+          onClose={() => setEditingPlastic(null)}
         />
       )}
 
