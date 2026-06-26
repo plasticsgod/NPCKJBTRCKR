@@ -1307,6 +1307,56 @@ button {
 .like-wrap:hover .like-tip { opacity: 1; visibility: visible; transform: translateY(0); }
 .like-tip-row { white-space: nowrap; }
 
+/* Emoji reactions */
+.reaction-bar { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.reaction-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: #fff;
+  cursor: pointer;
+  font-family: var(--mono); font-size: 12px; font-weight: 700;
+  color: var(--ink-2);
+  line-height: 1.4;
+  transition: background .12s, border-color .12s;
+}
+.reaction-pill:hover { border-color: var(--ink-3); }
+.reaction-pill.mine { background: #fff1ea; border-color: var(--accent); color: var(--accent); }
+.reaction-emoji { font-size: 13px; line-height: 1; }
+.reaction-count { font-variant-numeric: tabular-nums; }
+
+.reaction-add-wrap { position: relative; display: inline-flex; }
+.reaction-add {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: #fff; color: var(--ink-3);
+  cursor: pointer;
+  transition: color .12s, border-color .12s;
+}
+.reaction-add:hover { color: var(--accent); border-color: var(--accent); }
+.reaction-add svg { display: block; }
+.reaction-picker {
+  position: absolute; bottom: calc(100% + 6px); left: 0; z-index: 80;
+  display: flex; gap: 2px;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .16);
+  animation: reactionIn .12s ease;
+}
+@keyframes reactionIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+.reaction-choice {
+  border: none; background: none; cursor: pointer;
+  font-size: 20px; line-height: 1;
+  padding: 4px 5px; border-radius: 8px;
+  transition: background .1s;
+}
+.reaction-choice:hover { background: var(--panel); transform: scale(1.15); }
+
 /* Image attach (composer) */
 .img-attach { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .attach { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
