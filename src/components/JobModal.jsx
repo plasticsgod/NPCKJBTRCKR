@@ -8,6 +8,8 @@ const EMPTY = {
   brand: "",
   description: "",
   print_qty: 0,
+  cost: "",
+  revenue: "",
   status: "Not Submitted",
   ship_to: "",
   po_number: "",
@@ -43,7 +45,12 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
   function submit(e) {
     e.preventDefault();
     if (!form.job_title.trim()) return;
-    onSave({ ...form, print_qty: Number(form.print_qty) || 0 });
+    onSave({
+      ...form,
+      print_qty: Number(form.print_qty) || 0,
+      cost: form.cost === "" || form.cost == null ? null : Number(form.cost) || 0,
+      revenue: form.revenue === "" || form.revenue == null ? null : Number(form.revenue) || 0,
+    });
   }
 
   useEffect(() => {
@@ -96,6 +103,23 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
                   onChange={(e) => set("print_qty", e.target.value)} />
               </label>
             </div>
+            <div className="field-row">
+              <label className="field">
+                <span>Total Cost <span className="field-hint">— what we paid (brokering)</span></span>
+                <input type="number" min="0" step="0.01" placeholder="0.00"
+                  value={form.cost} onChange={(e) => set("cost", e.target.value)} />
+              </label>
+              <label className="field">
+                <span>Client Charge <span className="field-hint">— what we bill the client</span></span>
+                <input type="number" min="0" step="0.01" placeholder="0.00"
+                  value={form.revenue} onChange={(e) => set("revenue", e.target.value)} />
+              </label>
+            </div>
+            {(form.cost !== "" || form.revenue !== "") && (
+              <p className="profit-hint">
+                Profit: <b>${((Number(form.revenue) || 0) - (Number(form.cost) || 0)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b>
+              </p>
+            )}
             <div className="field-row">
               <label className="field">
                 <span>Status</span>

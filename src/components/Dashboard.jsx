@@ -42,6 +42,13 @@ export default function Dashboard({ jobs = [] }) {
   const labelsYTD = ytdDone.reduce((sum, j) => sum + (j.print_qty || 0), 0);
   const activeCount = jobs.filter((j) => !DONE.includes(j.status)).length;
 
+  // Money (realized on shipped/delivered jobs this year).
+  const revenueYTD = ytdDone.reduce((s, j) => s + (Number(j.revenue) || 0), 0);
+  const costYTD = ytdDone.reduce((s, j) => s + (Number(j.cost) || 0), 0);
+  const profitYTD = revenueYTD - costYTD;
+  const marginPct = revenueYTD > 0 ? Math.round((profitYTD / revenueYTD) * 100) : null;
+  const usd = (n) => "$" + Math.round(n).toLocaleString();
+
   // Top client by total labels YTD.
   const byClient = {};
   for (const j of ytdDone) {
@@ -88,6 +95,16 @@ export default function Dashboard({ jobs = [] }) {
           <span className="stat-label">Labels Printed · Year to Date</span>
           <span className="stat-value">{labelsYTD.toLocaleString()}</span>
           <span className="stat-foot">Shipped &amp; delivered in {year}</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">Revenue · Year to Date</span>
+          <span className="stat-value money">{usd(revenueYTD)}</span>
+          <span className="stat-foot">Billed on shipped &amp; delivered</span>
+        </div>
+        <div className="stat-card accent">
+          <span className="stat-label">Label Profit · YTD</span>
+          <span className="stat-value money">{usd(profitYTD)}</span>
+          <span className="stat-foot">{marginPct !== null ? `${marginPct}% margin` : "Charge minus cost"}</span>
         </div>
         <div className="stat-card">
           <span className="stat-label">Active Work Orders</span>
