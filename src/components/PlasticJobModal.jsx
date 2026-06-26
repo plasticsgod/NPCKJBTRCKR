@@ -56,7 +56,6 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
   });
   const [portc, setPortc] = useState(snap?.portc ?? "");
   const [truck, setTruck] = useState(snap?.truck ?? "");
-  const [ware, setWare] = useState(snap?.ware ?? "");
 
   useEffect(() => {
     function onKey(e) { if (e.key === "Escape") onClose(); }
@@ -73,7 +72,7 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
     const oid = ORIGIN_ID[form.origin];
     const pid = portIdByName(form.port);
     const freight = (oid && pid && data.freight?.[oid]?.[pid]) || 0;
-    const ship = { freight, portc: num(portc), truck: num(truck), ware: num(ware) };
+    const ship = { freight, portc: num(portc), truck: num(truck) };
     let unitCost, unitCharge;
     if (kind === "set") {
       const e = setEconomics(data, item, ship, {});
@@ -87,7 +86,7 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
     const totalCost = units != null ? unitCost * units : null;
     const totalCharge = units != null ? unitCharge * units : null;
     return { kind, id, item, freight, lane: !!(oid && pid), unitCost, unitCharge, units, totalCost, totalCharge };
-  }, [data, prod, marginIdx, portc, truck, ware, form.origin, form.port, form.qty, form.qty_unit]);
+  }, [data, prod, marginIdx, portc, truck, form.origin, form.port, form.qty, form.qty_unit]);
 
   function applyPricing() {
     if (!calc || !version || calc.totalCost == null) {
@@ -105,7 +104,7 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
       origin: form.origin,
       port: form.port,
       freight: calc.freight,
-      portc: num(portc), truck: num(truck), ware: num(ware),
+      portc: num(portc), truck: num(truck),
       units: calc.units,
       unit_cost: calc.unitCost,
       unit_charge: calc.unitCharge,
@@ -261,10 +260,6 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
                   <label className="field">
                     <span>Trucking</span>
                     <input type="number" min="0" placeholder="0" value={truck} onChange={(e) => setTruck(e.target.value)} />
-                  </label>
-                  <label className="field">
-                    <span>Warehouse</span>
-                    <input type="number" min="0" placeholder="0" value={ware} onChange={(e) => setWare(e.target.value)} />
                   </label>
                 </div>
 
