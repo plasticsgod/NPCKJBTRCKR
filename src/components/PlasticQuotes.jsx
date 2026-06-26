@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../supabaseClient";
 import { buildQuotePDF } from "../lib/quotePdf";
-import { money, money2 } from "../lib/pricing";
+import { MARGINS, money, money2 } from "../lib/pricing";
 import { displayName } from "../projects/userMap";
 import { toast } from "./Toaster";
 
@@ -39,23 +39,44 @@ export default function PlasticQuotes() {
   }
 
   // Create a plastics work order from a saved quote, carrying over what we know.
-  // The user fills in PO, shipping, etc. on the work order afterward.
+  // Cost is recoverable from each line: sell price = landed / margin-divisor, so
+  // unit cost = unit charge × divisor. We snapshot the figures onto the order.
   async function sendToWorkOrders(q) {
     const lines = q.lines || [];
+    const divisor = (lab) => MARGINS.find((m) => m.lab === lab)?.d ?? 0.5;
+    const priced = lines.map((l) => {
+      const d = divisor(l.marginLab);
+      const unitCost = (Number(l.unit) || 0) * d;
+      const units = Number(l.units) || 0;
+      return {
+        name: l.name,
+        units,
+        margin: l.marginLab,
+        unit_charge: Number(l.unit) || 0,
+        unit_cost: unitCost,
+        total_charge: Number(l.total) || 0,
+        total_cost: unitCost * units,
+      };
+    });
+    const totalCost = priced.reduce((s, l) => s + l.total_cost, 0);
+    const totalCharge = q.total || priced.reduce((s, l) => s + l.total_charge, 0);
     const qty = lines.reduce((s, l) => s + (Number(l.units) || 0), 0);
     const description = lines.map((l) => `${(l.units || 0).toLocaleString()} × ${l.name}`).join("\n");
+
     const { error } = await supabase.from("plastic_jobs").insert({
       job_title: `Quote #${q.quote_no}${q.customer ? " — " + q.customer : ""}`,
       brand: q.customer || null,
       description,
       qty,
       qty_unit: "tubs",
-      revenue: q.total || 0,
+      cost: Math.round(totalCost * 100) / 100,
+      revenue: Math.round(totalCharge * 100) / 100,
       status: "Submitted",
       created_by: q.created_by || null,
+      pricing: { source: "quote", quote_no: q.quote_no, lines: priced, total_cost: totalCost, total_charge: totalCharge },
     });
     if (error) { toast.error("Couldn't send — " + error.message); return; }
-    toast.success("Sent to Plastics Work Orders — open it there to add PO & shipping");
+    toast.success("Sent to Plastics Work Orders — cost & charge filled in");
   }
 
   if (quotes === null) return <div className="muted pad">Loading quotes…</div>;
