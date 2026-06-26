@@ -171,7 +171,7 @@ function MentionTextarea({ value, onChange, users, placeholder, rows = 3 }) {
 export default function TaskDrawer({ task, projectName, userEmail, users, onClose, onUpdate, onDelete }) {
   const [local, setLocal] = useState({ ...task, owners: task.owners || [] });
   const [posts, setPosts] = useState([]);
-  const [likes, setLikes] = useState({}); // { [target_id]: [user_email, ...] }
+  const [reactions, setReactions] = useState({}); // { [target_id]: { [emoji]: [user_email, ...] } }
   const [newPost, setNewPost] = useState("");
   const [newImages, setNewImages] = useState([]);
   const [newFiles, setNewFiles] = useState([]);
@@ -227,17 +227,18 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
       .from("task_posts").select("*, task_replies(*)").eq("task_id", task.id).order("created_at");
     const list = data ?? [];
     setPosts(list);
-    // Collect every post + reply id, then pull their likes in one query.
+    // Collect every post + reply id, then pull their reactions in one query.
     const ids = [];
     list.forEach((p) => { ids.push(p.id); (p.task_replies ?? []).forEach((r) => ids.push(r.id)); });
-    if (ids.length === 0) { setLikes({}); return; }
-    const { data: likeRows } = await supabase
-      .from("task_likes").select("target_id, user_email").in("target_id", ids);
+    if (ids.length === 0) { setReactions({}); return; }
+    const { data: reactionRows } = await supabase
+      .from("task_reactions").select("target_id, user_email, emoji").in("target_id", ids);
     const map = {};
-    (likeRows ?? []).forEach((row) => {
-      (map[row.target_id] = map[row.target_id] || []).push(row.user_email);
+    (reactionRows ?? []).forEach((row) => {
+      const t = (map[row.target_id] = map[row.target_id] || {});
+      (t[row.emoji] = t[row.emoji] || []).push(row.user_email);
     });
-    setLikes(map);
+    setReactions(map);
   }, [task.id]);
 
   useEffect(() => {
@@ -245,7 +246,7 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
     const ch = supabase.channel("posts-" + task.id)
       .on("postgres_changes", { event: "*", schema: "public", table: "task_posts", filter: "task_id=eq." + task.id }, loadPosts)
       .on("postgres_changes", { event: "*", schema: "public", table: "task_replies" }, loadPosts)
-      .on("postgres_changes", { event: "*", schema: "public", table: "task_likes" }, loadPosts)
+      .on("postgres_changes", { event: "*", schema: "public", table: "task_reactions" }, loadPosts)
       .subscribe();
     return () => supabase.removeChannel(ch);
   }, [task.id, loadPosts]);
@@ -297,22 +298,24 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
     loadPosts();
   }
 
-  // Like / unlike a post or reply. Updates the UI immediately, then persists;
+  // Add / remove the current user's reaction with a given emoji. Optimistic;
   // the realtime subscription keeps everyone else in sync.
-  async function toggleLike(targetType, targetId) {
-    const current = likes[targetId] || [];
-    const liked = current.includes(userEmail);
-    setLikes((m) => {
-      const list = m[targetId] || [];
-      const next = liked ? list.filter((e) => e !== userEmail) : [...list, userEmail];
-      return { ...m, [targetId]: next };
+  async function toggleReaction(targetType, targetId, emoji) {
+    const cur = (reactions[targetId] || {})[emoji] || [];
+    const has = cur.includes(userEmail);
+    setReactions((m) => {
+      const t = { ...(m[targetId] || {}) };
+      const list = t[emoji] || [];
+      const next = has ? list.filter((e) => e !== userEmail) : [...list, userEmail];
+      if (next.length) t[emoji] = next; else delete t[emoji];
+      return { ...m, [targetId]: t };
     });
-    if (liked) {
-      await supabase.from("task_likes").delete()
-        .eq("target_type", targetType).eq("target_id", targetId).eq("user_email", userEmail);
+    if (has) {
+      await supabase.from("task_reactions").delete()
+        .eq("target_type", targetType).eq("target_id", targetId).eq("user_email", userEmail).eq("emoji", emoji);
     } else {
-      await supabase.from("task_likes")
-        .insert({ target_type: targetType, target_id: targetId, user_email: userEmail });
+      await supabase.from("task_reactions")
+        .insert({ target_type: targetType, target_id: targetId, user_email: userEmail, emoji });
     }
   }
 
@@ -367,7 +370,7 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
             {[...posts].reverse().map((post) => (
               <PostCard key={post.id} post={post} users={users} userEmail={userEmail}
                 taskTitle={task.title} projectName={projectName} owners={local.owners || []}
-                likes={likes} onToggleLike={toggleLike}
+                reactions={reactions} onToggleReaction={toggleReaction}
                 onDelete={deletePost} onReply={loadPosts} />
             ))}
           </div>
@@ -428,7 +431,7 @@ function KebabMenu({ onEdit, onDelete }) {
   );
 }
 
-function PostCard({ post, users, userEmail, taskTitle, projectName, owners, likes, onToggleLike, onDelete, onReply }) {
+function PostCard({ post, users, userEmail, taskTitle, projectName, owners, reactions, onToggleReaction, onDelete, onReply }) {
   const [showReply, setShowReply] = useState(false);
   const [reply, setReply] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -514,16 +517,16 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, owners, like
         <div className="reply-thread">
           {replies.map((r) => (
             <ReplyItem key={r.id} reply={r} users={users} userEmail={userEmail}
-              likers={likes[r.id] || []} onToggleLike={onToggleLike}
+              reactions={reactions[r.id]} onToggleReaction={onToggleReaction}
               onChanged={onReply} onDelete={deleteReply} />
           ))}
         </div>
       )}
 
-      {/* Like + reply actions */}
+      {/* Reactions + reply actions */}
       <div className="post-actions">
-        <LikeButton targetType="post" targetId={post.id} likers={likes[post.id] || []}
-          userEmail={userEmail} onToggle={onToggleLike} />
+        <ReactionBar targetType="post" targetId={post.id} reactions={reactions[post.id]}
+          userEmail={userEmail} onToggle={onToggleReaction} />
         <button className="link" onClick={() => setShowReply(!showReply)}>
           {showReply ? "Cancel" : `Reply${replies.length ? ` (${replies.length})` : ""}`}
         </button>
@@ -547,7 +550,7 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, owners, like
   );
 }
 
-function ReplyItem({ reply, users, userEmail, likers, onToggleLike, onChanged, onDelete }) {
+function ReplyItem({ reply, users, userEmail, reactions, onToggleReaction, onChanged, onDelete }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(reply.body);
   const [saving, setSaving] = useState(false);
@@ -591,8 +594,8 @@ function ReplyItem({ reply, users, userEmail, likers, onToggleLike, onChanged, o
             <ImageGrid paths={reply.images} />
             <FileList files={reply.files} />
             <div className="reply-actions">
-              <LikeButton targetType="reply" targetId={reply.id} likers={likers}
-                userEmail={userEmail} onToggle={onToggleLike} />
+              <ReactionBar targetType="reply" targetId={reply.id} reactions={reactions}
+                userEmail={userEmail} onToggle={onToggleReaction} />
             </div>
           </>
         )}
@@ -609,26 +612,59 @@ function fmtTime(iso) {
 
 // Like button: gray thumbs-up that turns orange with a count when you've liked.
 // Hovering reveals the list of people who liked this update/comment.
-function LikeButton({ targetType, targetId, likers, userEmail, onToggle }) {
-  const liked = likers.includes(userEmail);
-  const count = likers.length;
+// Curated reaction set for the picker.
+const REACTION_EMOJIS = ["👍", "❤️", "🎉", "😄", "👀", "✅", "🚀"];
+
+function ReactionBar({ targetType, targetId, reactions, userEmail, onToggle }) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!pickerOpen) return;
+    function onDown(e) { if (ref.current && !ref.current.contains(e.target)) setPickerOpen(false); }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [pickerOpen]);
+
+  const map = reactions || {};
+  const active = Object.entries(map).filter(([, list]) => list && list.length > 0);
+
   return (
-    <div className="like-wrap">
-      <button type="button" className={"like-btn" + (liked ? " liked" : "")}
-        onClick={() => onToggle(targetType, targetId)}
-        aria-pressed={liked} aria-label={liked ? "Remove like" : "Like"}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill={liked ? "currentColor" : "none"}
-          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M7 10v12" />
-          <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z" />
-        </svg>
-        {count > 0 && <span className="like-count">{count}</span>}
-      </button>
-      {count > 0 && (
-        <div className="like-tip" role="tooltip">
-          {likers.map((e) => <div key={e} className="like-tip-row">{displayName(e)}</div>)}
-        </div>
-      )}
+    <div className="reaction-bar" ref={ref}>
+      {active.map(([emoji, list]) => {
+        const mine = list.includes(userEmail);
+        return (
+          <button
+            key={emoji}
+            type="button"
+            className={"reaction-pill" + (mine ? " mine" : "")}
+            onClick={() => onToggle(targetType, targetId, emoji)}
+            title={list.map(displayName).join(", ")}
+          >
+            <span className="reaction-emoji">{emoji}</span>
+            <span className="reaction-count">{list.length}</span>
+          </button>
+        );
+      })}
+      <div className="reaction-add-wrap">
+        <button type="button" className="reaction-add" onClick={() => setPickerOpen((v) => !v)}
+          aria-label="Add reaction" aria-expanded={pickerOpen}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" /><path d="M8 14s1.5 2 4 2 4-2 4-2" />
+            <line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" />
+          </svg>
+        </button>
+        {pickerOpen && (
+          <div className="reaction-picker">
+            {REACTION_EMOJIS.map((e) => (
+              <button key={e} type="button" className="reaction-choice"
+                onClick={() => { onToggle(targetType, targetId, e); setPickerOpen(false); }}>
+                {e}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
