@@ -37,6 +37,7 @@ export default function Header({ page, email, onMenu, onSignOut, onSearch }) {
 function ProfileMenu({ email, onSignOut }) {
   const [open, setOpen] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
   const ref = useRef(null);
 
   useEffect(() => {
@@ -66,6 +67,15 @@ function ProfileMenu({ email, onSignOut }) {
           </div>
           <div className="profile-sep" />
           <button className="profile-item" role="menuitem"
+            onClick={() => { setOpen(false); setShowInvite(true); }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+              <line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" />
+            </svg>
+            Invite member or guest
+          </button>
+          <button className="profile-item" role="menuitem"
             onClick={() => { setOpen(false); setShowEmail(true); }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -85,6 +95,7 @@ function ProfileMenu({ email, onSignOut }) {
       )}
 
       {showEmail && <ChangeEmailModal currentEmail={email} onClose={() => setShowEmail(false)} />}
+      {showInvite && <InviteModal onClose={() => setShowInvite(false)} />}
     </div>
   );
 }
@@ -160,6 +171,96 @@ function ChangeEmailModal({ currentEmail, onClose }) {
             </div>
           </>
         )}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// Invite a full-access member (whole app) or a guest (one project). Calls the
+// secure invite-user Edge Function, which creates the account, emails an invite
+// link, and grants the chosen access.
+function InviteModal({ onClose }) {
+  const [email, setEmail] = useState("");
+  const [scope, setScope] = useState("project"); // 'project' | 'workspace'
+  const [projects, setProjects] = useState([]);
+  const [projectId, setProjectId] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [done, setDone] = useState("");
+
+  useEffect(() => {
+    supabase.from("projects").select("id,name").order("name").then(({ data }) => {
+      setProjects(data || []);
+      if (data && data.length) setProjectId((id) => id || data[0].id);
+    });
+  }, []);
+
+  async function submit() {
+    setError(""); setDone("");
+    const addr = email.trim().toLowerCase();
+    if (!addr || !addr.includes("@")) { setError("Enter a valid email address."); return; }
+    if (scope === "project" && !projectId) { setError("Pick a project."); return; }
+
+    setBusy(true);
+    const { data, error: fnErr } = await supabase.functions.invoke("invite-user", {
+      body: { email: addr, scope, projectId: scope === "project" ? projectId : null },
+    });
+    setBusy(false);
+
+    if (fnErr || data?.error) {
+      setError(data?.error || fnErr?.message || "Could not send the invite.");
+      return;
+    }
+    setDone(
+      data?.alreadyExisted
+        ? `${addr} already had an account — access granted.`
+        : `Invite sent to ${addr}. They'll get an email to set a password.`
+    );
+    setEmail("");
+  }
+
+  return createPortal(
+    <div className="pm-overlay" onClick={onClose}>
+      <div className="pm-modal" onClick={(e) => e.stopPropagation()}>
+        <h3 className="pm-title">Invite member or guest</h3>
+        <p className="pm-text">
+          We'll email them a link to set a password. Choose how much they can see.
+        </p>
+
+        <label className="pm-field">
+          <span>Email</span>
+          <input type="email" className="pm-input" value={email} autoFocus
+            placeholder="person@company.com" onChange={(e) => setEmail(e.target.value)} />
+        </label>
+
+        <label className="pm-field">
+          <span>Access</span>
+          <select className="pm-input" value={scope} onChange={(e) => setScope(e.target.value)}>
+            <option value="project">Guest — one project only</option>
+            <option value="workspace">Member — the whole app</option>
+          </select>
+        </label>
+
+        {scope === "project" && (
+          <label className="pm-field">
+            <span>Project</span>
+            <select className="pm-input" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+              {projects.length === 0 && <option value="">No projects yet</option>}
+              {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </label>
+        )}
+
+        {error && <p className="pm-error">{error}</p>}
+        {done && <p className="pm-text" style={{ color: "var(--accent)" }}>{done}</p>}
+
+        <div className="pm-actions">
+          <button className="link" onClick={onClose}>Close</button>
+          <button className="btn-accent" onClick={submit} disabled={busy}>
+            {busy ? "Sending…" : "Send invite"}
+          </button>
+        </div>
       </div>
     </div>,
     document.body
