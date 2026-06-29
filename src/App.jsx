@@ -16,6 +16,15 @@ import SearchOverlay from "./components/SearchOverlay";
 
 const PAGES = ["dashboard", "work_orders", "plastic_work_orders", "projects", "plastics", "plastic_quotes"];
 
+// Instant client-side check for the core team (matches the SQL allowlist) so
+// they never see a flash; invited "members" are confirmed via RPC below.
+const KNOWN_INTERNAL = [
+  "eduardonutramedia@gmail.com",
+  "jeff.weisser@nutrapack.co",
+  "taylor.knox@nutrapack.co",
+  "cc@nutramedia.co",
+];
+
 function getPageFromHash() {
   const h = window.location.hash.replace("#", "");
   return PAGES.includes(h) ? h : "dashboard";
@@ -33,6 +42,7 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
   const [recovery, setRecovery] = useState(isAuthActionHash);
+  const [isInternal, setIsInternal] = useState(false);
 
   const [jobs, setJobs] = useState([]);
   const [plasticJobs, setPlasticJobs] = useState([]);
@@ -98,6 +108,18 @@ export default function App() {
     });
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // Decide what the signed-in person can see. Core team is known instantly;
+  // invited "members" (full access) are confirmed via the same rule RLS uses.
+  useEffect(() => {
+    if (!session) { setIsInternal(false); return; }
+    const email = (session.user.email || "").toLowerCase();
+    const known = KNOWN_INTERNAL.includes(email);
+    setIsInternal(known);
+    supabase.rpc("app_is_internal").then(({ data, error }) => {
+      if (!error && typeof data === "boolean") setIsInternal(known || data);
+    });
+  }, [session]);
 
   // --- Browser-tab title reflects the current page ---------------------------
   useEffect(() => {
@@ -240,9 +262,11 @@ export default function App() {
 
   return (
     <div className="app">
+      {/* Guests only ever see Projects — pin the page and menu regardless of hash. */}
       <Header
-        page={page}
+        page={isInternal ? page : "projects"}
         email={session.user.email}
+        canInvite={isInternal}
         onMenu={() => setNavOpen(true)}
         onSignOut={() => supabase.auth.signOut()}
         onSearch={() => setSearchOpen(true)}
@@ -250,7 +274,8 @@ export default function App() {
 
       <Sidebar
         open={navOpen}
-        page={page}
+        page={isInternal ? page : "projects"}
+        isInternal={isInternal}
         onClose={() => setNavOpen(false)}
         onNavigate={(p) => {
           setPage(p);
@@ -259,7 +284,13 @@ export default function App() {
       />
 
       <main className="main">
-        {page === "plastics" ? (
+        {!isInternal ? (
+          <Projects
+            userEmail={session.user.email}
+            focusTaskId={focusTaskId}
+            onTaskFocused={() => setFocusTaskId(null)}
+          />
+        ) : page === "plastics" ? (
           <PlasticsEstimator userEmail={session.user.email} />
         ) : page === "plastic_quotes" ? (
           <PlasticQuotes />
