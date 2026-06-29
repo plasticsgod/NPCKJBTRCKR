@@ -22,7 +22,7 @@ function dueState(task) {
   return null;
 }
 
-export default function Projects({ userEmail, focusTaskId, onTaskFocused }) {
+export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdit = true }) {
   const [projects, setProjects] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -409,14 +409,14 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused }) {
           )}
         </div>
 
-        <button className="btn-accent push-right" onClick={() => setAddingProject(true)}>+ New Project</button>
+        {canEdit && <button className="btn-accent push-right" onClick={() => setAddingProject(true)}>+ New Project</button>}
       </div>
 
       {projects.length === 0 && !addingProject ? (
         <div className="empty">
           <p className="empty-title">No projects yet</p>
-          <p className="muted">Create your first project to start adding tasks.</p>
-          <button className="btn-accent" onClick={() => setAddingProject(true)}>+ New Project</button>
+          <p className="muted">{canEdit ? "Create your first project to start adding tasks." : "You haven't been added to any projects yet."}</p>
+          {canEdit && <button className="btn-accent" onClick={() => setAddingProject(true)}>+ New Project</button>}
         </div>
       ) : anyActive && visibleProjects.length === 0 ? (
         <div className="empty">
