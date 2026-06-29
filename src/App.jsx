@@ -21,10 +21,18 @@ function getPageFromHash() {
   return PAGES.includes(h) ? h : "dashboard";
 }
 
+// Invite and password-reset emails land back here with a #type=invite (or
+// recovery) token — in both cases we want the "set a password" screen.
+function isAuthActionHash() {
+  const p = new URLSearchParams(window.location.hash.replace("#", ""));
+  const t = p.get("type");
+  return t === "recovery" || t === "invite";
+}
+
 export default function App() {
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
-  const [recovery, setRecovery] = useState(false);
+  const [recovery, setRecovery] = useState(isAuthActionHash);
 
   const [jobs, setJobs] = useState([]);
   const [plasticJobs, setPlasticJobs] = useState([]);
