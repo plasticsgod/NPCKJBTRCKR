@@ -23,8 +23,10 @@ function EyeOffIcon() {
 
 // `recovery` is set by App when the user arrives via a password-reset link.
 // `onRecovered` lets App drop back to the normal app once the password is set.
+// Sign-up is disabled — accounts are created by invite only, so this screen
+// offers sign in, forgot-password, and the reset-link (recovery) flow.
 export default function Auth({ recovery = false, onRecovered }) {
-  const [mode, setMode] = useState(recovery ? "recovery" : "signin"); // signin | signup | forgot | recovery
+  const [mode, setMode] = useState(recovery ? "recovery" : "signin"); // signin | forgot | recovery
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -71,31 +73,21 @@ export default function Auth({ recovery = false, onRecovered }) {
       return;
     }
 
-    // Normal sign in / sign up.
-    const fn =
-      mode === "signin"
-        ? supabase.auth.signInWithPassword({ email, password })
-        : supabase.auth.signUp({ email, password });
-
-    const { error } = await fn;
+    // Normal sign in.
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
-
     if (error) setMessage(error.message);
-    else if (mode === "signup")
-      setMessage("Account created. You can sign in now (or confirm your email if asked).");
     // On successful sign in, App's auth listener swaps to the tracker automatically.
   }
 
   const title =
     mode === "signin" ? "Sign in"
-    : mode === "signup" ? "Create your account"
     : mode === "forgot" ? "Reset your password"
     : "Set a new password";
 
   const buttonLabel =
     busy ? "Working…"
     : mode === "signin" ? "Sign in"
-    : mode === "signup" ? "Create account"
     : mode === "forgot" ? "Send reset link"
     : "Update password";
 
@@ -155,19 +147,8 @@ export default function Auth({ recovery = false, onRecovered }) {
         {message && <p className="auth-message">{message}</p>}
 
         {mode === "signin" && (
-          <>
-            <button type="button" className="link" onClick={() => switchMode("forgot")}>
-              Forgot password?
-            </button>
-            <button type="button" className="link" onClick={() => switchMode("signup")}>
-              New here? Create an account
-            </button>
-          </>
-        )}
-
-        {mode === "signup" && (
-          <button type="button" className="link" onClick={() => switchMode("signin")}>
-            Already have an account? Sign in
+          <button type="button" className="link" onClick={() => switchMode("forgot")}>
+            Forgot password?
           </button>
         )}
 
