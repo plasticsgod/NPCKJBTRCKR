@@ -7,7 +7,8 @@ const NAV = [
   { id: "plastic_quotes", label: "Plastic Quotes" },
 ];
 
-export default function Sidebar({ open, page, onClose, onNavigate }) {
+export default function Sidebar({ open, page, isInternal = true, onClose, onNavigate }) {
+  const items = isInternal ? NAV : NAV.filter((item) => item.id === "projects");
   return (
     <>
       <div
@@ -20,7 +21,7 @@ export default function Sidebar({ open, page, onClose, onNavigate }) {
           <button className="link" onClick={onClose} aria-label="Close menu">Close</button>
         </div>
         <ul className="nav-list">
-          {NAV.map((item) => (
+          {items.map((item) => (
             <li key={item.id}>
               <button
                 className={`nav-link ${page === item.id ? "active" : ""}`}

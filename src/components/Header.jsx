@@ -6,7 +6,7 @@ import { displayName, nameInitials, avatarStyle } from "../projects/userMap";
 
 const TITLES = { work_orders: "Work Orders", dashboard: "Dashboard", plastics: "Plastics Estimator", projects: "Projects" };
 
-export default function Header({ page, email, onMenu, onSignOut, onSearch }) {
+export default function Header({ page, email, onMenu, onSignOut, onSearch, canInvite = true }) {
   return (
     <header className="header">
       <button className="burger" onClick={onMenu} aria-label="Open menu">
@@ -27,14 +27,14 @@ export default function Header({ page, email, onMenu, onSignOut, onSearch }) {
           </svg>
         </button>
         <NotificationBell userEmail={email} />
-        <ProfileMenu email={email} onSignOut={onSignOut} />
+        <ProfileMenu email={email} onSignOut={onSignOut} canInvite={canInvite} />
       </div>
     </header>
   );
 }
 
 // Avatar button in the top-right that opens an account menu.
-function ProfileMenu({ email, onSignOut }) {
+function ProfileMenu({ email, onSignOut, canInvite = true }) {
   const [open, setOpen] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
@@ -66,15 +66,17 @@ function ProfileMenu({ email, onSignOut }) {
             </div>
           </div>
           <div className="profile-sep" />
-          <button className="profile-item" role="menuitem"
-            onClick={() => { setOpen(false); setShowInvite(true); }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
-              <line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" />
-            </svg>
-            Invite member or guest
-          </button>
+          {canInvite && (
+            <button className="profile-item" role="menuitem"
+              onClick={() => { setOpen(false); setShowInvite(true); }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+                <line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" />
+              </svg>
+              Invite member or guest
+            </button>
+          )}
           <button className="profile-item" role="menuitem"
             onClick={() => { setOpen(false); setShowEmail(true); }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
