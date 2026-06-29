@@ -289,6 +289,7 @@ export default function App() {
             userEmail={session.user.email}
             focusTaskId={focusTaskId}
             onTaskFocused={() => setFocusTaskId(null)}
+            canEdit={isInternal}
           />
         ) : page === "plastics" ? (
           <PlasticsEstimator userEmail={session.user.email} />
@@ -307,6 +308,7 @@ export default function App() {
             userEmail={session.user.email}
             focusTaskId={focusTaskId}
             onTaskFocused={() => setFocusTaskId(null)}
+            canEdit={isInternal}
           />
         ) : loading ? (
           <div className="muted pad">Loading…</div>
