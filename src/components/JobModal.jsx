@@ -10,6 +10,7 @@ const EMPTY = {
   print_qty: 0,
   cost: "",
   revenue: "",
+  deposit: "Not Applicable",
   status: "Not Submitted",
   ship_to: "",
   po_number: "",
@@ -120,6 +121,14 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
                 Profit: <b>${((Number(form.revenue) || 0) - (Number(form.cost) || 0)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b>
               </p>
             )}
+            <label className="field">
+              <span>Deposit</span>
+              <select value={form.deposit || "Not Applicable"} onChange={(e) => set("deposit", e.target.value)}>
+                <option value="Not Applicable">Not Applicable</option>
+                <option value="Paid">Paid</option>
+                <option value="Owed">Owed</option>
+              </select>
+            </label>
             <div className="field-row">
               <label className="field">
                 <span>Status</span>
