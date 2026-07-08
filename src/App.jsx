@@ -270,6 +270,7 @@ export default function App() {
         onMenu={() => setNavOpen(true)}
         onSignOut={() => supabase.auth.signOut()}
         onSearch={() => setSearchOpen(true)}
+        onOpenTask={openTaskFromSearch}
       />
 
       <Sidebar
