@@ -4,7 +4,7 @@ import { displayName } from "../projects/userMap";
 
 // Header notification bell. Shows the current user's in-app notifications
 // (task assignments and @mentions), with an unread badge and live updates.
-export default function NotificationBell({ userEmail }) {
+export default function NotificationBell({ userEmail, onOpenTask }) {
   const [items, setItems] = useState([]);
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -59,8 +59,10 @@ export default function NotificationBell({ userEmail }) {
   function openNotification(n) {
     if (!n.read) markRead(n.id);
     setOpen(false);
-    // Jump to the Projects page (App listens to the hash and switches pages).
-    window.location.hash = "projects";
+    // Open the exact task the notification is about; fall back to the Projects
+    // page for older notifications that predate task links.
+    if (n.task_id && onOpenTask) onOpenTask(n.task_id);
+    else window.location.hash = "projects";
   }
 
   function label(n) {
