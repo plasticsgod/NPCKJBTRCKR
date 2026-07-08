@@ -675,7 +675,7 @@ function TaskRow({ task, users, userEmail, checked, onToggle, onOpen, onUpdate, 
     onUpdate(task.id, { owners: next });
     // Notify newly added people only
     if (!prev.includes(email)) {
-      notifyAssignment({ to: email, task: task.title, project: "", assignedBy: userEmail });
+      notifyAssignment({ to: email, task: task.title, project: "", assignedBy: userEmail, taskId: task.id });
     }
   }
 

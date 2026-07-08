@@ -270,7 +270,7 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
     const next = adding ? [...prev, email] : prev.filter((x) => x !== email);
     setField("owners", next);
     if (adding) {
-      notifyAssignment({ to: email, task: task.title, project: projectName || "", assignedBy: userEmail });
+      notifyAssignment({ to: email, task: task.title, project: projectName || "", assignedBy: userEmail, taskId: task.id });
     }
   }
 
@@ -282,8 +282,8 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
     const files = newFiles.length ? await uploadFiles(newFiles, task.id) : [];
     const mentions = parseMentions(body, users);
     await supabase.from("task_posts").insert({ task_id: task.id, author: userEmail, body, mentions, images, files });
-    notifyMentions({ mentions, task: task.title, project: projectName || "", mentionedBy: userEmail, body });
-    notifyComment({ owners: local.owners || [], author: userEmail, task: task.title, project: projectName || "", body, mentions });
+    notifyMentions({ mentions, task: task.title, project: projectName || "", mentionedBy: userEmail, body, taskId: task.id });
+    notifyComment({ owners: local.owners || [], author: userEmail, task: task.title, project: projectName || "", body, mentions, taskId: task.id });
     setNewPost("");
     setNewImages([]);
     setNewFiles([]);
@@ -452,8 +452,8 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, owners, reac
     const files = replyFiles.length ? await uploadFiles(replyFiles, post.task_id) : [];
     const mentions = parseMentions(body, users);
     await supabase.from("task_replies").insert({ post_id: post.id, author: userEmail, body, mentions, images, files });
-    notifyMentions({ mentions, task: taskTitle, project: projectName || "", mentionedBy: userEmail, body });
-    notifyComment({ owners: owners || [], author: userEmail, task: taskTitle, project: projectName || "", body, mentions });
+    notifyMentions({ mentions, task: taskTitle, project: projectName || "", mentionedBy: userEmail, body, taskId: post.task_id });
+    notifyComment({ owners: owners || [], author: userEmail, task: taskTitle, project: projectName || "", body, mentions, taskId: post.task_id });
     setReply("");
     setReplyImages([]);
     setReplyFiles([]);
