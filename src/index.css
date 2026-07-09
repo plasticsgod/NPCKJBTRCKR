@@ -3,6 +3,9 @@
   --panel: #f4f1ec;
   --accent: #ff5b1f;
   --accent-press: #e64e15;
+  --ease: cubic-bezier(.22, .61, .36, 1);
+  --dur: 200ms;
+  --dur-fast: 130ms;
   --ink: #14110d;
   --ink-2: #5c574e;
   --ink-3: #9b958a;
@@ -1794,3 +1797,30 @@ a.file-chip:hover svg { color: var(--accent); }
 @keyframes sk-shimmer { 100% { transform: translateX(100%); } }
 @media (prefers-reduced-motion: reduce) { .sk::after { animation: none; } }
 .sk-task-row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-bottom: 1px solid var(--hairline-soft); }
+
+/* ---- Motion system (transform + opacity only; reduced-motion aware) ------ */
+.btn-accent, .btn-ghost, .btn-danger {
+  transition: transform var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease),
+              border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.btn-accent:active, .btn-ghost:active, .btn-danger:active { transform: scale(.97); }
+
+.overlay { animation: overlay-in var(--dur) var(--ease); }
+.modal { animation: modal-in var(--dur) var(--ease); }
+.drawer-overlay { animation: overlay-in var(--dur) var(--ease); overflow-x: hidden; }
+.drawer { animation: drawer-in 260ms var(--ease); }
+
+@keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(12px) scale(.985); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes drawer-in {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay, .modal, .drawer, .drawer-overlay { animation: none; }
+  .btn-accent:active, .btn-ghost:active, .btn-danger:active { transform: none; }
+}
