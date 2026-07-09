@@ -8,6 +8,7 @@ import PlasticWorkOrders from "./components/PlasticWorkOrders";
 import Dashboard from "./components/Dashboard";
 import PlasticsEstimator from "./components/PlasticsEstimator";
 import PlasticQuotes from "./components/PlasticQuotes";
+import { DashboardSkeleton, WorkOrdersSkeleton } from "./components/Skeletons";
 import Projects from "./projects/Projects";
 import JobModal from "./components/JobModal";
 import PlasticJobModal from "./components/PlasticJobModal";
@@ -317,7 +318,7 @@ export default function App() {
             canEdit={isInternal}
           />
         ) : loading ? (
-          <div className="muted pad">Loading…</div>
+          page === "dashboard" ? <DashboardSkeleton /> : <WorkOrdersSkeleton />
         ) : page === "dashboard" ? (
           <Dashboard jobs={jobs} />
         ) : (

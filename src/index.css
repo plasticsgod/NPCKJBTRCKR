@@ -1787,3 +1787,10 @@ a.file-chip:hover svg { color: var(--accent); }
 .members-add input { flex: 1; min-width: 0; font-family: var(--ui); font-size: 13px; padding: 8px 10px; border: 1px solid var(--hairline); border-radius: 8px; }
 .members-add input:focus { outline: 2px solid var(--accent); border-color: transparent; }
 .members-add .btn-accent { padding: 8px 14px; }
+
+/* ---- Loading skeletons --------------------------------------------------- */
+.sk { display: inline-block; vertical-align: middle; background: rgba(20,17,13,.09); border-radius: 4px; position: relative; overflow: hidden; }
+.sk::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent); animation: sk-shimmer 1.3s infinite; }
+@keyframes sk-shimmer { 100% { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .sk::after { animation: none; } }
+.sk-task-row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-bottom: 1px solid var(--hairline-soft); }
