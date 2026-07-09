@@ -1131,20 +1131,6 @@ button {
 .add-item-btn:hover { color: var(--accent); background: var(--panel); }
 
 /* ---- Batch 1: my-tasks toggle, sort, progress, drag-to-project ---------- */
-.mine-toggle {
-  font-family: var(--ui);
-  font-size: 14px;
-  padding: 9px 16px;
-  border: 1px solid var(--hairline);
-  border-radius: 999px;
-  background: #fff;
-  color: var(--ink);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background .12s, border-color .12s, color .12s;
-}
-.mine-toggle:hover { border-color: var(--ink-3); }
-.mine-toggle.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 
 /* ---- Condensed filter dropdown ------------------------------------------ */
 .filter-wrap { position: relative; }
@@ -1238,10 +1224,6 @@ button {
 .filter-clear:hover { text-decoration: underline; }
 
 /* Per-project progress bar in the group header */
-.proj-progress { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; }
-.proj-progress-bar { width: 88px; height: 6px; border-radius: 999px; background: var(--hairline); overflow: hidden; }
-.proj-progress-fill { display: block; height: 100%; background: var(--accent); border-radius: 999px; transition: width .25s ease; }
-.proj-progress-label { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; color: var(--ink-3); min-width: 30px; text-align: right; }
 
 /* Empty project hint row */
 .empty-task-row td { padding: 16px 14px !important; color: var(--ink-3); font-size: 13px; font-style: italic; background: #fff; }
@@ -1367,18 +1349,6 @@ button {
 .post-actions { display: flex; align-items: center; gap: 12px; }
 .reply-actions { display: flex; align-items: center; margin-top: 4px; }
 
-/* Like button — gray by default, accent-colored when you've liked it */
-.like-wrap { position: relative; display: inline-flex; }
-.like-btn { display: inline-flex; align-items: center; gap: 5px; background: transparent; border: none; cursor: pointer; color: var(--ink-3); font-family: var(--mono); font-size: 12px; font-weight: 700; padding: 4px 7px; border-radius: 8px; transition: color .12s, background .12s; }
-.like-btn svg { display: block; }
-.like-btn:hover { background: var(--hairline-soft); color: var(--ink-2); }
-.like-btn.liked { color: var(--accent); }
-.like-btn.liked:hover { color: var(--accent); }
-.like-count { line-height: 1; }
-/* Hover list of people who liked */
-.like-tip { position: absolute; bottom: calc(100% + 6px); left: 0; z-index: 70; background: var(--ink); color: #fff; border-radius: 8px; padding: 7px 10px; font-family: var(--ui); font-size: 12px; line-height: 1.55; box-shadow: 0 12px 32px rgba(0,0,0,.28); opacity: 0; visibility: hidden; transform: translateY(3px); transition: opacity .12s, transform .12s, visibility .12s; pointer-events: none; }
-.like-wrap:hover .like-tip { opacity: 1; visibility: visible; transform: translateY(0); }
-.like-tip-row { white-space: nowrap; }
 
 /* Emoji reactions */
 .reaction-bar { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; }
@@ -1537,7 +1507,6 @@ a.file-chip:hover svg { color: var(--accent); }
 
   /* roomier group header */
   .proj-head { padding: 12px 14px; flex-wrap: wrap; }
-  .proj-progress-bar { display: none; }
 }
 
 /* ---- Multi-person picker ------------------------------------------------- */
@@ -1797,3 +1766,5 @@ a.file-chip:hover svg { color: var(--accent); }
 .pc-row b { font-variant-numeric: tabular-nums; color: var(--ink); }
 .pc-row.total { border-top: 1px solid var(--hairline); padding-top: 8px; font-size: 14px; }
 .pc-row.total b { color: var(--accent); }
+
+.date-readonly { font-size: 13px; color: var(--ink-2); }
