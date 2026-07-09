@@ -122,8 +122,10 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
   }
 
   async function updateTask(id, fields) {
-    await supabase.from("tasks").update(fields).eq("id", id);
-    load();
+    // Reflect the change instantly; realtime reconciles, revert on error.
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...fields } : t)));
+    const { error } = await supabase.from("tasks").update(fields).eq("id", id);
+    if (error) { toast.error("Could not save change: " + error.message); load(); }
   }
 
   // Drag-and-drop: move a task into a different project. Appends to the end of
