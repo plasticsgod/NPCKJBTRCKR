@@ -436,6 +436,7 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
                 tasks={projTasks}
                 users={users}
                 userEmail={userEmail}
+                canEdit={canEdit}
                 progress={progress}
                 selected={selProjects.has(proj.id)}
                 onToggleSelect={toggleProject}
@@ -536,7 +537,7 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
   );
 }
 
-function ProjectGroup({ project, tasks, users, userEmail, progress, selected, onToggleSelect, selectedTasks, onToggleTask, onUpdateName, onAddTask, onOpenTask, onUpdateTask, activity, reads, draggingTaskId, onDragTaskStart, onDragTaskEnd, isDropTarget, onDragOverProject, onDropTask }) {
+function ProjectGroup({ project, tasks, users, userEmail, canEdit = true, progress, selected, onToggleSelect, selectedTasks, onToggleTask, onUpdateName, onAddTask, onOpenTask, onUpdateTask, activity, reads, draggingTaskId, onDragTaskStart, onDragTaskEnd, isDropTarget, onDragOverProject, onDropTask }) {
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState(project.name);
   const [collapsed, setCollapsed] = useState(false);
@@ -570,24 +571,27 @@ function ProjectGroup({ project, tasks, users, userEmail, progress, selected, on
       onDrop={handleDrop}
     >
       <div className="proj-head">
-        <input
-          type="checkbox"
-          className="proj-check"
-          checked={selected}
-          onChange={() => onToggleSelect(project.id)}
-          onClick={(e) => e.stopPropagation()}
-          aria-label={`Select project ${project.name}`}
-        />
+        {canEdit && (
+          <input
+            type="checkbox"
+            className="proj-check"
+            checked={selected}
+            onChange={() => onToggleSelect(project.id)}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`Select project ${project.name}`}
+          />
+        )}
         <button className="proj-collapse" onClick={() => setCollapsed(!collapsed)}>
           {collapsed ? "▶" : "▼"}
         </button>
-        {editingName ? (
+        {editingName && canEdit ? (
           <input className="proj-name-input" value={name} autoFocus
             onChange={(e) => setName(e.target.value)}
             onBlur={saveName}
             onKeyDown={(e) => { if (e.key === "Enter") saveName(); if (e.key === "Escape") { setName(project.name); setEditingName(false); } }} />
         ) : (
-          <span className="proj-name" title="Double-click to rename" onDoubleClick={() => setEditingName(true)}>{project.name}</span>
+          <span className="proj-name" title={canEdit ? "Double-click to rename" : undefined}
+            onDoubleClick={canEdit ? () => setEditingName(true) : undefined}>{project.name}</span>
         )}
         <span className="proj-count">{tasks.length} {tasks.length === 1 ? "item" : "items"}</span>
       </div>
@@ -620,6 +624,7 @@ function ProjectGroup({ project, tasks, users, userEmail, progress, selected, on
                   && (!lastRead || new Date(meta.latest) > new Date(lastRead));
                 return (
                   <TaskRow key={t.id} task={t} users={users} userEmail={userEmail}
+                    canEdit={canEdit}
                     checked={selectedTasks.has(t.id)}
                     onToggle={onToggleTask}
                     onOpen={() => onOpenTask(t.id)}
@@ -631,11 +636,13 @@ function ProjectGroup({ project, tasks, users, userEmail, progress, selected, on
                     onDragEnd={onDragTaskEnd} />
                 );
               })}
-              <tr className="add-item-row">
-                <td colSpan={5}>
-                  <button className="add-item-btn" onClick={() => onAddTask(project.id)}>+ Add item</button>
-                </td>
-              </tr>
+              {canEdit && (
+                <tr className="add-item-row">
+                  <td colSpan={5}>
+                    <button className="add-item-btn" onClick={() => onAddTask(project.id)}>+ Add item</button>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -644,7 +651,7 @@ function ProjectGroup({ project, tasks, users, userEmail, progress, selected, on
   );
 }
 
-function TaskRow({ task, users, userEmail, checked, onToggle, onOpen, onUpdate, updates = 0, unread = false, dragging = false, onDragStart, onDragEnd }) {
+function TaskRow({ task, users, userEmail, canEdit = true, checked, onToggle, onOpen, onUpdate, updates = 0, unread = false, dragging = false, onDragStart, onDragEnd }) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [title, setTitle] = useState(task.title);
   const owners = task.owners || (task.owner ? [task.owner] : []);
@@ -672,9 +679,9 @@ function TaskRow({ task, users, userEmail, checked, onToggle, onOpen, onUpdate, 
     <tr
       className={"ptask-row" + (checked ? " selected" : "") + (dragging ? " dragging" : "")}
       onClick={!editingTitle ? onOpen : undefined}
-      draggable={!editingTitle}
+      draggable={canEdit && !editingTitle}
       onDragStart={(e) => {
-        if (editingTitle) return;
+        if (!canEdit || editingTitle) return;
         e.dataTransfer.effectAllowed = "move";
         try { e.dataTransfer.setData("text/plain", task.id); } catch {}
         onDragStart && onDragStart(task.id);
@@ -682,30 +689,35 @@ function TaskRow({ task, users, userEmail, checked, onToggle, onOpen, onUpdate, 
       onDragEnd={() => onDragEnd && onDragEnd()}
     >
       <td className="col-check" onClick={(e) => e.stopPropagation()}>
-        <input type="checkbox" checked={checked} onChange={() => onToggle(task.id)}
-          aria-label={`Select task ${task.title}`} />
+        {canEdit && (
+          <input type="checkbox" checked={checked} onChange={() => onToggle(task.id)}
+            aria-label={`Select task ${task.title}`} />
+        )}
       </td>
       <td className="col-item">
         <div className="item-cell">
-          {editingTitle ? (
+          {editingTitle && canEdit ? (
             <input className="task-title-input" value={title} autoFocus
               onChange={(e) => setTitle(e.target.value)}
               onBlur={saveTitle}
               onClick={(e) => e.stopPropagation()}
               onKeyDown={(e) => { if (e.key === "Enter") saveTitle(); if (e.key === "Escape") { setTitle(task.title); setEditingTitle(false); } }} />
           ) : (
-            <span className="task-title" title="Double-click to rename" onDoubleClick={(e) => { e.stopPropagation(); setEditingTitle(true); }}>{task.title}</span>
+            <span className="task-title" title={canEdit ? "Double-click to rename" : undefined}
+              onDoubleClick={canEdit ? (e) => { e.stopPropagation(); setEditingTitle(true); } : undefined}>{task.title}</span>
           )}
         </div>
       </td>
       <td className="col-person" onClick={(e) => e.stopPropagation()}>
-        <MultiPersonPicker owners={owners} users={users} onToggle={toggleOwner} />
+        <MultiPersonPicker owners={owners} users={users} onToggle={toggleOwner} readOnly={!canEdit} />
       </td>
       <td className="col-status" onClick={(e) => e.stopPropagation()}>
-        <StatusPicker value={task.status} onChange={(s) => onUpdate(task.id, { status: s })} />
+        <StatusPicker value={task.status} onChange={(s) => onUpdate(task.id, { status: s })} readOnly={!canEdit} />
       </td>
       <td className={"col-date" + (dueState(task) ? " due-" + dueState(task) : "")} onClick={(e) => e.stopPropagation()}>
-        <DatePicker value={task.due_date || ""} onChange={(v) => onUpdate(task.id, { due_date: v || null })} placeholder="Set date" />
+        {canEdit
+          ? <DatePicker value={task.due_date || ""} onChange={(v) => onUpdate(task.id, { due_date: v || null })} placeholder="Set date" />
+          : <span className="date-readonly">{task.due_date ? new Date(task.due_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}</span>}
       </td>
     </tr>
   );
@@ -730,7 +742,7 @@ function UpdatesBadge({ count, unread }) {
   );
 }
 
-function StatusPicker({ value, onChange }) {
+function StatusPicker({ value, onChange, readOnly }) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState(null);
   const ref = useRef(null);
@@ -774,11 +786,15 @@ function StatusPicker({ value, onChange }) {
 
   return (
     <div className="status-picker" ref={ref}>
-      <button type="button" ref={triggerRef} className={"tpill tpill-" + slug(current)}
-        onClick={() => setOpen((o) => !o)}>
-        {current}
-      </button>
-      {open && coords && (
+      {readOnly ? (
+        <span className={"tpill tpill-" + slug(current)}>{current}</span>
+      ) : (
+        <button type="button" ref={triggerRef} className={"tpill tpill-" + slug(current)}
+          onClick={() => setOpen((o) => !o)}>
+          {current}
+        </button>
+      )}
+      {open && coords && !readOnly && (
         <div className="status-menu"
           style={{ position: "fixed", top: coords.top, left: coords.left, minWidth: coords.width }}>
           {TASK_STATUSES.map((s) => (
@@ -794,7 +810,7 @@ function StatusPicker({ value, onChange }) {
   );
 }
 
-function MultiPersonPicker({ owners, users, onToggle }) {
+function MultiPersonPicker({ owners, users, onToggle, readOnly }) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState(null);
   const ref = useRef(null);
@@ -836,16 +852,18 @@ function MultiPersonPicker({ owners, users, onToggle }) {
 
   return (
     <div className="multi-person" ref={ref}>
-      <div className="person-avatars" ref={triggerRef} onClick={() => setOpen(!open)}>
+      <div className="person-avatars" ref={triggerRef}
+        onClick={readOnly ? undefined : () => setOpen(!open)}
+        style={readOnly ? { cursor: "default" } : undefined}>
         {owners.length === 0
           ? <span className="not-assigned">Not Assigned</span>
           : owners.map(e => (
             <Avatar key={e} email={e} size="sm" />
           ))
         }
-        <span className="assign-caret">▾</span>
+        {!readOnly && <span className="assign-caret">▾</span>}
       </div>
-      {open && coords && (
+      {open && coords && !readOnly && (
         <div className="person-dropdown" style={{ position: "fixed", top: coords.top, left: coords.left }}>
           {users.map(u => (
             <label key={u} className="person-option">
