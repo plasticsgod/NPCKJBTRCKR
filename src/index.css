@@ -566,6 +566,7 @@ button {
 .modal {
   width: 100%;
   max-width: 560px;
+  max-height: calc(100vh - 80px);
   background: var(--bg);
   border-radius: 16px;
   border: 1px solid var(--hairline);
@@ -589,6 +590,8 @@ button {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow-y: auto;
+  min-height: 0;
 }
 .modal-foot {
   display: flex;
@@ -637,6 +640,12 @@ button {
   }
   .overlay {
     padding: 16px 12px;
+  }
+  .modal {
+    max-height: calc(100vh - 32px);
+  }
+  .toolbar .search-input {
+    flex: 1 1 100%;
   }
   .board {
     grid-auto-columns: minmax(220px, 80%);

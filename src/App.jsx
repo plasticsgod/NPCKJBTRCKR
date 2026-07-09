@@ -183,6 +183,7 @@ export default function App() {
       const { error } = await supabase.from("jobs").update(fields).eq("id", id);
       if (error) return toast.error("Could not save changes: " + error.message);
       setEditing(null);
+      toast.success("Work order saved");
     } else {
       const { data, error } = await supabase.from("jobs").insert(job).select().single();
       if (error) return toast.error("Could not create the job: " + error.message);
@@ -204,6 +205,7 @@ export default function App() {
   async function deleteJobs(ids) {
     const { error } = await supabase.from("jobs").delete().in("id", ids);
     if (error) return toast.error("Could not delete: " + error.message);
+    toast.success(ids.length > 1 ? `${ids.length} work orders deleted` : "Work order deleted");
     loadJobs();
   }
 
@@ -228,9 +230,11 @@ export default function App() {
       const { id, created_at, ...fields } = job;
       const { error } = await supabase.from("plastic_jobs").update(fields).eq("id", id);
       if (error) return toast.error("Could not save changes: " + error.message);
+      toast.success("Plastics order saved");
     } else {
       const { error } = await supabase.from("plastic_jobs").insert({ ...job, created_by: session.user.email });
       if (error) return toast.error("Could not create the order: " + error.message);
+      toast.success("Plastics order created");
     }
     setEditingPlastic(null);
     loadPlasticJobs();
@@ -239,6 +243,7 @@ export default function App() {
   async function deletePlasticJobs(ids) {
     const { error } = await supabase.from("plastic_jobs").delete().in("id", ids);
     if (error) return toast.error("Could not delete: " + error.message);
+    toast.success(ids.length > 1 ? `${ids.length} orders deleted` : "Order deleted");
     loadPlasticJobs();
   }
 
