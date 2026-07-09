@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "../supabaseClient";
 import { displayName } from "../projects/userMap";
+import { timeAgo, fullTime } from "../lib/time";
 
 // Header notification bell. Shows the current user's in-app notifications
 // (task assignments and @mentions), with an unread badge and live updates.
@@ -102,8 +103,8 @@ export default function NotificationBell({ userEmail, onOpenTask }) {
                 >
                   <p className="notif-text">{label(n)}</p>
                   {n.body && <p className="notif-snippet muted">{n.body}</p>}
-                  <span className="notif-meta muted">
-                    {n.project ? n.project + " · " : ""}{fmtTime(n.created_at)}
+                  <span className="notif-meta muted" title={fullTime(n.created_at)}>
+                    {n.project ? n.project + " · " : ""}{timeAgo(n.created_at)}
                   </span>
                 </li>
               ))}
@@ -115,8 +116,4 @@ export default function NotificationBell({ userEmail, onOpenTask }) {
   );
 }
 
-function fmtTime(iso) {
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " · " +
-    d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-}
+
