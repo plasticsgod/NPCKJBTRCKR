@@ -4,6 +4,7 @@ import { TASK_STATUSES } from "./constants";
 import { notifyAssignment, notifyMentions, notifyComment } from "./notifications";
 import { displayName, nameInitials, avatarStyle } from "./userMap";
 import Avatar from "./Avatar";
+import { timeAgo, fullTime } from "../lib/time";
 import DatePicker from "../components/DatePicker";
 
 // --- Image attachments -------------------------------------------------------
@@ -502,7 +503,7 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, owners, reac
         <Avatar email={post.author} />
         <div className="post-meta">
           <span className="post-author">{displayName(post.author)}</span>
-          <span className="post-time">{fmtTime(post.created_at)}</span>
+          <span className="post-time" title={fullTime(post.created_at)}>{timeAgo(post.created_at)}</span>
         </div>
         {mine && !editing && (
           <KebabMenu onEdit={startEdit} onDelete={() => onDelete(post.id, post.images, post.files)} />
@@ -587,7 +588,7 @@ function ReplyItem({ reply, users, userEmail, reactions, onToggleReaction, onCha
       <div className="reply-content">
         <div className="reply-meta">
           <span className="post-author">{displayName(reply.author)}</span>
-          <span className="post-time">{fmtTime(reply.created_at)}</span>
+          <span className="post-time" title={fullTime(reply.created_at)}>{timeAgo(reply.created_at)}</span>
           {mine && !editing && (
             <KebabMenu onEdit={() => { setDraft(reply.body); setEditing(true); }}
               onDelete={() => onDelete(reply.id, reply.images, reply.files)} />
@@ -619,11 +620,7 @@ function ReplyItem({ reply, users, userEmail, reactions, onToggleReaction, onCha
   );
 }
 
-function fmtTime(iso) {
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " · " +
-    d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-}
+
 
 // Like button: gray thumbs-up that turns orange with a count when you've liked.
 // Hovering reveals the list of people who liked this update/comment.
