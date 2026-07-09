@@ -546,9 +546,6 @@ function ProjectGroup({ project, tasks, users, userEmail, progress, selected, on
     onUpdateName(project.id, name);
   }
 
-  const done = progress?.done || 0;
-  const total = progress?.total || 0;
-  const pct = total ? Math.round((done / total) * 100) : 0;
 
   // This group is the source of the current drag (don't show a drop cue on it).
   const isSource = draggingTaskId != null && tasks.some((t) => t.id === draggingTaskId);
@@ -593,14 +590,6 @@ function ProjectGroup({ project, tasks, users, userEmail, progress, selected, on
           <span className="proj-name" title="Double-click to rename" onDoubleClick={() => setEditingName(true)}>{project.name}</span>
         )}
         <span className="proj-count">{tasks.length} {tasks.length === 1 ? "item" : "items"}</span>
-        {total > 0 && (
-          <span className="proj-progress" title={`${done} of ${total} done`}>
-            <span className="proj-progress-bar">
-              <span className="proj-progress-fill" style={{ width: pct + "%" }} />
-            </span>
-            <span className="proj-progress-label">{done}/{total}</span>
-          </span>
-        )}
       </div>
       {!collapsed && (
         <div className="ptable-wrap">
