@@ -220,7 +220,7 @@ button {
 /* Change-email modal */
 .pm-overlay { position: fixed; inset: 0; z-index: 600; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(20,17,13,.42); }
 .pm-modal { width: 100%; max-width: 420px; background: #fff; border-radius: 14px; box-shadow: 0 24px 64px rgba(0,0,0,.32); padding: 22px 22px 18px; }
-.pm-title { margin: 0 0 6px; font-family: var(--display); font-size: 20px; }
+.pm-title { margin: 0 0 6px; font-family: var(--ui); font-size: 18px; font-weight: 600; }
 .pm-text { margin: 0 0 16px; font-size: 13px; color: var(--ink-2); line-height: 1.5; }
 .pm-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
 .pm-field > span { font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
@@ -251,9 +251,9 @@ button {
   gap: 12px;
 }
 .empty-title {
-  font-family: var(--display);
-  font-size: 28px;
-  text-transform: uppercase;
+  font-family: var(--ui);
+  font-size: 20px;
+  font-weight: 600;
 }
 
 /* ---- Table view ---------------------------------------------------------- */
@@ -532,9 +532,9 @@ button {
   gap: 16px;
 }
 .auth-title {
-  font-family: var(--display);
-  font-size: 26px;
-  text-transform: uppercase;
+  font-family: var(--ui);
+  font-size: 24px;
+  font-weight: 600;
 }
 .auth-message {
   font-size: 13px;
@@ -580,9 +580,9 @@ button {
   border-bottom: 1px solid var(--hairline);
 }
 .modal-head h2 {
-  font-family: var(--display);
-  font-size: 22px;
-  text-transform: uppercase;
+  font-family: var(--ui);
+  font-size: 20px;
+  font-weight: 600;
 }
 .modal-body {
   padding: 24px;
@@ -825,9 +825,9 @@ button {
   padding: 22px;
 }
 .panel-title {
-  font-family: var(--display);
-  font-size: 18px;
-  text-transform: uppercase;
+  font-family: var(--ui);
+  font-size: 16px;
+  font-weight: 600;
   margin-bottom: 14px;
 }
 .breakdown {
@@ -928,7 +928,7 @@ button {
 .est-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
 .est-col { display: flex; flex-direction: column; gap: 20px; }
 .panel-card { background: #fff; border: 1px solid var(--hairline); border-radius: 14px; padding: 22px; }
-.card-h { font-family: var(--display); font-size: 17px; text-transform: uppercase; margin-bottom: 16px; }
+.card-h { font-family: var(--ui); font-size: 16px; font-weight: 600; margin-bottom: 16px; }
 .card-h .small { font-family: var(--ui); font-size: 11px; text-transform: none; }
 .ship-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
 .ship-total { margin-top: 14px; font-size: 13px; color: var(--ink-2); }
@@ -1083,7 +1083,7 @@ button {
 
 /* New project inline form */
 .proj-new-form { background: #fff; border: 1px solid var(--accent); border-radius: 12px; padding: 14px 16px; }
-.proj-new-input { width: 100%; font-family: var(--display); font-size: 16px; text-transform: uppercase; letter-spacing: .02em; border: none; outline: none; background: transparent; color: var(--ink); }
+.proj-new-input { width: 100%; font-family: var(--ui); font-size: 16px; font-weight: 600; letter-spacing: 0; border: none; outline: none; background: transparent; color: var(--ink); }
 
 /* Task table */
 .ptable-wrap { overflow-x: auto; }
@@ -1734,7 +1734,7 @@ a.file-chip:hover svg { color: var(--accent); }
 /* ---- Plastic Quotes page ------------------------------------------------- */
 .qfoot-actions { display: flex; gap: 10px; }
 
-.page-h1 { font-family: var(--display); font-size: 26px; text-transform: uppercase; letter-spacing: .01em; }
+.page-h1 { font-family: var(--ui); font-size: 24px; font-weight: 600; letter-spacing: 0; }
 .quotes-page { display: flex; flex-direction: column; gap: 18px; }
 .quotes-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .quotes-sub { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
