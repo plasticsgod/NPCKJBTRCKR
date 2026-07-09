@@ -211,15 +211,15 @@ export default function App() {
   }
 
   async function changeStatus(id, status) {
+    setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, status } : j)));
     const { error } = await supabase.from("jobs").update({ status }).eq("id", id);
-    if (error) toast.error("Could not update status: " + error.message);
-    else loadJobs();
+    if (error) { toast.error("Could not update status: " + error.message); loadJobs(); }
   }
 
   async function changeFacility(id, printing_facility) {
+    setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, printing_facility } : j)));
     const { error } = await supabase.from("jobs").update({ printing_facility }).eq("id", id);
-    if (error) toast.error("Could not update facility: " + error.message);
-    else loadJobs();
+    if (error) { toast.error("Could not update facility: " + error.message); loadJobs(); }
   }
 
   // List of existing customers (for the combobox dropdown)
