@@ -771,11 +771,13 @@ function StatusPicker({ value, onChange, readOnly }) {
       if (left + PW > window.innerWidth - EDGE) left = r.right - PW;
       left = Math.max(EDGE, left);
       let top = r.bottom + GAP;
+      let flip = false;
       if (top + PH > window.innerHeight - EDGE) {
         const up = r.top - GAP - PH;
         top = up >= EDGE ? up : Math.max(EDGE, window.innerHeight - PH - EDGE);
+        flip = true;
       }
-      setCoords({ top, left, width: r.width });
+      setCoords({ top, left, width: r.width, flip });
     }
     place();
     window.addEventListener("scroll", place, true);
@@ -798,7 +800,7 @@ function StatusPicker({ value, onChange, readOnly }) {
       )}
       {open && coords && !readOnly && (
         <div className="status-menu"
-          style={{ position: "fixed", top: coords.top, left: coords.left, minWidth: coords.width }}>
+          style={{ position: "fixed", top: coords.top, left: coords.left, minWidth: coords.width, transformOrigin: coords.flip ? "bottom left" : "top left" }}>
           {TASK_STATUSES.map((s) => (
             <button key={s} type="button"
               className={"status-option tpill-" + slug(s) + (s === current ? " is-current" : "")}
@@ -837,11 +839,13 @@ function MultiPersonPicker({ owners, users, onToggle, readOnly }) {
       if (left + PW > window.innerWidth - EDGE) left = r.right - PW;
       left = Math.max(EDGE, left);
       let top = r.bottom + GAP;
+      let flip = false;
       if (top + PH > window.innerHeight - EDGE) {
         const up = r.top - GAP - PH;
         top = up >= EDGE ? up : Math.max(EDGE, window.innerHeight - PH - EDGE);
+        flip = true;
       }
-      setCoords({ top, left });
+      setCoords({ top, left, flip });
     }
     place();
     window.addEventListener("scroll", place, true);
@@ -866,7 +870,7 @@ function MultiPersonPicker({ owners, users, onToggle, readOnly }) {
         {!readOnly && <span className="assign-caret">▾</span>}
       </div>
       {open && coords && !readOnly && (
-        <div className="person-dropdown" style={{ position: "fixed", top: coords.top, left: coords.left }}>
+        <div className="person-dropdown" style={{ position: "fixed", top: coords.top, left: coords.left, transformOrigin: coords.flip ? "bottom left" : "top left" }}>
           {users.map(u => (
             <label key={u} className="person-option">
               <input type="checkbox" checked={owners.includes(u)}
@@ -927,8 +931,9 @@ function ProjectMembers({ project }) {
     const PW = 280, PH = 260, GAP = 6, EDGE = 8;
     let left = Math.max(EDGE, r.right - PW);
     let top = r.bottom + GAP;
-    if (top + PH > window.innerHeight - EDGE) top = Math.max(EDGE, r.top - PH - GAP);
-    setCoords({ top, left });
+    let flip = false;
+    if (top + PH > window.innerHeight - EDGE) { top = Math.max(EDGE, r.top - PH - GAP); flip = true; }
+    setCoords({ top, left, flip });
   }, [open, members]);
 
   async function addMember() {
@@ -970,7 +975,7 @@ function ProjectMembers({ project }) {
 
       {open && coords && (
         <div className="members-panel" ref={panelRef}
-          style={{ position: "fixed", top: coords.top, left: coords.left }}
+          style={{ position: "fixed", top: coords.top, left: coords.left, transformOrigin: coords.flip ? "bottom right" : "top right" }}
           onClick={(e) => e.stopPropagation()}>
           <div className="members-panel-head">Guests on this project</div>
 
