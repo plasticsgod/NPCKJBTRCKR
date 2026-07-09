@@ -7,6 +7,7 @@ import { notifyAssignment } from "./notifications";
 import { displayName, nameInitials, avatarStyle } from "./userMap";
 import Avatar from "./Avatar";
 import DatePicker from "../components/DatePicker";
+import { ProjectsSkeleton } from "../components/Skeletons";
 import { toast } from "../components/Toaster";
 
 // Classifies a task's due date for highlighting and filtering.
@@ -264,7 +265,7 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
     return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onEsc); };
   }, [filterOpen]);
 
-  if (loading) return <div className="muted pad">Loading projects…</div>;
+  if (loading) return <ProjectsSkeleton />;
 
   const openTask = tasks.find((t) => t.id === openTaskId) || null;
   const openProject = openTask ? projects.find(p => p.id === openTask.project_id) : null;
