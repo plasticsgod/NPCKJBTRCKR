@@ -91,23 +91,31 @@ const DRAWER_WIDTH_KEY = "npck_task_drawer_width";
 const DRAWER_MIN_W = 420;
 const DRAWER_DEFAULT_W = 720;
 
-// Parse @mentions from text — returns array of emails mentioned
+// Parse @mentions from text — returns array of emails mentioned. Matches by
+// display name (what people type) and still accepts a raw @email for safety.
 function parseMentions(text, users) {
   const found = [];
-  users.forEach((u) => { if (text.includes("@" + u)) found.push(u); });
+  users.forEach((u) => {
+    const name = displayName(u);
+    if ((name && text.includes("@" + name)) || text.includes("@" + u)) found.push(u);
+  });
   return found;
 }
 
-// Render text with @mentions highlighted
+// Render text with @mentions highlighted. Recognizes both @Name and @email.
 function RichText({ body, users }) {
   if (!users?.length) return <span>{body}</span>;
+  const byName = {};
+  users.forEach((u) => { const n = displayName(u); if (n) byName[n] = u; });
   const parts = body.split(/(@\S+)/g);
   return (
     <span>
       {parts.map((p, i) => {
-        const email = p.startsWith("@") ? p.slice(1) : null;
-        if (email && users.includes(email))
-          return <strong key={i} className="mention">@{displayName(email)}</strong>;
+        if (p.startsWith("@")) {
+          const tok = p.slice(1);
+          const email = users.includes(tok) ? tok : byName[tok];
+          if (email) return <strong key={i} className="mention">@{displayName(email)}</strong>;
+        }
         return <span key={i}>{p}</span>;
       })}
     </span>
@@ -139,14 +147,20 @@ function MentionTextarea({ value, onChange, users, placeholder, rows = 3 }) {
     if (match) {
       const q = match[1].toLowerCase();
       setMentionQ(match[0]);
-      setSuggestions(users.filter((u) => u.toLowerCase().includes(q)).slice(0, 5));
+      setSuggestions(
+        users
+          .filter((u) => (displayName(u) || "").toLowerCase().includes(q) || u.toLowerCase().includes(q))
+          .slice(0, 5)
+      );
     } else {
       setSuggestions([]);
     }
   }
 
   function pickSuggestion(u) {
-    const v = value.replace(new RegExp(mentionQ.replace("@", "@") + "$"), "@" + u + " ");
+    const token = displayName(u) || u;
+    const safe = mentionQ.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const v = value.replace(new RegExp(safe + "$"), "@" + token + " ");
     onChange(v);
     setSuggestions([]);
     ref.current?.focus();
