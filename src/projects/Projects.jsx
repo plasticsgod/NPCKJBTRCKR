@@ -594,6 +594,7 @@ function ProjectGroup({ project, tasks, users, userEmail, canEdit = true, progre
             onDoubleClick={canEdit ? () => setEditingName(true) : undefined}>{project.name}</span>
         )}
         <span className="proj-count">{tasks.length} {tasks.length === 1 ? "item" : "items"}</span>
+        {canEdit && <ProjectMembers project={project} />}
       </div>
       {!collapsed && (
         <div className="ptable-wrap">
@@ -879,6 +880,121 @@ function MultiPersonPicker({ owners, users, onToggle, readOnly }) {
               Clear all
             </button>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Per-project access: shows the guests on a project and lets internal users add
+// (via the secure invite function) or remove them. Panel is position:fixed so
+// it escapes the project card's overflow clipping (same trick as StatusPicker).
+function ProjectMembers({ project }) {
+  const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState(null);
+  const [members, setMembers] = useState(null); // null = loading
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const btnRef = useRef(null);
+  const panelRef = useRef(null);
+
+  const load = useCallback(async () => {
+    const { data } = await supabase
+      .from("project_members")
+      .select("member_email, created_at")
+      .eq("project_id", project.id)
+      .order("created_at");
+    setMembers(data || []);
+  }, [project.id]);
+
+  useEffect(() => { if (open && members === null) load(); }, [open, members, load]);
+
+  useEffect(() => {
+    function onDown(e) {
+      if (btnRef.current?.contains(e.target) || panelRef.current?.contains(e.target)) return;
+      setOpen(false);
+    }
+    if (open) document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const el = btnRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const PW = 280, PH = 260, GAP = 6, EDGE = 8;
+    let left = Math.max(EDGE, r.right - PW);
+    let top = r.bottom + GAP;
+    if (top + PH > window.innerHeight - EDGE) top = Math.max(EDGE, r.top - PH - GAP);
+    setCoords({ top, left });
+  }, [open, members]);
+
+  async function addMember() {
+    const addr = email.trim().toLowerCase();
+    if (!addr || !addr.includes("@")) { toast.error("Enter a valid email address."); return; }
+    setBusy(true);
+    const { data, error } = await supabase.functions.invoke("invite-user", {
+      body: { email: addr, scope: "project", projectId: project.id },
+    });
+    setBusy(false);
+    if (error || data?.error) { toast.error(data?.error || error?.message || "Could not add them."); return; }
+    toast.success(data?.alreadyExisted ? `${addr} added to this project` : `Invite sent to ${addr}`);
+    setEmail("");
+    load();
+  }
+
+  async function removeMember(memberEmail) {
+    if (!confirm(`Remove ${memberEmail} from "${project.name}"? They'll lose access to this project.`)) return;
+    const { error } = await supabase.from("project_members").delete()
+      .eq("project_id", project.id).eq("member_email", memberEmail);
+    if (error) { toast.error("Could not remove: " + error.message); return; }
+    toast.success("Access removed");
+    load();
+  }
+
+  const count = members?.length ?? 0;
+
+  return (
+    <div className="proj-members">
+      <button type="button" ref={btnRef} className="proj-members-btn"
+        onClick={() => setOpen((o) => !o)} title="Manage who can see this project">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+          strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+        Members{count ? ` · ${count}` : ""}
+      </button>
+
+      {open && coords && (
+        <div className="members-panel" ref={panelRef}
+          style={{ position: "fixed", top: coords.top, left: coords.left }}
+          onClick={(e) => e.stopPropagation()}>
+          <div className="members-panel-head">Guests on this project</div>
+
+          {members === null ? (
+            <p className="muted members-empty">Loading…</p>
+          ) : members.length === 0 ? (
+            <p className="muted members-empty">No guests yet. Add someone below — they'll see only this project.</p>
+          ) : (
+            <ul className="members-list">
+              {members.map((m) => (
+                <li key={m.member_email}>
+                  <span className="members-email" title={m.member_email}>{m.member_email}</span>
+                  <button className="members-remove" onClick={() => removeMember(m.member_email)}
+                    aria-label={`Remove ${m.member_email}`}>×</button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="members-add">
+            <input type="email" placeholder="person@company.com" value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addMember(); } }} />
+            <button className="btn-accent" onClick={addMember} disabled={busy}>{busy ? "…" : "Add"}</button>
+          </div>
         </div>
       )}
     </div>
