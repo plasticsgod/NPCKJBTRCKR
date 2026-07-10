@@ -1896,6 +1896,11 @@ a.file-chip:hover svg { color: var(--accent); }
 .quote-actions { display: flex; gap: 10px; justify-content: flex-end; }
 @media (prefers-reduced-motion: reduce) { .search-dd { animation: none; } }
 
+.pl-tabs { display: inline-flex; gap: 4px; background: var(--panel); border: 1px solid var(--hairline); border-radius: 999px; padding: 3px; margin-bottom: 14px; flex-wrap: wrap; }
+.pl-tab { font-family: var(--ui); font-size: 13px; font-weight: 600; color: var(--ink-3); background: transparent; border: none; border-radius: 999px; padding: 6px 15px; cursor: pointer; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+.pl-tab:hover { color: var(--ink); }
+.pl-tab.on { background: var(--accent); color: #fff; }
+
 /* Estimator price list / catalog */
 .price-list-section { margin-top: 8px; border-top: 1px solid var(--hairline); padding-top: 18px; }
 .pl-head-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
@@ -1907,7 +1912,7 @@ a.file-chip:hover svg { color: var(--accent); }
 .pl-head { padding: 0 10px 8px; font-family: var(--mono); font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); }
 .pl-row { padding: 9px 10px; border-radius: 8px; }
 .pl-row:hover { background: var(--panel); }
-.pl-cat { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); padding: 14px 10px 4px; }
+.pl-cat { font-family: var(--ui); font-size: 13px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; color: var(--ink-2); padding: 18px 10px 7px; border-bottom: 1px solid var(--hairline); margin-bottom: 3px; }
 .pl-name { font-size: 14px; color: var(--ink); }
 .pl-num { text-align: right; font-family: var(--mono); font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; }
 .pl-num.muted-num { color: var(--ink-3); }
