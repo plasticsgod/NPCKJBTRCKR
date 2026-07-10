@@ -4,6 +4,7 @@ import { unitEconomics, setEconomics, money } from "../lib/pricing";
 
 // Deep clone so edits don't touch the active version until published.
 const clone = (o) => JSON.parse(JSON.stringify(o));
+const genId = () => "c" + Math.random().toString(36).slice(2, 9);
 
 export default function PricingEditor({ baseData, ship, userEmail, onClose, onPublished }) {
   const [draft, setDraft] = useState(() => clone(baseData));
@@ -19,7 +20,32 @@ export default function PricingEditor({ baseData, ship, userEmail, onClose, onPu
     setDraft((d) => {
       const next = clone(d);
       const row = next[group].find((x) => x.id === id);
-      if (row) row[key] = value === "" ? 0 : Number(value);
+      if (!row) return next;
+      row[key] = key === "name" ? value : value === "" ? null : Number(value);
+      return next;
+    });
+  }
+  function addProduct(group) {
+    setDraft((d) => {
+      const next = clone(d);
+      next[group] = next[group] || [];
+      next[group].push({ id: genId(), name: group === "tubs" ? "New tub" : "New lid", factory: 0, tariff: 0, pcs: null, ppp: null });
+      return next;
+    });
+  }
+  function removeProduct(group, id) {
+    setDraft((d) => {
+      const next = clone(d);
+      next[group] = next[group].filter((x) => x.id !== id);
+      if (group === "tubs" && next.sets) delete next.sets[id];
+      return next;
+    });
+  }
+  function setPairing(tubId, lidId) {
+    setDraft((d) => {
+      const next = clone(d);
+      next.sets = next.sets || {};
+      if (lidId) next.sets[tubId] = lidId; else delete next.sets[tubId];
       return next;
     });
   }
@@ -39,14 +65,30 @@ export default function PricingEditor({ baseData, ship, userEmail, onClose, onPu
     onPublished();
   }
 
-  // Landed reflects the current shipping inputs, folded in automatically.
-  const tubLanded = (t) => unitEconomics(t, "tub", sh, {}).landed;
-  const lidLanded = (l) => unitEconomics(l, "lid", sh, {}).landed;
-  const setLanded = (t) => setEconomics(draft, t, sh, {}).landed;
+  const landedOf = (item, kind) => {
+    const e = kind === "set" ? setEconomics(draft, item, sh, {}) : unitEconomics(item, kind, sh, {});
+    return e ? e.landed : null;
+  };
 
-  const Header = () => (
-    <div className="ep-hdr">
-      <span>Item</span><span className="r">Factory</span><span className="r">Tariff</span><span className="r">Landed</span>
+  // Editable rows for tubs / lids (called inline so inputs keep focus).
+  const renderGroup = (group) => (
+    <div className="epx-wrap">
+      <div className="epx-hdr">
+        <span>Product</span><span className="r">Factory</span><span className="r">Tariff</span>
+        <span className="r">Pcs/ctnr</span><span className="r">Pcs/pallet</span><span className="r">Landed</span><span></span>
+      </div>
+      {draft[group].map((it) => (
+        <div className="epx-row" key={it.id}>
+          <input className="epx-name" value={it.name} onChange={(e) => setField(group, it.id, "name", e.target.value)} />
+          <input className="epx-inp" type="number" step="0.001" value={it.factory ?? ""} onChange={(e) => setField(group, it.id, "factory", e.target.value)} />
+          <input className="epx-inp" type="number" step="0.001" value={it.tariff ?? ""} onChange={(e) => setField(group, it.id, "tariff", e.target.value)} />
+          <input className="epx-inp" type="number" placeholder="—" value={it.pcs ?? ""} onChange={(e) => setField(group, it.id, "pcs", e.target.value)} />
+          <input className="epx-inp" type="number" placeholder="—" value={it.ppp ?? ""} onChange={(e) => setField(group, it.id, "ppp", e.target.value)} />
+          <span className="epx-landed">{money(landedOf(it, group === "tubs" ? "tub" : "lid"), 3)}</span>
+          <button className="epx-rm" onClick={() => removeProduct(group, it.id)} aria-label={`Remove ${it.name}`}>×</button>
+        </div>
+      ))}
+      <button className="epx-add" onClick={() => addProduct(group)}>+ Add {group === "tubs" ? "tub" : "lid"}</button>
     </div>
   );
 
@@ -62,46 +104,32 @@ export default function PricingEditor({ baseData, ship, userEmail, onClose, onPu
           <>
             <div className="modal-body">
               <p className="ep-note">
-                Set factory cost &amp; tariff per item. Freight comes from the Shipping panel and is folded
-                into Landed automatically. Saving creates a new signed version — it never overwrites history.
+                Add, remove, or edit products here. Factory &amp; tariff feed pricing; pieces-per-container
+                and per-pallet enable the Containers / Pallets quantity options. Freight comes from the
+                Shipping panel and folds into Landed automatically. Saving creates a new signed version —
+                it never overwrites history.
               </p>
 
               <div className="ep-cat">Tubs</div>
-              <Header />
-              {draft.tubs.map((t) => (
-                <div className="ep-row" key={t.id}>
-                  <span className="ep-iname">{t.name}</span>
-                  <input className="ep-inp" type="number" step="0.001" value={t.factory}
-                    onChange={(e) => setField("tubs", t.id, "factory", e.target.value)} />
-                  <input className="ep-inp" type="number" step="0.001" value={t.tariff}
-                    onChange={(e) => setField("tubs", t.id, "tariff", e.target.value)} />
-                  <span className="ep-landed">{money(tubLanded(t), 3)}<small>incl. freight</small></span>
-                </div>
-              ))}
+              {renderGroup("tubs")}
 
               <div className="ep-cat">Lids</div>
-              <Header />
-              {draft.lids.map((l) => (
-                <div className="ep-row" key={l.id}>
-                  <span className="ep-iname">{l.name}</span>
-                  <input className="ep-inp" type="number" step="0.001" value={l.factory}
-                    onChange={(e) => setField("lids", l.id, "factory", e.target.value)} />
-                  <input className="ep-inp" type="number" step="0.001" value={l.tariff}
-                    onChange={(e) => setField("lids", l.id, "tariff", e.target.value)} />
-                  <span className="ep-landed">{money(lidLanded(l), 3)}<small>no freight add-on</small></span>
-                </div>
-              ))}
+              {renderGroup("lids")}
 
               <div className="ep-cat">Sets (tub + lid)</div>
-              <Header />
-              {draft.tubs.map((t) => (
-                <div className="ep-row" key={"set-" + t.id}>
-                  <span className="ep-iname">{t.name.replace("Tub", "Set")} + lid</span>
-                  <span className="ep-calc">tub + lid</span>
-                  <span className="ep-calc">—</span>
-                  <span className="ep-landed">{money(setLanded(t), 3)}<small>{t.name} + lid</small></span>
-                </div>
-              ))}
+              <div className="epx-wrap">
+                <div className="epx-hdr sets"><span>Set</span><span>Paired lid</span><span className="r">Landed</span></div>
+                {draft.tubs.map((t) => (
+                  <div className="epx-row sets" key={"set-" + t.id}>
+                    <span className="epx-name-static">{t.name.replace("Tub", "Set")}</span>
+                    <select className="epx-pair" value={draft.sets?.[t.id] || ""} onChange={(e) => setPairing(t.id, e.target.value)}>
+                      <option value="">— no lid —</option>
+                      {draft.lids.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                    </select>
+                    <span className="epx-landed">{landedOf(t, "set") == null ? "—" : money(landedOf(t, "set"), 3)}</span>
+                  </div>
+                ))}
+              </div>
             </div>
             <div className="modal-foot">
               <button className="btn-ghost" onClick={onClose}>Cancel</button>

@@ -77,7 +77,7 @@ export default function PlasticsEstimator({ userEmail }) {
   const match = (arr) => arr.filter((x) => x.name.toLowerCase().includes(q));
   const resTubs = match(data.tubs);
   const resLids = match(data.lids);
-  const resSets = match(data.tubs); // sets are named from their tub
+  const resSets = match(data.tubs.filter((t) => findItem(data, data.sets?.[t.id]))); // paired tubs only
   const hasResults = resTubs.length || resLids.length || resSets.length;
 
   function addLine(prod, name) {
@@ -93,6 +93,7 @@ export default function PlasticsEstimator({ userEmail }) {
     const item = kind === "set" ? data.tubs.find((t) => t.id === id) : findItem(data, id);
     if (!item) return { unit: null, units: null, total: null, saved: null };
     const econ = kind === "set" ? setEconomics(data, item, ship, ov) : unitEconomics(item, kind, ship, ov);
+    if (!econ) return { unit: null, units: null, total: null, saved: null };
     const qn = parseFloat(l.qty) || 0;
     const units = unitsFromQty(item, l.mode, qn);
     const hasMargin = l.marginIdx != null;
@@ -115,6 +116,7 @@ export default function PlasticsEstimator({ userEmail }) {
   // Per-unit prices for the catalog at the bottom (reflects current shipping).
   function productPrices(kind, item) {
     const econ = kind === "set" ? setEconomics(data, item, ship, ov) : unitEconomics(item, kind, ship, ov);
+    if (!econ) return { landed: null, sells: [] };
     return { landed: econ.landed, sells: econ.sells };
   }
 
@@ -123,7 +125,7 @@ export default function PlasticsEstimator({ userEmail }) {
   const catalog = [
     { id: "tubs", label: "Tubs", items: data.tubs.map((t) => ({ prod: "tub:" + t.id, name: t.name, item: t, kind: "tub" })) },
     { id: "lids", label: "Lids", items: data.lids.map((l) => ({ prod: "lid:" + l.id, name: l.name, item: l, kind: "lid" })) },
-    { id: "sets", label: "Sets", items: data.tubs.map((t) => ({ prod: "set:" + t.id, name: t.name.replace("Tub", "Set") + " + lid", item: t, kind: "set" })) },
+    { id: "sets", label: "Sets", items: data.tubs.filter((t) => findItem(data, data.sets?.[t.id])).map((t) => ({ prod: "set:" + t.id, name: t.name.replace("Tub", "Set") + " + lid", item: t, kind: "set" })) },
   ];
 
   async function saveQuote() {
