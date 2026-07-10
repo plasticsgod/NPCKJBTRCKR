@@ -1918,3 +1918,17 @@ a.file-chip:hover svg { color: var(--accent); }
 .pl-num.muted-num { color: var(--ink-3); }
 .pl-add { justify-self: end; font-size: 12px; font-weight: 600; color: var(--accent); background: transparent; border: 1px solid var(--accent); border-radius: 999px; padding: 5px 12px; cursor: pointer; white-space: nowrap; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .pl-add:hover { background: var(--accent); color: #fff; }
+
+/* Edit-pricing view (grouped Factory -> Tariff -> Landed) */
+.ep-note { font-size: 13px; color: var(--ink-3); line-height: 1.5; margin-bottom: 4px; }
+.ep-cat { font-family: var(--ui); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; color: var(--ink-2); padding: 16px 4px 5px; border-bottom: 1px solid var(--hairline); margin-bottom: 2px; }
+.ep-hdr, .ep-row { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.1fr; gap: 12px; align-items: center; }
+.ep-hdr { padding: 4px 4px 6px; font-family: var(--mono); font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); }
+.ep-hdr .r { text-align: right; }
+.ep-row { padding: 5px 4px; }
+.ep-iname { font-size: 14px; color: var(--ink); }
+.ep-inp { font-family: var(--ui); font-size: 13px; padding: 7px 9px; border: 1px solid var(--hairline); border-radius: 8px; background: #fff; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; width: 100%; }
+.ep-inp:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.ep-landed { text-align: right; font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ep-landed small { display: block; font-family: var(--ui); font-size: 10px; font-weight: 500; color: var(--ink-3); }
+.ep-calc { text-align: right; font-size: 13px; color: var(--ink-3); font-style: italic; }
