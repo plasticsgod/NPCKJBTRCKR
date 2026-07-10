@@ -3,6 +3,9 @@
   --panel: #f4f1ec;
   --accent: #ff5b1f;
   --accent-press: #e64e15;
+  --primary: #1a1712;
+  --primary-press: #322c23;
+  --accent-tint: #fff3ee;
   --ease: cubic-bezier(.22, .61, .36, 1);
   --dur: 200ms;
   --dur-fast: 130ms;
@@ -65,7 +68,7 @@ button {
 
 /* ---- Buttons ------------------------------------------------------------- */
 .btn-accent {
-  background: var(--accent);
+  background: var(--primary);
   color: #fff;
   border: none;
   cursor: pointer;
@@ -75,7 +78,7 @@ button {
   border-radius: 999px;
 }
 .btn-accent:hover {
-  background: var(--accent-press);
+  background: var(--primary-press);
 }
 .btn-accent.full {
   width: 100%;
@@ -948,7 +951,7 @@ button {
 
 .seg { display: inline-flex; border: 1px solid var(--hairline); border-radius: 999px; overflow: hidden; }
 .seg button { background: transparent; border: none; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--ink-3); padding: 9px 14px; }
-.seg button.on { background: var(--ink); color: var(--bg); }
+.seg button.on { background: var(--primary); color: #fff; }
 
 .market { margin-top: 16px; border-radius: 10px; background: var(--ink); color: var(--bg); padding: 14px 16px; }
 .market-row { display: flex; justify-content: space-between; align-items: baseline; }
@@ -1060,7 +1063,7 @@ button {
 .modal-tabs { max-width: 580px; }
 .modal-tab-bar { display: flex; gap: 2px; background: var(--panel); border-radius: 999px; padding: 3px; }
 .mtab { background: transparent; border: none; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ink-3); padding: 7px 16px; border-radius: 999px; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
-.mtab.on { background: var(--ink); color: var(--bg); }
+.mtab.on { background: var(--primary); color: #fff; }
 
 /* ---- File upload + list -------------------------------------------------- */
 .files-panel { gap: 14px; }
@@ -1882,7 +1885,7 @@ a.file-chip:hover svg { color: var(--accent); }
 .qline-rm { border: none; background: transparent; color: var(--ink-3); font-size: 18px; line-height: 1; cursor: pointer; padding: 0 4px; border-radius: 6px; transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease); }
 .qline-rm:hover { color: #d64545; background: var(--hairline-soft); }
 .qline-ctrls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.qline-ctrls .seg button.on { background: var(--accent); color: #fff; }
+.qline-ctrls .seg button.on { background: var(--primary); color: #fff; }
 .qline-qty { width: 96px; font-family: var(--ui); font-size: 13px; padding: 8px 10px; border: 1px solid var(--hairline); border-radius: 8px; background: #fff; color: var(--ink); }
 .qline-margin { font-family: var(--ui); font-size: 13px; padding: 8px 10px; border: 1px solid var(--hairline); border-radius: 8px; background: #fff; color: var(--ink); cursor: pointer; }
 .qline-margin.empty { color: var(--accent); border-color: var(--accent); border-style: dashed; }
@@ -1899,7 +1902,7 @@ a.file-chip:hover svg { color: var(--accent); }
 .pl-tabs { display: inline-flex; gap: 4px; background: var(--panel); border: 1px solid var(--hairline); border-radius: 999px; padding: 3px; margin-bottom: 14px; flex-wrap: wrap; }
 .pl-tab { font-family: var(--ui); font-size: 13px; font-weight: 600; color: var(--ink-3); background: transparent; border: none; border-radius: 999px; padding: 6px 15px; cursor: pointer; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .pl-tab:hover { color: var(--ink); }
-.pl-tab.on { background: var(--accent); color: #fff; }
+.pl-tab.on { background: var(--primary); color: #fff; }
 
 /* Estimator price list / catalog */
 .price-list-section { margin-top: 8px; border-top: 1px solid var(--hairline); padding-top: 18px; }
@@ -1955,3 +1958,6 @@ a.file-chip:hover svg { color: var(--accent); }
 .epx-hdr.sets, .epx-row.sets { grid-template-columns: 1.4fr 1.5fr 74px; min-width: 420px; }
 .epx-name-static { font-size: 13px; color: var(--ink); }
 .epx-pair { font-family: var(--ui); font-size: 13px; padding: 7px 9px; border: 1px solid var(--hairline); border-radius: 8px; background: #fff; color: var(--ink); }
+
+/* Option C depth — soft elevation on content cards */
+.panel, .stat-card, .panel-card, .proj-group, .qline { box-shadow: 0 1px 2px rgba(20,17,13,.03), 0 6px 18px rgba(20,17,13,.05); }
