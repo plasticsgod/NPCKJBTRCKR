@@ -41,14 +41,15 @@ export function findItem(data, id) {
 
 // tariffOverrides: { [id]: number } from on-screen edits; falls back to item.tariff
 export function unitEconomics(item, kind, ship, tariffOverrides) {
-  const ad = kind === "tub" || (kind === "custom" && item.pcs) ? containerCosts(ship) / item.pcs : 0;
+  const ad = (kind === "tub" || kind === "custom") && item.pcs ? containerCosts(ship) / item.pcs : 0;
   const t = kind === "custom" ? item.tariff : tariffOverrides?.[item.id] ?? item.tariff ?? 0;
   const landed = item.factory + ad + t;
   return { addOn: ad, tariff: t, landed, sells: MARGINS.map((m) => landed / m.d) };
 }
 
 export function setEconomics(data, tub, ship, tariffOverrides) {
-  const lid = findItem(data, data.sets[tub.id]);
+  const lid = findItem(data, data.sets?.[tub.id]);
+  if (!lid) return null; // tub not paired with a lid yet — no set
   const t = unitEconomics(tub, "tub", ship, tariffOverrides);
   const l = unitEconomics(lid, "lid", ship, tariffOverrides);
   const landed = t.landed + l.landed;
