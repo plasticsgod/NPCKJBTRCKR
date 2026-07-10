@@ -1997,3 +1997,8 @@ a.file-chip:hover svg { color: var(--accent); }
   .proj-mobile-nav { display: block; }
 }
 @media (prefers-reduced-motion: reduce) { .proj-mobile-drop { animation: none; } }
+
+/* Rail: search projects */
+.proj-rail-search { width: 100%; font-family: var(--ui); font-size: 13px; padding: 7px 10px; margin-bottom: 8px; border: 1px solid var(--hairline); border-radius: 8px; background: #fff; color: var(--ink); }
+.proj-rail-search:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.proj-rail-empty { font-size: 12px; color: var(--ink-3); padding: 8px 10px; }
