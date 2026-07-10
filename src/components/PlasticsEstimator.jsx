@@ -1,57 +1,55 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "../supabaseClient";
 import {
-  MARGINS, ORIGINS, PORTS, fbxLane, SAMPLE_MARKET,
-  containerCosts, findItem, unitEconomics, setEconomics, unitsFromQty,
-  money, money2,
+  MARGINS, ORIGINS, PORTS,
+  findItem, unitEconomics, setEconomics, unitsFromQty, money2,
 } from "../lib/pricing";
-import PriceList from "./PriceList";
-import DraftQuote from "./DraftQuote";
 import PricingEditor from "./PricingEditor";
 import { buildQuotePDF } from "../lib/quotePdf";
 import { toast } from "./Toaster";
 
+let _lineSeq = 0;
+const nextLineId = () => ++_lineSeq;
+const cap = (s) => s[0].toUpperCase() + s.slice(1);
+
 export default function PlasticsEstimator({ userEmail }) {
   const [versions, setVersions] = useState([]);
-  const [vi, setVi] = useState(0); // index into versions (0 = current/newest)
+  const [vi, setVi] = useState(0);
   const [loading, setLoading] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
 
-  // Shipping inputs (on-screen only, never published)
+  // Shipping (internal only). Freight is typed manually — no auto-fill.
   const [ship, setShip] = useState({ origin: "", port: "", freight: 0, portc: 0, truck: 0, ware: 0 });
-  const [tariffOv, setTariffOv] = useState({});
-  const [market] = useState(SAMPLE_MARKET);
 
-  // Quote builder selections
-  const [prod, setProd] = useState("");
-  const [mode, setMode] = useState("units");
-  const [qty, setQty] = useState("");
-  const [marginIdx, setMarginIdx] = useState(0);
+  // Store-style quote: each line = product + unit + qty + margin.
+  const [lines, setLines] = useState([]);
 
-  // Draft quote basket
-  const [quote, setQuote] = useState({ customer: "", lines: [] });
+  // Product search
+  const [search, setSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchRef = useRef(null);
 
   const loadVersions = useCallback(async () => {
     const { data, error } = await supabase
-      .from("pricing_versions")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .from("pricing_versions").select("*").order("created_at", { ascending: false });
     if (error) console.error("Load pricing failed:", error.message);
-    else {
-      setVersions(data ?? []);
-      setVi(0);
-    }
+    else { setVersions(data ?? []); setVi(0); }
     setLoading(false);
   }, []);
 
   useEffect(() => {
     loadVersions();
-    const ch = supabase
-      .channel("pricing-changes")
+    const ch = supabase.channel("pricing-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "pricing_versions" }, loadVersions)
       .subscribe();
     return () => supabase.removeChannel(ch);
   }, [loadVersions]);
+
+  useEffect(() => {
+    function onDown(e) { if (searchRef.current && !searchRef.current.contains(e.target)) setSearchOpen(false); }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, []);
 
   if (loading) return <div className="muted pad">Loading pricing…</div>;
   if (versions.length === 0)
@@ -65,286 +63,204 @@ export default function PlasticsEstimator({ userEmail }) {
   const version = versions[vi];
   const data = version.data; // { tubs, lids, sets, freight }
 
-  // Sync tariff overrides whenever the active version changes
-  function activeTariffs() {
-    const ov = {};
-    [...data.tubs, ...data.lids].forEach((i) => (ov[i.id] = tariffOv[i.id] ?? i.tariff));
-    return ov;
-  }
-  const ov = activeTariffs();
+  // Tariffs come straight from the version (edited via "Edit pricing").
+  const ov = {};
+  [...data.tubs, ...data.lids].forEach((i) => (ov[i.id] = i.tariff ?? 0));
 
-  function applyLane(originId, portId) {
-    setShip((s) => {
-      const next = { ...s, origin: originId, port: portId };
-      const o = ORIGINS.find((x) => x.id === originId);
-      const p = PORTS.find((x) => x.id === portId);
-      if (o && p && data.freight[originId]) next.freight = data.freight[originId][portId] ?? 0;
-      return next;
-    });
-  }
+  const updateShip = (k, v) => setShip((s) => ({ ...s, [k]: v }));
 
-  function resolveProduct() {
-    if (!prod) return null;
-    const [kind, id] = prod.split(":");
-    if (kind === "set") return { kind, item: data.tubs.find((t) => t.id === id) };
-    return { kind, item: findItem(data, id) };
-  }
+  // --- grouped search results -------------------------------------------------
+  const q = search.trim().toLowerCase();
+  const match = (arr) => arr.filter((x) => x.name.toLowerCase().includes(q));
+  const resTubs = match(data.tubs);
+  const resLids = match(data.lids);
+  const resSets = match(data.tubs); // sets are named from their tub
+  const hasResults = resTubs.length || resLids.length || resSets.length;
 
-  function currentLine() {
-    const rp = resolveProduct();
-    if (!rp) return null;
-    const q = parseFloat(qty) || 0;
-    const { kind, item } = rp;
-    let econ, name;
-    if (kind === "set") { econ = setEconomics(data, item, ship, ov); name = item.name.replace("Tub", "Set"); }
-    else { econ = unitEconomics(item, kind, ship, ov); name = item.name; }
-    const units = unitsFromQty(item, mode, q);
-    if (units === null || units <= 0) return null;
-    const unit = econ.sells[marginIdx];
-    const freightU = kind === "set" ? unitEconomics(item, "tub", ship, ov).addOn : econ.addOn;
-    const dutyU = kind === "set" ? (ov[item.id] || 0) + (ov[econ.lid.id] || 0) : econ.tariff;
-    return { name, units, unit, total: unit * units, marginLab: MARGINS[marginIdx].lab, freightU, dutyU, dutyIncluded: kind === "lid" };
+  function addLine(prod, name) {
+    setLines((ls) => [...ls, { id: nextLineId(), prod, name, mode: "units", qty: "", marginIdx: null }]);
+    setSearch(""); setSearchOpen(false);
   }
+  const updateLine = (id, patch) => setLines((ls) => ls.map((l) => (l.id === id ? { ...l, ...patch } : l)));
+  const removeLine = (id) => setLines((ls) => ls.filter((l) => l.id !== id));
 
-  function addToQuote() {
-    const l = currentLine();
-    if (!l) return;
-    setQuote((qu) => ({ ...qu, lines: [...qu.lines, l] }));
+  // Price one builder line. Returns display values + a "saved" shape for PDF/save.
+  function priceLine(l) {
+    const [kind, id] = l.prod.split(":");
+    const item = kind === "set" ? data.tubs.find((t) => t.id === id) : findItem(data, id);
+    if (!item) return { unit: null, units: null, total: null, saved: null };
+    const econ = kind === "set" ? setEconomics(data, item, ship, ov) : unitEconomics(item, kind, ship, ov);
+    const qn = parseFloat(l.qty) || 0;
+    const units = unitsFromQty(item, l.mode, qn);
+    const hasMargin = l.marginIdx != null;
+    const unit = hasMargin ? econ.sells[l.marginIdx] : null;
+    const total = unit != null && units ? unit * units : null;
+    let saved = null;
+    if (hasMargin && units) {
+      const freightU = kind === "set" ? unitEconomics(item, "tub", ship, ov).addOn : econ.addOn;
+      const dutyU = kind === "set" ? (ov[item.id] || 0) + (ov[econ.lid.id] || 0) : econ.tariff;
+      saved = { name: l.name, units, unit, total, marginLab: MARGINS[l.marginIdx].lab, freightU, dutyU, dutyIncluded: kind === "lid" };
+    }
+    return { unit, units, total, saved };
   }
 
-  // Save the current draft basket to the Plastic Quotes history.
+  const priced = lines.map((l) => ({ l, ...priceLine(l) }));
+  const savedLines = priced.map((p) => p.saved).filter(Boolean);
+  const total = savedLines.reduce((a, s) => a + s.total, 0);
+  const needMargin = priced.filter((p) => p.l.marginIdx == null).length;
+
   async function saveQuote() {
-    if (quote.lines.length === 0) return;
-    const total = quote.lines.reduce((a, l) => a + l.total, 0);
+    if (savedLines.length === 0) { toast.error("Add at least one line with a margin first."); return; }
     const { error } = await supabase.from("plastic_quotes").insert({
-      created_by: userEmail,
-      customer: quote.customer || null,
-      lines: quote.lines,
-      total,
+      created_by: userEmail, customer: null, lines: savedLines, total,
     });
     if (error) { toast.error("Couldn't save quote — " + error.message); return; }
-    toast.success(`Quote saved${quote.customer ? " for " + quote.customer : ""}`);
+    toast.success("Quote saved");
   }
-
-  // Result panel data
-  const rp = resolveProduct();
-  let result = null;
-  if (rp) {
-    const { kind, item } = rp;
-    const q = parseFloat(qty) || 0;
-    let econ, name, pcs;
-    if (kind === "set") { econ = setEconomics(data, item, ship, ov); name = item.name.replace("Tub", "Set"); pcs = item.pcs; }
-    else { econ = unitEconomics(item, kind, ship, ov); name = item.name; pcs = item.pcs; }
-    const units = unitsFromQty(item, mode, q);
-    result = { kind, item, econ, name, pcs, units };
+  function exportPdf() {
+    if (savedLines.length === 0) { toast.error("Add at least one line with a margin first."); return; }
+    buildQuotePDF({ customer: null, lines: savedLines });
   }
 
   return (
-    <div className="estimator">
-      <div className="est-toolbar">
-        <div className="fld">
-          <label>Pricing Version</label>
-          <select className="inp" value={vi} onChange={(e) => setVi(+e.target.value)}>
-            {versions.map((v, i) => (
-              <option key={v.id} value={i}>
-                {v.version_date} — {v.label}{i === 0 ? " (current)" : ""}
-              </option>
-            ))}
-          </select>
-        </div>
-        <button className="btn-accent push-right" onClick={() => setEditorOpen(true)}>
-          Edit pricing
-        </button>
-      </div>
-
-      <div className="est-grid">
-        {/* LEFT: lane + shipping + quote builder */}
-        <div className="est-col">
-          <section className="panel-card">
-            <h3 className="card-h">Lane &amp; Freight</h3>
-            <div className="field-row">
-              <label className="field">
-                <span>Origin</span>
-                <select value={ship.origin} onChange={(e) => applyLane(e.target.value, ship.port)}>
-                  <option value="">Select origin…</option>
-                  {ORIGINS.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-                </select>
-              </label>
-              <label className="field">
-                <span>US Port</span>
-                <select value={ship.port} onChange={(e) => applyLane(ship.origin, e.target.value)}>
-                  <option value="">Select US port…</option>
-                  {PORTS.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              </label>
-            </div>
-
-            <MarketCard ship={ship} market={market} />
-
-            <div className="ship-grid">
-              {[["freight", "Container freight"], ["portc", "Port / customs"], ["truck", "Trucking"], ["ware", "Warehouse"]].map(([k, lab]) => (
-                <label className="field" key={k}>
-                  <span>{lab}</span>
-                  <input type="number" min="0" value={ship[k]}
-                    onChange={(e) => setShip((s) => ({ ...s, [k]: parseFloat(e.target.value) || 0 }))} />
-                </label>
+    <div className="estv2">
+      <div className="estv2-head">
+        <div className="estv2-title">
+          <h1 className="page-h1">Plastics Estimator</h1>
+          {versions.length > 1 && (
+            <select className="ver-select" value={vi} onChange={(e) => setVi(+e.target.value)}>
+              {versions.map((v, i) => (
+                <option key={v.id} value={i}>{v.version_date} — {v.label}{i === 0 ? " (current)" : ""}</option>
               ))}
-            </div>
-            <p className="ship-total">Container costs: <b>{money2(containerCosts(ship))}</b></p>
-          </section>
-
-          <section className="panel-card">
-            <h3 className="card-h">Quote Builder</h3>
-            <label className="field">
-              <span>Product</span>
-              <select value={prod} onChange={(e) => setProd(e.target.value)}>
-                <option value="">Select a product…</option>
-                <optgroup label="Tubs — India">
-                  {data.tubs.map((t) => <option key={t.id} value={"tub:" + t.id}>{t.name}</option>)}
-                </optgroup>
-                <optgroup label="Lids — China">
-                  {data.lids.map((l) => <option key={l.id} value={"lid:" + l.id}>{l.name}</option>)}
-                </optgroup>
-                <optgroup label="Sets (Tub + Lid)">
-                  {data.tubs.map((t) => <option key={t.id} value={"set:" + t.id}>{t.name.replace("Tub", "Set")} + {data.sets[t.id]} lid</option>)}
-                </optgroup>
-              </select>
-            </label>
-
-            <div className="field-row">
-              <label className="field">
-                <span>Quantity in</span>
-                <div className="seg">
-                  {["units", "pallets", "containers"].map((m) => (
-                    <button key={m} type="button" className={mode === m ? "on" : ""} onClick={() => setMode(m)}>
-                      {m[0].toUpperCase() + m.slice(1)}
-                    </button>
-                  ))}
-                </div>
-              </label>
-              <label className="field">
-                <span>Quantity</span>
-                <input type="number" min="0" value={qty} onChange={(e) => setQty(e.target.value)} />
-              </label>
-            </div>
-
-            <label className="field">
-              <span>Quote at margin</span>
-              <select value={marginIdx} onChange={(e) => setMarginIdx(+e.target.value)}>
-                {MARGINS.map((m, i) => <option key={i} value={i}>{m.lab} margin</option>)}
-              </select>
-            </label>
-
-            <ResultPanel result={result} ship={ship} ov={ov} mode={mode} qty={qty} marginIdx={marginIdx} data={data} />
-
-            <button className="btn-accent full" style={{ marginTop: 14 }} onClick={addToQuote} disabled={!currentLine()}>
-              Add to draft quote
-            </button>
-          </section>
+            </select>
+          )}
         </div>
+        <button className="btn-ghost" onClick={() => setEditorOpen(true)}>Edit pricing</button>
+      </div>
 
-        {/* RIGHT: draft quote + price list */}
-        <div className="est-col">
-          <DraftQuote
-            quote={quote}
-            setQuote={setQuote}
-            onPdf={() => buildQuotePDF(quote)}
-            onSave={saveQuote}
-          />
+      {/* Shipping strip — internal only; freight typed manually */}
+      <div className="ship-strip">
+        <span className="ship-strip-label">Shipping · internal only (sets freight per unit)</span>
+        <div className="ship-strip-row">
+          <label className="ss-fld"><span>Origin</span>
+            <select value={ship.origin} onChange={(e) => updateShip("origin", e.target.value)}>
+              <option value="">—</option>
+              {ORIGINS.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+          </label>
+          <label className="ss-fld"><span>Port</span>
+            <select value={ship.port} onChange={(e) => updateShip("port", e.target.value)}>
+              <option value="">—</option>
+              {PORTS.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </label>
+          <label className="ss-fld"><span>Container freight</span>
+            <input type="number" min="0" value={ship.freight}
+              onChange={(e) => updateShip("freight", parseFloat(e.target.value) || 0)} />
+          </label>
+          <label className="ss-fld"><span>Port / customs</span>
+            <input type="number" min="0" value={ship.portc}
+              onChange={(e) => updateShip("portc", parseFloat(e.target.value) || 0)} />
+          </label>
+          <label className="ss-fld"><span>Trucking</span>
+            <input type="number" min="0" value={ship.truck}
+              onChange={(e) => updateShip("truck", parseFloat(e.target.value) || 0)} />
+          </label>
         </div>
       </div>
 
-      <PriceList data={data} ship={ship} ov={ov} setTariffOv={setTariffOv} />
-
-      <footer className="est-footer">
-        Active pricing · {version.version_date} · {version.label} · signed by {version.signer || "—"}
-      </footer>
-
-      {editorOpen && (
-        <PricingEditor
-          baseData={data}
-          userEmail={userEmail}
-          onClose={() => setEditorOpen(false)}
-          onPublished={() => { setEditorOpen(false); loadVersions(); }}
-        />
-      )}
-    </div>
-  );
-}
-
-// --- Market reference card --------------------------------------------------
-function MarketCard({ ship, market }) {
-  if (!ship.origin || !ship.port) return null;
-  const port = PORTS.find((p) => p.id === ship.port);
-  const lane = fbxLane(ship.origin, port?.coast);
-  const isSample = (market.updated || "").includes("sample");
-  if (!lane) {
-    return (
-      <div className="market">
-        <span className="market-lab">Market reference</span>
-        <span className="market-note">No headline index for India lanes — benchmark covers China → US only.</span>
-      </div>
-    );
-  }
-  const rate = market.lanes?.[lane.code];
-  return (
-    <div className="market">
-      <div className="market-row">
-        <span className="market-lab">{lane.name}{isSample ? " · sample" : " · live"}</span>
-        <span className="market-rate">{money2(rate)} <small>/ FEU</small></span>
-      </div>
-      <span className="market-note">
-        Your manual freight: {money2(ship.freight)} · {isSample ? "Sample data — not a live quote." : "Market benchmark vs your rate."}
-      </span>
-    </div>
-  );
-}
-
-// --- Result breakdown panel -------------------------------------------------
-function ResultPanel({ result, ship, ov, mode, qty, marginIdx, data }) {
-  if (!result) return <div className="breakdown-box muted">Select a product to begin a quote.</div>;
-  const { kind, item, econ, name, pcs, units } = result;
-  if (units === null) {
-    const what = mode === "pallets" ? "pallet count" : "pcs-per-container";
-    return <div className="breakdown-box">No {what} on file for this item. Switch to “Units”.</div>;
-  }
-  const s = econ.sells;
-  const sfx = mode === "pallets" ? ` · ${qty} plt` : mode === "containers" ? ` · ${qty} ctnr` : "";
-  const factory = kind === "set" ? item.factory + econ.lid.factory : item.factory;
-  const addOn = kind === "set" ? unitEconomics(item, "tub", ship, ov).addOn : econ.addOn;
-  const tariff = kind === "set" ? (ov[item.id] || 0) + (ov[econ.lid.id] || 0) : econ.tariff;
-
-  return (
-    <div className="breakdown-box dark">
-      <div className="bd-head"><span>{name}</span><span>{units.toLocaleString()} units{sfx}</span></div>
-      <div className="bd-rows">
-        <div className="bd-row"><span>{kind === "set" ? "Tub + lid factory" : "Factory cost"}</span><span className="num">{money(factory)}</span></div>
-        <div className="bd-row"><span>{kind === "set" ? "Tub add-on / unit" : "Add-on / unit"}</span><span className="num">{money(addOn)}</span></div>
-        <div className="bd-row">
-          <span>{kind === "lid" ? "Duty / tariff" : "Tariff / unit"}</span>
-          <span className="num">{kind === "lid" ? <em>included in pricing</em> : money(tariff)}</span>
+      {/* Product search */}
+      <div className="prod-search" ref={searchRef}>
+        <div className="prod-search-box">
+          <span className="ps-icon" aria-hidden="true">⌕</span>
+          <input value={search} placeholder="Add a product…"
+            onFocus={() => setSearchOpen(true)}
+            onChange={(e) => { setSearch(e.target.value); setSearchOpen(true); }} />
         </div>
-        <div className="bd-row landed"><span>Landed cost / unit</span><span className="num">{money(econ.landed)}</span></div>
-      </div>
-      <div className="bd-margins">
-        {MARGINS.map((mg, i) => (
-          <div className={"bd-mcell " + (i === marginIdx ? "hero" : "")} key={i}>
-            <div className="bd-mlab">{mg.lab} margin</div>
-            <div className="bd-mbig num">{money(s[i], 3)}</div>
+        {searchOpen && (
+          <div className="search-dd">
+            {!hasResults && <div className="search-dd-empty">No products match “{search}”.</div>}
+            {resTubs.length > 0 && <div className="search-dd-cat">Tubs</div>}
+            {resTubs.map((t) => (
+              <button key={"tub:" + t.id} className="search-dd-item" onClick={() => addLine("tub:" + t.id, t.name)}>
+                {t.name}<span>+ add</span>
+              </button>
+            ))}
+            {resLids.length > 0 && <div className="search-dd-cat">Lids</div>}
+            {resLids.map((l) => (
+              <button key={"lid:" + l.id} className="search-dd-item" onClick={() => addLine("lid:" + l.id, l.name)}>
+                {l.name}<span>+ add</span>
+              </button>
+            ))}
+            {resSets.length > 0 && <div className="search-dd-cat">Sets (tub + lid)</div>}
+            {resSets.map((t) => (
+              <button key={"set:" + t.id} className="search-dd-item"
+                onClick={() => addLine("set:" + t.id, t.name.replace("Tub", "Set"))}>
+                {t.name.replace("Tub", "Set")} + lid<span>+ add</span>
+              </button>
+            ))}
           </div>
-        ))}
-      </div>
-      <div className="bd-totals">
-        {MARGINS.map((mg, i) => (
-          <div className="bd-row" key={i}>
-            <span>{i === marginIdx ? <b>Line total @ {mg.lab}</b> : `Line total @ ${mg.lab}`}</span>
-            <span className="num">{money2(s[i] * units)}</span>
-          </div>
-        ))}
-        {pcs && kind !== "set" && (
-          <div className="bd-row fc"><b>Full container @ {MARGINS[marginIdx].lab}</b><span className="num">{money2(s[marginIdx] * pcs)}</span></div>
         )}
       </div>
+
+      {/* Quote lines */}
+      {lines.length === 0 ? (
+        <div className="quote-empty">Search for a product above to start your quote.</div>
+      ) : (
+        <div className="quote-lines">
+          {priced.map(({ l, unit, units, total }) => (
+            <div className="qline" key={l.id}>
+              <div className="qline-top">
+                <span className="qline-name">{l.name}</span>
+                <div className="qline-right">
+                  <span className={"qline-total" + (total == null ? " none" : "")}>{total == null ? "—" : money2(total)}</span>
+                  <button className="qline-rm" onClick={() => removeLine(l.id)} aria-label={`Remove ${l.name}`}>×</button>
+                </div>
+              </div>
+              <div className="qline-ctrls">
+                <div className="seg">
+                  {["units", "pallets", "containers"].map((m) => (
+                    <button type="button" key={m} className={l.mode === m ? "on" : ""}
+                      onClick={() => updateLine(l.id, { mode: m })}>{cap(m)}</button>
+                  ))}
+                </div>
+                <input className="qline-qty" type="number" min="0" placeholder="Qty" value={l.qty}
+                  onChange={(e) => updateLine(l.id, { qty: e.target.value })} />
+                <select className={"qline-margin" + (l.marginIdx == null ? " empty" : "")}
+                  value={l.marginIdx ?? ""}
+                  onChange={(e) => updateLine(l.id, { marginIdx: e.target.value === "" ? null : +e.target.value })}>
+                  <option value="">Pick margin</option>
+                  {MARGINS.map((m, i) => <option key={i} value={i}>{m.lab}</option>)}
+                </select>
+                {units != null && unit != null && l.mode !== "units" && (
+                  <span className="qline-units">{units.toLocaleString()} units</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {lines.length > 0 && (
+        <>
+          <div className="quote-total-bar">
+            <span className="qtb-label">
+              Total{needMargin ? <span className="qtb-note"> · {needMargin} line{needMargin > 1 ? "s" : ""} need a margin</span> : ""}
+            </span>
+            <span className="qtb-total">{money2(total)}</span>
+          </div>
+          <div className="quote-actions">
+            <button className="btn-ghost" onClick={saveQuote}>Save quote</button>
+            <button className="btn-accent" onClick={exportPdf}>Export PDF</button>
+          </div>
+        </>
+      )}
+
+      {editorOpen && (
+        <PricingEditor baseData={data} userEmail={userEmail}
+          onClose={() => setEditorOpen(false)}
+          onPublished={() => { setEditorOpen(false); loadVersions(); }} />
+      )}
     </div>
   );
 }
