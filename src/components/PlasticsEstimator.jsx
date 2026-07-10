@@ -23,6 +23,8 @@ export default function PlasticsEstimator({ userEmail }) {
 
   // Store-style quote: each line = product + unit + qty + margin.
   const [lines, setLines] = useState([]);
+  const [customer, setCustomer] = useState("");
+  const [quoteDate, setQuoteDate] = useState(() => new Date().toISOString().slice(0, 10));
 
   // Product search
   const [search, setSearch] = useState("");
@@ -127,14 +129,18 @@ export default function PlasticsEstimator({ userEmail }) {
   async function saveQuote() {
     if (savedLines.length === 0) { toast.error("Add at least one line with a margin first."); return; }
     const { error } = await supabase.from("plastic_quotes").insert({
-      created_by: userEmail, customer: null, lines: savedLines, total,
+      created_by: userEmail,
+      customer: customer.trim() || null,
+      quote_date: quoteDate || null,
+      lines: savedLines,
+      total,
     });
     if (error) { toast.error("Couldn't save quote — " + error.message); return; }
-    toast.success("Quote saved");
+    toast.success(`Quote saved${customer.trim() ? " for " + customer.trim() : ""}`);
   }
   function exportPdf() {
     if (savedLines.length === 0) { toast.error("Add at least one line with a margin first."); return; }
-    buildQuotePDF({ customer: null, lines: savedLines });
+    buildQuotePDF({ customer: customer.trim() || null, lines: savedLines });
   }
 
   return (
@@ -222,7 +228,17 @@ export default function PlasticsEstimator({ userEmail }) {
       {lines.length === 0 ? (
         <div className="quote-empty">Search for a product above to start your quote.</div>
       ) : (
-        <div className="quote-lines">
+        <>
+          <div className="quote-meta-row">
+            <label className="ss-fld qm-customer"><span>Customer / project</span>
+              <input type="text" placeholder="Who is this quote for?" value={customer}
+                onChange={(e) => setCustomer(e.target.value)} />
+            </label>
+            <label className="ss-fld"><span>Quote date</span>
+              <input type="date" value={quoteDate} onChange={(e) => setQuoteDate(e.target.value)} />
+            </label>
+          </div>
+          <div className="quote-lines">
           {priced.map(({ l, unit, units, total }) => (
             <div className="qline" key={l.id}>
               <div className="qline-top">
@@ -253,7 +269,8 @@ export default function PlasticsEstimator({ userEmail }) {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        </>
       )}
 
       {lines.length > 0 && (

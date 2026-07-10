@@ -127,7 +127,7 @@ export default function PlasticQuotes() {
                   <span className="quote-no">#{row.quote_no}</span>
                   <span className="quote-customer">{row.customer || "—"}</span>
                   <span className="quote-meta">
-                    {new Date(row.created_at).toLocaleDateString()} · {lines.length} line{lines.length === 1 ? "" : "s"}
+                    {new Date(row.quote_date ? row.quote_date + "T00:00:00" : row.created_at).toLocaleDateString()} · {lines.length} line{lines.length === 1 ? "" : "s"}
                   </span>
                   <span className="quote-total">{money2(row.total || 0)}</span>
                   <span className="quote-caret">{open ? "▴" : "▾"}</span>
