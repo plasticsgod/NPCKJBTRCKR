@@ -51,6 +51,7 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
   const newProjRef = useRef(null);
   const [activeProjectId, setActiveProjectId] = useState(null);
   const [mobilePickerOpen, setMobilePickerOpen] = useState(false);
+  const [railSearch, setRailSearch] = useState("");
 
   const load = useCallback(async () => {
     const [{ data: p }, { data: t }] = await Promise.all([
@@ -317,7 +318,10 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
     return arr;
   }
 
-  const activeProject = projects.find((p) => p.id === activeProjectId) || projects[0] || null;
+  const sortedProjects = [...projects].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  const railProjects = sortedProjects.filter((p) =>
+    (p.name || "").toLowerCase().includes(railSearch.trim().toLowerCase()));
+  const activeProject = projects.find((p) => p.id === activeProjectId) || sortedProjects[0] || null;
   const activeRaw = activeProject ? tasks.filter((t) => t.project_id === activeProject.id) : [];
   const activeVis = activeProject ? sortTasks(visibleTasksFor(activeProject, activeRaw)) : [];
   const activeProgress = { done: activeRaw.filter((t) => (t.status || "To do") === "Done").length, total: activeRaw.length };
@@ -413,7 +417,7 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
           </button>
           {mobilePickerOpen && (
             <div className="proj-mobile-drop">
-              {projects.map(renderRailItem)}
+              {sortedProjects.map(renderRailItem)}
               {canEdit && !addingProject && (
                 <button className="proj-rail-new" onClick={() => { setMobilePickerOpen(false); setAddingProject(true); }}>+ New project</button>
               )}
@@ -425,7 +429,13 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
       <div className="proj-layout">
         <aside className="proj-rail">
           <div className="proj-rail-head">Projects</div>
-          <div className="proj-rail-list">{projects.map(renderRailItem)}</div>
+          <input className="proj-rail-search" type="search" placeholder="Search projects…"
+            value={railSearch} onChange={(e) => setRailSearch(e.target.value)} />
+          <div className="proj-rail-list">
+            {railProjects.length === 0
+              ? <div className="proj-rail-empty">No matches</div>
+              : railProjects.map(renderRailItem)}
+          </div>
           {canEdit && (addingProject ? newProjectForm : (
             <button className="proj-rail-new" onClick={() => setAddingProject(true)}>+ New project</button>
           ))}
