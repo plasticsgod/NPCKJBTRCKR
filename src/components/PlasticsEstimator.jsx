@@ -27,6 +27,7 @@ export default function PlasticsEstimator({ userEmail }) {
   // Product search
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
+  const [plCat, setPlCat] = useState("all");
   const searchRef = useRef(null);
 
   const loadVersions = useCallback(async () => {
@@ -114,6 +115,14 @@ export default function PlasticsEstimator({ userEmail }) {
     const econ = kind === "set" ? setEconomics(data, item, ship, ov) : unitEconomics(item, kind, ship, ov);
     return { landed: econ.landed, sells: econ.sells };
   }
+
+  // Catalog grouped by category. Add a new category here (e.g. "glass") and it
+  // appears as a tab + section automatically.
+  const catalog = [
+    { id: "tubs", label: "Tubs", items: data.tubs.map((t) => ({ prod: "tub:" + t.id, name: t.name, item: t, kind: "tub" })) },
+    { id: "lids", label: "Lids", items: data.lids.map((l) => ({ prod: "lid:" + l.id, name: l.name, item: l, kind: "lid" })) },
+    { id: "sets", label: "Sets", items: data.tubs.map((t) => ({ prod: "set:" + t.id, name: t.name.replace("Tub", "Set") + " + lid", item: t, kind: "set" })) },
+  ];
 
   async function saveQuote() {
     if (savedLines.length === 0) { toast.error("Add at least one line with a margin first."); return; }
@@ -274,38 +283,34 @@ export default function PlasticsEstimator({ userEmail }) {
           <h2 className="pl-title">All products · per-unit</h2>
           <span className="pl-hint">Prices reflect the shipping inputs above</span>
         </div>
+
+        <div className="pl-tabs">
+          <button type="button" className={"pl-tab" + (plCat === "all" ? " on" : "")} onClick={() => setPlCat("all")}>All</button>
+          {catalog.map((c) => (
+            <button key={c.id} type="button" className={"pl-tab" + (plCat === c.id ? " on" : "")} onClick={() => setPlCat(c.id)}>{c.label}</button>
+          ))}
+        </div>
+
         <div className="pl-wrap">
           <div className="pl-table">
             <div className="pl-head">
               <span className="pl-name">Product</span><span className="pl-num">Landed</span><span></span>
             </div>
-
-            <div className="pl-cat">Tubs</div>
-            {data.tubs.map((t) => { const pr = productPrices("tub", t); return (
-              <div className="pl-row" key={"pl-tub-" + t.id}>
-                <span className="pl-name">{t.name}</span>
-                <span className="pl-num muted-num">{money(pr.landed, 3)}</span>
-                <button className="pl-add" onClick={() => addLine("tub:" + t.id, t.name)}>Add to estimate</button>
+            {catalog.filter((c) => plCat === "all" || plCat === c.id).map((c) => (
+              <div key={c.id}>
+                {plCat === "all" && <div className="pl-cat">{c.label}</div>}
+                {c.items.map((row) => {
+                  const pr = productPrices(row.kind, row.item);
+                  return (
+                    <div className="pl-row" key={row.prod}>
+                      <span className="pl-name">{row.name}</span>
+                      <span className="pl-num muted-num">{money(pr.landed, 3)}</span>
+                      <button className="pl-add" onClick={() => addLine(row.prod, row.name)}>Add to estimate</button>
+                    </div>
+                  );
+                })}
               </div>
-            ); })}
-
-            <div className="pl-cat">Lids</div>
-            {data.lids.map((l) => { const pr = productPrices("lid", l); return (
-              <div className="pl-row" key={"pl-lid-" + l.id}>
-                <span className="pl-name">{l.name}</span>
-                <span className="pl-num muted-num">{money(pr.landed, 3)}</span>
-                <button className="pl-add" onClick={() => addLine("lid:" + l.id, l.name)}>Add to estimate</button>
-              </div>
-            ); })}
-
-            <div className="pl-cat">Sets (tub + lid)</div>
-            {data.tubs.map((t) => { const pr = productPrices("set", t); const nm = t.name.replace("Tub", "Set"); return (
-              <div className="pl-row" key={"pl-set-" + t.id}>
-                <span className="pl-name">{nm} + lid</span>
-                <span className="pl-num muted-num">{money(pr.landed, 3)}</span>
-                <button className="pl-add" onClick={() => addLine("set:" + t.id, nm)}>Add to estimate</button>
-              </div>
-            ); })}
+            ))}
           </div>
         </div>
       </div>
