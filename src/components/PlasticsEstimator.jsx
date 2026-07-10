@@ -277,8 +277,7 @@ export default function PlasticsEstimator({ userEmail }) {
         <div className="pl-wrap">
           <div className="pl-table">
             <div className="pl-head">
-              <span>Product</span><span className="pl-num">Landed</span>
-              <span className="pl-num">50%</span><span className="pl-num">40%</span><span className="pl-num">30%</span><span></span>
+              <span className="pl-name">Product</span><span className="pl-num">Landed</span><span></span>
             </div>
 
             <div className="pl-cat">Tubs</div>
@@ -286,9 +285,6 @@ export default function PlasticsEstimator({ userEmail }) {
               <div className="pl-row" key={"pl-tub-" + t.id}>
                 <span className="pl-name">{t.name}</span>
                 <span className="pl-num muted-num">{money(pr.landed, 3)}</span>
-                <span className="pl-num">{money(pr.sells[0], 3)}</span>
-                <span className="pl-num">{money(pr.sells[1], 3)}</span>
-                <span className="pl-num">{money(pr.sells[2], 3)}</span>
                 <button className="pl-add" onClick={() => addLine("tub:" + t.id, t.name)}>Add to estimate</button>
               </div>
             ); })}
@@ -298,9 +294,6 @@ export default function PlasticsEstimator({ userEmail }) {
               <div className="pl-row" key={"pl-lid-" + l.id}>
                 <span className="pl-name">{l.name}</span>
                 <span className="pl-num muted-num">{money(pr.landed, 3)}</span>
-                <span className="pl-num">{money(pr.sells[0], 3)}</span>
-                <span className="pl-num">{money(pr.sells[1], 3)}</span>
-                <span className="pl-num">{money(pr.sells[2], 3)}</span>
                 <button className="pl-add" onClick={() => addLine("lid:" + l.id, l.name)}>Add to estimate</button>
               </div>
             ); })}
@@ -310,9 +303,6 @@ export default function PlasticsEstimator({ userEmail }) {
               <div className="pl-row" key={"pl-set-" + t.id}>
                 <span className="pl-name">{nm} + lid</span>
                 <span className="pl-num muted-num">{money(pr.landed, 3)}</span>
-                <span className="pl-num">{money(pr.sells[0], 3)}</span>
-                <span className="pl-num">{money(pr.sells[1], 3)}</span>
-                <span className="pl-num">{money(pr.sells[2], 3)}</span>
                 <button className="pl-add" onClick={() => addLine("set:" + t.id, nm)}>Add to estimate</button>
               </div>
             ); })}
