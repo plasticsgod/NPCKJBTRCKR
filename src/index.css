@@ -1937,3 +1937,21 @@ a.file-chip:hover svg { color: var(--accent); }
 .quote-meta-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
 .qm-customer { flex: 1 1 240px; }
 .qm-customer input { width: 100%; max-width: none; border-color: var(--hairline); }
+
+/* Edit-pricing: editable product rows (add / remove / pair) */
+.epx-wrap { overflow-x: auto; padding-bottom: 2px; }
+.epx-hdr, .epx-row { display: grid; grid-template-columns: 1.5fr 76px 76px 78px 82px 74px 22px; gap: 8px; align-items: center; min-width: 640px; }
+.epx-hdr { padding: 8px 2px 5px; font-family: var(--mono); font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); }
+.epx-hdr .r { text-align: right; }
+.epx-row { padding: 3px 2px; }
+.epx-name { font-family: var(--ui); font-size: 13px; padding: 7px 9px; border: 1px solid var(--hairline); border-radius: 8px; background: #fff; color: var(--ink); width: 100%; }
+.epx-inp { font-family: var(--ui); font-size: 13px; padding: 7px 6px; border: 1px solid var(--hairline); border-radius: 8px; background: #fff; color: var(--ink); width: 100%; text-align: right; }
+.epx-name:focus, .epx-inp:focus, .epx-pair:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.epx-landed { text-align: right; font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.epx-rm { border: none; background: transparent; color: var(--ink-3); font-size: 17px; line-height: 1; cursor: pointer; padding: 0; transition: color var(--dur-fast) var(--ease); }
+.epx-rm:hover { color: #d64545; }
+.epx-add { margin: 8px 0 4px; font-family: var(--ui); font-size: 13px; font-weight: 600; color: var(--accent); background: transparent; border: 1px dashed var(--accent); border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+.epx-add:hover { background: var(--panel); }
+.epx-hdr.sets, .epx-row.sets { grid-template-columns: 1.4fr 1.5fr 74px; min-width: 420px; }
+.epx-name-static { font-size: 13px; color: var(--ink); }
+.epx-pair { font-family: var(--ui); font-size: 13px; padding: 7px 9px; border: 1px solid var(--hairline); border-radius: 8px; background: #fff; color: var(--ink); }
