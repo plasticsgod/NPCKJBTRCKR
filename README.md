@@ -1,5 +1,7 @@
 # NutraPack App
 
+*Last updated: July 10, 2026*
+
 An internal operations app for the NutraPack team. Built with React + Vite, with
 Supabase as the backend (database, logins, file storage, live updates, and a few
 serverless functions). Every signed-in employee shares the same data, and changes

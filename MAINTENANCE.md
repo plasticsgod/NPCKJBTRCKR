@@ -1,5 +1,7 @@
 # NutraPack App — Maintenance Guide
 
+*Last updated: June 25, 2026*
+
 How to keep this app healthy, deploy changes safely, and recover when something
 breaks. Written for how this project is actually run (GitHub web edits → Vercel,
 Supabase backend, no local git). Skim the **Routine cadence** first; everything
