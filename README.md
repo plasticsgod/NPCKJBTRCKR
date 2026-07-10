@@ -5,27 +5,37 @@ Supabase as the backend (database, logins, file storage, live updates, and a few
 serverless functions). Every signed-in employee shares the same data, and changes
 appear for everyone in real time.
 
-It's one app with four sections:
+It's one app with six sections:
 
-- **Dashboard** — year-to-date labels printed, top client, active order count, and
-  a breakdown of orders by status.
-- **Work Orders** — the job tracker. Create, edit, search, and bulk-delete print
-  jobs. Jobs printed at Sttark can be linked to their Sttark order so their status
-  updates automatically. Each job also has **Proofs** (uploaded files, stamped with
-  a branded cover sheet) and **Artwork** (links to approved files).
+- **Dashboard** — YTD labels printed, **revenue and Label Profit** (from per-job
+  cost/charge), active orders, top clients, open tasks, and SVG charts (monthly
+  trend, orders by status, top clients, tasks donut).
 - **Projects** — a Monday.com-style task tracker: projects, tasks, multiple
   assignees, due dates, and a per-task activity feed with posts, threaded replies,
-  likes, image **and file attachments**, and `@mentions`. Tasks can be filtered to
-  **My tasks**, **sorted** (due date / status / name), **dragged between projects**,
-  and each project shows a **progress bar**.
-- **Plastics Estimator** — a tub/lid pricing and quoting tool: signed, versioned
-  pricing; freight-lane and tariff math; a live price list; a quote builder; and a
-  branded PDF quote export.
+  **emoji reactions**, image **and file attachments**, and name-based `@mentions`.
+  Tasks filter/sort, drag between projects, and each project has a **Members**
+  button for guest access.
+- **Label Work Orders** — the print-job tracker. Create, edit, search, bulk-delete.
+  Jobs printed at Sttark link to their Sttark order for automatic status. Each job
+  has **cost / client charge / deposit** fields plus **Proofs** (branded cover
+  sheets) and **Artwork** links, available immediately on create.
+- **Plastics Work Orders** — a parallel tracker for plastics (no Sttark): qty in
+  tubs/pallets/containers, origin/port shipping tab, and a **Pricing tab** that
+  pulls estimator products and snapshots cost/charge onto the order.
+- **Plastics Estimator** — a store-style quote builder: search or browse the
+  tabbed catalog (Tubs / Lids / Sets) and "Add to estimate"; each line gets
+  unit + quantity + a required per-line margin; manual shipping strip; grouped
+  Factory → Tariff → Landed **Edit pricing** (append-only signed versions);
+  Save quote + branded PDF export.
+- **Plastic Quotes** — history of every saved quote: search, expand line items,
+  re-download the PDF, or **"Send to plastics work orders"** (creates a
+  pre-filled order with cost & charge).
 
-Across every page: a **global search** palette (the header search button or
-**⌘K / Ctrl+K**) that jumps to any task, project, or work order; an in-app
-**notification bell** (assignments, mentions, and comments); and brief **toast**
-confirmations for saves, moves, and deletes.
+Across every page: **global search** (⌘K / Ctrl+K), a **notification bell** whose
+entries open the exact task, **toasts**, loading **skeletons**, a consistent
+**motion system**, and optimistic updates. **Access is role-based:** the internal
+team and invited *members* see everything; invited *guests* see only the projects
+they're added to (view + comment).
 
 This guide assumes you've never deployed a site before. Follow it top to bottom
 once and you'll have a live, password-protected app your team can use.
@@ -87,6 +97,18 @@ next.
 14. `add_task_likes.sql` — likes on posts/replies.
 15. `add_task_files.sql` — file attachments (`files` columns; reuses the
     `task-images` bucket under a `files/` subpath).
+16. `add_task_reactions.sql` — emoji reactions on posts/replies (replaces likes).
+17. `add_job_financials.sql` — `cost` + `revenue` columns on jobs (profit tracking).
+18. `add_job_deposit.sql` — deposit status on jobs (Not Applicable / Paid / Owed).
+19. `add_plastic_quotes.sql` — saved estimator quotes (auto quote numbers).
+20. `add_plastic_jobs.sql` — the Plastics Work Orders table (separate from jobs).
+21. `add_plastic_job_pricing.sql` — pricing snapshot columns on plastic jobs.
+22. `add_notification_task_link.sql` — `task_id` on notifications (click-to-open).
+23. `add_guest_access.sql` — **the access-control rewrite**: roles, `project_members`,
+    and row-level rules (internal team hard-coded; guests see only their projects).
+24. `add_workspace_members.sql` — invited full-access "members."
+25. `add_client_access.sql` — client role + `client_prices` foundation (client UI
+    not built yet).
 
 > **Why so many files?** These are the database changes as they were built up over
 > time. Steps 8 → 9 → 10 in particular *must* run in order: step 10 removes things
@@ -260,17 +282,21 @@ supabase functions deploy sttark-status
 
 ---
 
-## Part 6 — Add your employees
+## Part 6 — Add people (invite-only)
 
-How people get accounts depends on one Supabase setting:
+**Self sign-up is disabled** (Supabase → Authentication → "Allow new users to sign
+up" is off) and the login screen has no create-account form. People are added from
+inside the app: **avatar menu → "Invite member or guest"** — enter their email and
+pick the access level. The `invite-user` Edge Function creates the account, emails
+them a set-password link, and grants access.
 
-- **Easiest for an internal tool:** in Supabase → **Authentication** → **Providers**
-  → Email, turn **"Confirm email" off** so staff can sign up and use it immediately.
-  Then share the link and have them click "Create an account."
-- **More controlled:** leave confirmation on, or in **Authentication → Users** click
-  **Add user** to create each employee's login yourself.
+- **Member** — full app, like the core team.
+- **Guest** — only the projects they're added to (view + comment). Manage per-project
+  guests via the **Members** button on each project header.
 
-Because of the security rules, only people with an account can see any data.
+The four core-team emails are hard-coded as always-internal in `add_guest_access.sql`
+(and mirrored in `App.jsx` / the Edge Function), so the team can never be locked out.
+Because of the row-level rules, an account with no grants sees nothing.
 
 **Display names:** the app shows friendly names (and avatar initials) instead of raw
 emails in Projects. Those are mapped in `src/projects/userMap.js`. When someone new
@@ -341,18 +367,24 @@ nutrapack-app/
    │  ├─ SearchOverlay.jsx      global ⌘K search (tasks, projects, work orders)
    │  ├─ NotificationBell.jsx   in-app notifications dropdown
    │  ├─ Toaster.jsx            global toast() messages (mounted once in App)
-   │  ├─ Dashboard.jsx          YTD stats + orders-by-status
-   │  ├─ WorkOrders.jsx         job list, search, bulk delete, Sttark sync
-   │  ├─ JobTable.jsx           the work-orders table
-   │  ├─ JobBoard.jsx           kanban board view (see "Notes" below)
-   │  ├─ JobModal.jsx           create/edit a job; Proofs + Artwork tabs
+   │  ├─ Dashboard.jsx          KPI cards (incl. revenue/profit) + SVG charts
+   │  ├─ Skeletons.jsx           loading placeholders (dashboard/work orders/projects)
+   │  ├─ WorkOrders.jsx         label job list, search, bulk delete, Sttark sync
+   │  ├─ JobTable.jsx           the label work-orders table
+   │  ├─ JobBoard.jsx           kanban board view (unused; see "Notes")
+   │  ├─ JobModal.jsx           create/edit a label job; cost/charge/deposit; Proofs + Artwork
+   │  ├─ PlasticWorkOrders.jsx  plastics order list (no Sttark)
+   │  ├─ PlasticJobTable.jsx    the plastics orders table
+   │  ├─ PlasticJobModal.jsx    plastics order modal: Details / Pricing / Shipping tabs
+   │  ├─ PlasticQuotes.jsx      saved-quote history + send-to-work-orders
    │  ├─ DatePicker.jsx         shared calendar control
-   │  ├─ PlasticsEstimator.jsx  pricing + quoting page
-   │  ├─ PriceList.jsx          live price list table
-   │  ├─ DraftQuote.jsx         quote basket + PDF export button
-   │  └─ PricingEditor.jsx      edit + sign/publish a pricing version
+   │  ├─ PlasticsEstimator.jsx  store-style quote builder + tabbed catalog
+   │  ├─ PriceList.jsx          (unused — superseded by the builder's catalog)
+   │  ├─ DraftQuote.jsx         (unused — superseded by the builder)
+   │  └─ PricingEditor.jsx      grouped Factory→Tariff→Landed editor; signed versions
    ├─ lib/
    │  ├─ pricing.js             pricing math (pure functions)
+   │  ├─ time.js                relative timestamps ("2h ago") + exact tooltip
    │  ├─ quotePdf.js            branded draft-quote PDF (loads jsPDF from CDN)
    │  └─ proofCover.js          branded proof cover sheet (pdf-lib)
    ├─ sttark/
@@ -360,8 +392,9 @@ nutrapack-app/
    │  ├─ statusMap.js           Sttark status → NutraPack status
    │  └─ fields.js              Sttark label-spec reference (see "Notes")
    └─ projects/
-      ├─ Projects.jsx           projects + tasks UI
-      ├─ TaskDrawer.jsx         task detail + activity feed (posts/replies)
+      ├─ Projects.jsx           projects + tasks UI (role-aware; Members button)
+      ├─ Avatar.jsx             avatar + portal hover card
+      ├─ TaskDrawer.jsx         task detail + activity feed (reactions, attachments)
       ├─ constants.js           task statuses
       ├─ useUsers.js            loads the user roster from profiles
       ├─ userMap.js             email → display name / initials
@@ -386,8 +419,14 @@ The tables the app uses, and what each is for:
 | `task_posts` | activity-feed posts on a task (incl. `images` text[] + `files` jsonb) |
 | `task_replies` | threaded replies to a post (incl. `images` text[] + `files` jsonb) |
 | `task_reads` | per-user "last read" time per task (drives unread indicators) |
-| `task_likes` | likes on posts/replies |
-| `notifications` | in-app notification bell rows (assignments, mentions, comments) |
+| `task_likes` | legacy likes (superseded by `task_reactions`) |
+| `task_reactions` | emoji reactions on posts/replies |
+| `notifications` | in-app bell rows (assignments, mentions, comments; `task_id` opens the task) |
+| `plastic_quotes` | saved estimator quotes (snapshot of lines + total) |
+| `plastic_jobs` | plastics work orders (qty/unit, cost/revenue, origin/port, pricing snapshot) |
+| `project_members` | guest access grants: email ↔ project |
+| `workspace_members` | invited full-access members |
+| `client_users` / `client_prices` | client-role foundation (UI not built yet) |
 
 Plus two **storage buckets**: a private `job-files` bucket for proof files, and a
 public `task-images` bucket for comment image **and file** attachments (files live
@@ -402,6 +441,10 @@ A few things worth being aware of (none block normal use):
 - **`src/components/JobBoard.jsx`** is a kanban board view that isn't currently
   wired into any page — Work Orders renders the table only. It's kept in case the
   board view is brought back; you can ignore or delete it otherwise.
+- **`PriceList.jsx` and `DraftQuote.jsx`** are no longer rendered — the estimator's
+  store-style builder replaced both. Kept as harmless dead files.
+- **`task_likes`** (table + old CSS) was superseded by emoji reactions
+  (`task_reactions`); the old table is unused but left in place.
 - **`src/sttark/fields.js`** is a reference list of Sttark label specs (substrates,
   laminates, etc.). It isn't imported anywhere yet — it looks staged for a future
   job-spec form.
