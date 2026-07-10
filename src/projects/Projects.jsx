@@ -322,15 +322,7 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
   const activeVis = activeProject ? sortTasks(visibleTasksFor(activeProject, activeRaw)) : [];
   const activeProgress = { done: activeRaw.filter((t) => (t.status || "To do") === "Done").length, total: activeRaw.length };
 
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const isOverdue = (t) => t.due_date && t.due_date < todayStr && (t.status || "To do") !== "Done";
-  const projStats = (pid) => {
-    const pt = tasks.filter((t) => t.project_id === pid);
-    return { total: pt.length, overdue: pt.filter(isOverdue).length };
-  };
-
   const renderRailItem = (p) => {
-    const st = projStats(p.id);
     return (
       <button key={p.id}
         className={"proj-rail-item" + (activeProject && p.id === activeProject.id ? " on" : "") + (dragOverProject === p.id ? " drop" : "")}
@@ -340,9 +332,6 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
         onDrop={canEdit ? (e) => { e.preventDefault(); if (draggingTaskId) moveTaskToProject(draggingTaskId, p.id); setDragOverProject(null); } : undefined}
       >
         <span className="pri-name">{p.name}</span>
-        {st.overdue > 0
-          ? <span className="pri-count over">{st.overdue} overdue</span>
-          : <span className="pri-count">{st.total}</span>}
       </button>
     );
   };
