@@ -272,7 +272,7 @@ export default function PlasticsEstimator({ userEmail }) {
       )}
 
       {editorOpen && (
-        <PricingEditor baseData={data} userEmail={userEmail}
+        <PricingEditor baseData={data} ship={ship} userEmail={userEmail}
           onClose={() => setEditorOpen(false)}
           onPublished={() => { setEditorOpen(false); loadVersions(); }} />
       )}
