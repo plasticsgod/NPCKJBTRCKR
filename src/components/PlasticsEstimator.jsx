@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "../supabaseClient";
 import {
   MARGINS, ORIGINS, PORTS,
-  findItem, unitEconomics, setEconomics, unitsFromQty, money2,
+  findItem, unitEconomics, setEconomics, unitsFromQty, money, money2,
 } from "../lib/pricing";
 import PricingEditor from "./PricingEditor";
 import { buildQuotePDF } from "../lib/quotePdf";
@@ -108,6 +108,12 @@ export default function PlasticsEstimator({ userEmail }) {
   const savedLines = priced.map((p) => p.saved).filter(Boolean);
   const total = savedLines.reduce((a, s) => a + s.total, 0);
   const needMargin = priced.filter((p) => p.l.marginIdx == null).length;
+
+  // Per-unit prices for the catalog at the bottom (reflects current shipping).
+  function productPrices(kind, item) {
+    const econ = kind === "set" ? setEconomics(data, item, ship, ov) : unitEconomics(item, kind, ship, ov);
+    return { landed: econ.landed, sells: econ.sells };
+  }
 
   async function saveQuote() {
     if (savedLines.length === 0) { toast.error("Add at least one line with a margin first."); return; }
@@ -261,6 +267,58 @@ export default function PlasticsEstimator({ userEmail }) {
           onClose={() => setEditorOpen(false)}
           onPublished={() => { setEditorOpen(false); loadVersions(); }} />
       )}
+
+      {/* Full catalog / price list — reflects the shipping inputs above */}
+      <div className="price-list-section">
+        <div className="pl-head-row">
+          <h2 className="pl-title">All products · per-unit</h2>
+          <span className="pl-hint">Prices reflect the shipping inputs above</span>
+        </div>
+        <div className="pl-wrap">
+          <div className="pl-table">
+            <div className="pl-head">
+              <span>Product</span><span className="pl-num">Landed</span>
+              <span className="pl-num">50%</span><span className="pl-num">40%</span><span className="pl-num">30%</span><span></span>
+            </div>
+
+            <div className="pl-cat">Tubs</div>
+            {data.tubs.map((t) => { const pr = productPrices("tub", t); return (
+              <div className="pl-row" key={"pl-tub-" + t.id}>
+                <span className="pl-name">{t.name}</span>
+                <span className="pl-num muted-num">{money(pr.landed, 3)}</span>
+                <span className="pl-num">{money(pr.sells[0], 3)}</span>
+                <span className="pl-num">{money(pr.sells[1], 3)}</span>
+                <span className="pl-num">{money(pr.sells[2], 3)}</span>
+                <button className="pl-add" onClick={() => addLine("tub:" + t.id, t.name)}>Add to estimate</button>
+              </div>
+            ); })}
+
+            <div className="pl-cat">Lids</div>
+            {data.lids.map((l) => { const pr = productPrices("lid", l); return (
+              <div className="pl-row" key={"pl-lid-" + l.id}>
+                <span className="pl-name">{l.name}</span>
+                <span className="pl-num muted-num">{money(pr.landed, 3)}</span>
+                <span className="pl-num">{money(pr.sells[0], 3)}</span>
+                <span className="pl-num">{money(pr.sells[1], 3)}</span>
+                <span className="pl-num">{money(pr.sells[2], 3)}</span>
+                <button className="pl-add" onClick={() => addLine("lid:" + l.id, l.name)}>Add to estimate</button>
+              </div>
+            ); })}
+
+            <div className="pl-cat">Sets (tub + lid)</div>
+            {data.tubs.map((t) => { const pr = productPrices("set", t); const nm = t.name.replace("Tub", "Set"); return (
+              <div className="pl-row" key={"pl-set-" + t.id}>
+                <span className="pl-name">{nm} + lid</span>
+                <span className="pl-num muted-num">{money(pr.landed, 3)}</span>
+                <span className="pl-num">{money(pr.sells[0], 3)}</span>
+                <span className="pl-num">{money(pr.sells[1], 3)}</span>
+                <span className="pl-num">{money(pr.sells[2], 3)}</span>
+                <button className="pl-add" onClick={() => addLine("set:" + t.id, nm)}>Add to estimate</button>
+              </div>
+            ); })}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
