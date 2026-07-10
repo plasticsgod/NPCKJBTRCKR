@@ -1895,3 +1895,21 @@ a.file-chip:hover svg { color: var(--accent); }
 .qtb-total { font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
 .quote-actions { display: flex; gap: 10px; justify-content: flex-end; }
 @media (prefers-reduced-motion: reduce) { .search-dd { animation: none; } }
+
+/* Estimator price list / catalog */
+.price-list-section { margin-top: 8px; border-top: 1px solid var(--hairline); padding-top: 18px; }
+.pl-head-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+.pl-title { font-family: var(--ui); font-size: 16px; font-weight: 600; }
+.pl-hint { font-size: 12px; color: var(--ink-3); }
+.pl-wrap { overflow-x: auto; }
+.pl-table { display: flex; flex-direction: column; min-width: 560px; }
+.pl-head, .pl-row { display: grid; grid-template-columns: 1.7fr repeat(4, 1fr) auto; gap: 12px; align-items: center; }
+.pl-head { padding: 0 10px 8px; font-family: var(--mono); font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); }
+.pl-row { padding: 9px 10px; border-radius: 8px; }
+.pl-row:hover { background: var(--panel); }
+.pl-cat { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); padding: 14px 10px 4px; }
+.pl-name { font-size: 14px; color: var(--ink); }
+.pl-num { text-align: right; font-family: var(--mono); font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.pl-num.muted-num { color: var(--ink-3); }
+.pl-add { font-size: 12px; font-weight: 600; color: var(--accent); background: transparent; border: 1px solid var(--accent); border-radius: 999px; padding: 5px 12px; cursor: pointer; white-space: nowrap; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+.pl-add:hover { background: var(--accent); color: #fff; }
