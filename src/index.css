@@ -1932,3 +1932,8 @@ a.file-chip:hover svg { color: var(--accent); }
 .ep-landed { text-align: right; font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
 .ep-landed small { display: block; font-family: var(--ui); font-size: 10px; font-weight: 500; color: var(--ink-3); }
 .ep-calc { text-align: right; font-size: 13px; color: var(--ink-3); font-style: italic; }
+
+/* Customer + date row above quote lines */
+.quote-meta-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.qm-customer { flex: 1 1 240px; }
+.qm-customer input { width: 100%; max-width: none; border-color: var(--hairline); }
