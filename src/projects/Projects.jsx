@@ -49,6 +49,8 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
   const [dragOverProject, setDragOverProject] = useState(null); // project being hovered
   const users = useUsers();
   const newProjRef = useRef(null);
+  const [activeProjectId, setActiveProjectId] = useState(null);
+  const [mobilePickerOpen, setMobilePickerOpen] = useState(false);
 
   const load = useCallback(async () => {
     const [{ data: p }, { data: t }] = await Promise.all([
@@ -99,9 +101,10 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
     e.preventDefault();
     const name = newProjectName.trim();
     if (!name) { setAddingProject(false); return; }
-    await supabase.from("projects").insert({ name, sort_order: projects.length });
+    const { data } = await supabase.from("projects").insert({ name, sort_order: projects.length }).select().single();
     setNewProjectName("");
     setAddingProject(false);
+    if (data) setActiveProjectId(data.id);
     load();
   }
 
@@ -314,163 +317,170 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
     return arr;
   }
 
-  const visibleProjects = projects
-    .map((proj) => {
-      const projTasks = tasks.filter((t) => t.project_id === proj.id);
-      const visTasks = sortTasks(visibleTasksFor(proj, projTasks));
-      const nameHit = !!q && (proj.name || "").toLowerCase().includes(q);
-      const done = projTasks.filter((t) => (t.status || "To do") === "Done").length;
-      let show;
-      if (!anyActive) show = true;
-      else if (visTasks.length > 0) show = true;
-      // a project whose name matches the search still shows (even if empty),
-      // but only when no person/status filter is narrowing things down
-      else if (nameHit && !filterPerson && !filterStatus && !filterDue && !mineOnly) show = true;
-      else show = false;
-      return { proj, tasks: visTasks, show, progress: { done, total: projTasks.length } };
-    })
-    .filter((x) => x.show);
+  const activeProject = projects.find((p) => p.id === activeProjectId) || projects[0] || null;
+  const activeRaw = activeProject ? tasks.filter((t) => t.project_id === activeProject.id) : [];
+  const activeVis = activeProject ? sortTasks(visibleTasksFor(activeProject, activeRaw)) : [];
+  const activeProgress = { done: activeRaw.filter((t) => (t.status || "To do") === "Done").length, total: activeRaw.length };
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const isOverdue = (t) => t.due_date && t.due_date < todayStr && (t.status || "To do") !== "Done";
+  const projStats = (pid) => {
+    const pt = tasks.filter((t) => t.project_id === pid);
+    return { total: pt.length, overdue: pt.filter(isOverdue).length };
+  };
+
+  const renderRailItem = (p) => {
+    const st = projStats(p.id);
+    return (
+      <button key={p.id}
+        className={"proj-rail-item" + (activeProject && p.id === activeProject.id ? " on" : "") + (dragOverProject === p.id ? " drop" : "")}
+        onClick={() => { setActiveProjectId(p.id); setMobilePickerOpen(false); }}
+        onDragOver={canEdit ? (e) => { if (draggingTaskId) { e.preventDefault(); setDragOverProject(p.id); } } : undefined}
+        onDragLeave={() => setDragOverProject((d) => (d === p.id ? null : d))}
+        onDrop={canEdit ? (e) => { e.preventDefault(); if (draggingTaskId) moveTaskToProject(draggingTaskId, p.id); setDragOverProject(null); } : undefined}
+      >
+        <span className="pri-name">{p.name}</span>
+        {st.overdue > 0
+          ? <span className="pri-count over">{st.overdue} overdue</span>
+          : <span className="pri-count">{st.total}</span>}
+      </button>
+    );
+  };
+
+  const newProjectForm = (
+    <form className="proj-rail-newform" onSubmit={saveProject}>
+      <input ref={newProjRef} className="proj-rail-newinput" value={newProjectName}
+        onChange={(e) => setNewProjectName(e.target.value)} placeholder="Project name…" autoFocus
+        onBlur={saveProject} onKeyDown={(e) => e.key === "Escape" && setAddingProject(false)} />
+    </form>
+  );
+
+  const toolbar = (
+    <div className="toolbar">
+      <input className="search-input" type="search" placeholder="Search tasks in this project…"
+        value={query} onChange={(e) => setQuery(e.target.value)} />
+      <div className="filter-wrap" ref={filterRef}>
+        <button className={"filter-trigger" + (activeFilterCount > 0 ? " active" : "") + (filterOpen ? " open" : "")}
+          onClick={() => setFilterOpen((v) => !v)} aria-expanded={filterOpen} title="Filter & sort">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M3 4h18l-7 8v6l-4 2v-8z" />
+          </svg>
+          Filter
+          {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
+        </button>
+        {filterOpen && (
+          <div className="filter-menu">
+            <label className="filter-field">
+              <span className="filter-field-label">Person</span>
+              <select className="filter-field-select" value={filterPerson} onChange={(e) => setFilterPerson(e.target.value)}>
+                <option value="">All people</option>
+                {users.map((u) => (<option key={u} value={u}>{displayName(u)}</option>))}
+              </select>
+            </label>
+            <label className="filter-field">
+              <span className="filter-field-label">Status</span>
+              <select className="filter-field-select" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+                <option value="">All statuses</option>
+                {TASK_STATUSES.map((st) => (<option key={st} value={st}>{st}</option>))}
+              </select>
+            </label>
+            <label className="filter-field">
+              <span className="filter-field-label">Due date</span>
+              <select className="filter-field-select" value={filterDue} onChange={(e) => setFilterDue(e.target.value)}>
+                <option value="">Any due date</option>
+                <option value="overdue">Overdue</option>
+                <option value="soon">Due soon (3 days)</option>
+              </select>
+            </label>
+            <button className={"filter-mine" + (mineOnly ? " on" : "")} onClick={() => setMineOnly((v) => !v)} aria-pressed={mineOnly}>
+              <span className="filter-field-label">My tasks only</span>
+              <span className="filter-switch" aria-hidden="true" />
+            </button>
+            <div className="filter-divider" />
+            <label className="filter-field">
+              <span className="filter-field-label">Sort by</span>
+              <select className="filter-field-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <option value="manual">Manual</option>
+                <option value="due">Due date</option>
+                <option value="status">Status</option>
+                <option value="name">Name</option>
+              </select>
+            </label>
+            {activeFilterCount > 0 && (<button className="filter-clear" onClick={clearFilters}>Clear filters</button>)}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
-    <div className="projects">
-      <div className="toolbar">
-        <input
-          className="search-input"
-          type="search"
-          placeholder="Search projects & tasks…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-
-        <div className="filter-wrap" ref={filterRef}>
-          <button
-            className={"filter-trigger" + (activeFilterCount > 0 ? " active" : "") + (filterOpen ? " open" : "")}
-            onClick={() => setFilterOpen((v) => !v)}
-            aria-expanded={filterOpen}
-            title="Filter & sort"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M3 4h18l-7 8v6l-4 2v-8z" />
-            </svg>
-            Filter
-            {activeFilterCount > 0 && <span className="filter-badge">{activeFilterCount}</span>}
+    <div className="projects proj-railed">
+      {projects.length > 0 && (
+        <div className="proj-mobile-nav">
+          <button className="proj-mobile-pick" onClick={() => setMobilePickerOpen((o) => !o)}>
+            <span className="lbl">{activeProject ? activeProject.name : "Select a project"}</span>
+            <span className="chev" aria-hidden="true">▾</span>
           </button>
-
-          {filterOpen && (
-            <div className="filter-menu">
-              <label className="filter-field">
-                <span className="filter-field-label">Person</span>
-                <select className="filter-field-select" value={filterPerson} onChange={(e) => setFilterPerson(e.target.value)}>
-                  <option value="">All people</option>
-                  {users.map((u) => (<option key={u} value={u}>{displayName(u)}</option>))}
-                </select>
-              </label>
-
-              <label className="filter-field">
-                <span className="filter-field-label">Status</span>
-                <select className="filter-field-select" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-                  <option value="">All statuses</option>
-                  {TASK_STATUSES.map((s) => (<option key={s} value={s}>{s}</option>))}
-                </select>
-              </label>
-
-              <label className="filter-field">
-                <span className="filter-field-label">Due date</span>
-                <select className="filter-field-select" value={filterDue} onChange={(e) => setFilterDue(e.target.value)}>
-                  <option value="">Any due date</option>
-                  <option value="overdue">Overdue</option>
-                  <option value="soon">Due soon (3 days)</option>
-                </select>
-              </label>
-
-              <button
-                className={"filter-mine" + (mineOnly ? " on" : "")}
-                onClick={() => setMineOnly((v) => !v)}
-                aria-pressed={mineOnly}
-              >
-                <span className="filter-field-label">My tasks only</span>
-                <span className="filter-switch" aria-hidden="true" />
-              </button>
-
-              <div className="filter-divider" />
-
-              <label className="filter-field">
-                <span className="filter-field-label">Sort by</span>
-                <select className="filter-field-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                  <option value="manual">Manual</option>
-                  <option value="due">Due date</option>
-                  <option value="status">Status</option>
-                  <option value="name">Name</option>
-                </select>
-              </label>
-
-              {activeFilterCount > 0 && (
-                <button className="filter-clear" onClick={clearFilters}>Clear filters</button>
+          {mobilePickerOpen && (
+            <div className="proj-mobile-drop">
+              {projects.map(renderRailItem)}
+              {canEdit && !addingProject && (
+                <button className="proj-rail-new" onClick={() => { setMobilePickerOpen(false); setAddingProject(true); }}>+ New project</button>
               )}
             </div>
           )}
         </div>
+      )}
 
-        {canEdit && <button className="btn-accent push-right" onClick={() => setAddingProject(true)}>+ New Project</button>}
-      </div>
+      <div className="proj-layout">
+        <aside className="proj-rail">
+          <div className="proj-rail-head">Projects</div>
+          <div className="proj-rail-list">{projects.map(renderRailItem)}</div>
+          {canEdit && (addingProject ? newProjectForm : (
+            <button className="proj-rail-new" onClick={() => setAddingProject(true)}>+ New project</button>
+          ))}
+        </aside>
 
-      {projects.length === 0 && !addingProject ? (
-        <div className="empty">
-          <p className="empty-title">No projects yet</p>
-          <p className="muted">{canEdit ? "Create your first project to start adding tasks." : "You haven't been added to any projects yet."}</p>
-          {canEdit && <button className="btn-accent" onClick={() => setAddingProject(true)}>+ New Project</button>}
-        </div>
-      ) : anyActive && visibleProjects.length === 0 ? (
-        <div className="empty">
-          <p className="empty-title">No matches</p>
-          <p className="muted">No projects or tasks match your search and filters.</p>
-          <button className="btn-accent" onClick={() => { setQuery(""); setFilterPerson(""); setFilterStatus(""); setFilterDue(""); setMineOnly(false); }}>
-            Clear search &amp; filters
-          </button>
-        </div>
-      ) : (
-        <div className="proj-list">
-          {visibleProjects.map(({ proj, tasks: projTasks, progress }) => {
-            return (
-              <ProjectGroup
-                key={proj.id}
-                project={proj}
-                tasks={projTasks}
-                users={users}
-                userEmail={userEmail}
-                canEdit={canEdit}
-                progress={progress}
-                selected={selProjects.has(proj.id)}
-                onToggleSelect={toggleProject}
-                selectedTasks={selTasks}
-                onToggleTask={toggleTask}
-                onUpdateName={updateProjectName}
-                onAddTask={addTask}
-                onOpenTask={handleOpenTask}
-                onUpdateTask={updateTask}
-                activity={activity}
-                reads={reads}
-                draggingTaskId={draggingTaskId}
-                onDragTaskStart={setDraggingTaskId}
-                onDragTaskEnd={() => { setDraggingTaskId(null); setDragOverProject(null); }}
-                isDropTarget={dragOverProject === proj.id}
-                onDragOverProject={setDragOverProject}
-                onDropTask={moveTaskToProject}
-              />
-            );
-          })}
-          {addingProject && (
-            <form className="proj-new-form" onSubmit={saveProject}>
-              <input ref={newProjRef} className="proj-new-input"
-                value={newProjectName} onChange={(e) => setNewProjectName(e.target.value)}
-                placeholder="Project name…"
-                onBlur={saveProject}
-                onKeyDown={(e) => e.key === "Escape" && setAddingProject(false)} />
-            </form>
+        <div className="proj-main">
+          {toolbar}
+          {projects.length === 0 ? (
+            <div className="empty">
+              <p className="empty-title">No projects yet</p>
+              <p className="muted">{canEdit ? "Create your first project in the list to start adding tasks." : "You haven't been added to any projects yet."}</p>
+            </div>
+          ) : !activeProject ? (
+            <div className="empty"><p className="muted">Pick a project from the list.</p></div>
+          ) : (
+            <ProjectGroup
+              solo
+              key={activeProject.id}
+              project={activeProject}
+              tasks={activeVis}
+              users={users}
+              userEmail={userEmail}
+              canEdit={canEdit}
+              progress={activeProgress}
+              selected={selProjects.has(activeProject.id)}
+              onToggleSelect={toggleProject}
+              selectedTasks={selTasks}
+              onToggleTask={toggleTask}
+              onUpdateName={updateProjectName}
+              onAddTask={addTask}
+              onOpenTask={handleOpenTask}
+              onUpdateTask={updateTask}
+              activity={activity}
+              reads={reads}
+              draggingTaskId={draggingTaskId}
+              onDragTaskStart={setDraggingTaskId}
+              onDragTaskEnd={() => { setDraggingTaskId(null); setDragOverProject(null); }}
+              isDropTarget={false}
+              onDragOverProject={setDragOverProject}
+              onDropTask={moveTaskToProject}
+            />
           )}
         </div>
-      )}
+      </div>
 
       {openTask && (
         <TaskDrawer
@@ -540,7 +550,7 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
   );
 }
 
-function ProjectGroup({ project, tasks, users, userEmail, canEdit = true, progress, selected, onToggleSelect, selectedTasks, onToggleTask, onUpdateName, onAddTask, onOpenTask, onUpdateTask, activity, reads, draggingTaskId, onDragTaskStart, onDragTaskEnd, isDropTarget, onDragOverProject, onDropTask }) {
+function ProjectGroup({ project, tasks, users, userEmail, canEdit = true, solo = false, progress, selected, onToggleSelect, selectedTasks, onToggleTask, onUpdateName, onAddTask, onOpenTask, onUpdateTask, activity, reads, draggingTaskId, onDragTaskStart, onDragTaskEnd, isDropTarget, onDragOverProject, onDropTask }) {
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState(project.name);
   const [collapsed, setCollapsed] = useState(false);
@@ -584,7 +594,7 @@ function ProjectGroup({ project, tasks, users, userEmail, canEdit = true, progre
             aria-label={`Select project ${project.name}`}
           />
         )}
-        <button className="proj-collapse" onClick={() => setCollapsed(!collapsed)}>
+        <button className="proj-collapse" onClick={() => setCollapsed(!collapsed)} style={solo ? { display: "none" } : undefined}>
           {collapsed ? "▶" : "▼"}
         </button>
         {editingName && canEdit ? (
@@ -599,7 +609,7 @@ function ProjectGroup({ project, tasks, users, userEmail, canEdit = true, progre
         <span className="proj-count">{tasks.length} {tasks.length === 1 ? "item" : "items"}</span>
         {canEdit && <ProjectMembers project={project} />}
       </div>
-      {!collapsed && (
+      {(solo || !collapsed) && (
         <div className="ptable-wrap">
           <table className="ptable">
             <thead>
