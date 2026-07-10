@@ -1842,3 +1842,56 @@ a.file-chip:hover svg { color: var(--accent); }
   .notif-panel, .modal-body { animation: none; }
   .mtab { transition: none; }
 }
+
+/* ==== Plastics Estimator v2 (store-style quote builder) =================== */
+.estv2 { display: flex; flex-direction: column; gap: 16px; }
+.estv2-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.estv2-title { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ver-select { font-family: var(--ui); font-size: 12px; padding: 5px 10px; border: 1px solid var(--hairline); border-radius: 8px; background: #fff; color: var(--ink-2); }
+
+/* Shipping strip */
+.ship-strip { background: var(--panel); border: 1px solid var(--hairline); border-radius: 12px; padding: 12px 14px; }
+.ship-strip-label { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; }
+.ship-strip-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.ss-fld { display: flex; flex-direction: column; gap: 4px; }
+.ss-fld > span { font-size: 11px; color: var(--ink-3); }
+.ss-fld input, .ss-fld select { font-family: var(--ui); font-size: 13px; padding: 7px 9px; border: 1px solid var(--hairline); border-radius: 8px; background: #fff; color: var(--ink); min-width: 96px; }
+.ss-fld input { border-color: var(--accent); max-width: 120px; }
+
+/* Product search */
+.prod-search { position: relative; }
+.prod-search-box { display: flex; align-items: center; gap: 8px; border: 1px solid var(--accent); border-radius: 10px; padding: 11px 13px; background: #fff; }
+.ps-icon { color: var(--ink-3); font-size: 16px; }
+.prod-search-box input { flex: 1; border: none; outline: none; background: transparent; font-family: var(--ui); font-size: 15px; color: var(--ink); min-width: 0; }
+.search-dd { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 40; background: #fff; border: 1px solid var(--hairline); border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.14); padding: 6px; max-height: 320px; overflow-y: auto; transform-origin: top left; animation: picker-in var(--dur-fast) var(--ease); }
+.search-dd-cat { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); padding: 8px 10px 3px; }
+.search-dd-item { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 9px 10px; border: none; background: none; border-radius: 8px; cursor: pointer; font-family: var(--ui); font-size: 14px; color: var(--ink); text-align: left; }
+.search-dd-item:hover { background: var(--panel); }
+.search-dd-item span { font-size: 12px; color: var(--ink-3); }
+.search-dd-empty { padding: 10px; font-size: 13px; color: var(--ink-3); }
+
+/* Quote lines */
+.quote-empty { border: 1px dashed var(--hairline); border-radius: 12px; padding: 28px; text-align: center; color: var(--ink-3); font-size: 14px; }
+.quote-lines { display: flex; flex-direction: column; gap: 10px; }
+.qline { background: #fff; border: 1px solid var(--hairline); border-radius: 12px; padding: 12px 14px; }
+.qline-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 10px; }
+.qline-name { font-size: 15px; font-weight: 600; color: var(--ink); }
+.qline-right { display: flex; align-items: center; gap: 12px; }
+.qline-total { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.qline-total.none { color: var(--ink-3); font-weight: 500; }
+.qline-rm { border: none; background: transparent; color: var(--ink-3); font-size: 18px; line-height: 1; cursor: pointer; padding: 0 4px; border-radius: 6px; transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease); }
+.qline-rm:hover { color: #d64545; background: var(--hairline-soft); }
+.qline-ctrls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.qline-ctrls .seg button.on { background: var(--accent); color: #fff; }
+.qline-qty { width: 96px; font-family: var(--ui); font-size: 13px; padding: 8px 10px; border: 1px solid var(--hairline); border-radius: 8px; background: #fff; color: var(--ink); }
+.qline-margin { font-family: var(--ui); font-size: 13px; padding: 8px 10px; border: 1px solid var(--hairline); border-radius: 8px; background: #fff; color: var(--ink); cursor: pointer; }
+.qline-margin.empty { color: var(--accent); border-color: var(--accent); border-style: dashed; }
+.qline-units { font-size: 12px; color: var(--ink-3); }
+
+/* Total + actions */
+.quote-total-bar { display: flex; align-items: center; justify-content: space-between; padding-top: 14px; margin-top: 2px; border-top: 1px solid var(--hairline); }
+.qtb-label { font-size: 14px; color: var(--ink-2); }
+.qtb-note { font-size: 12px; color: var(--ink-3); }
+.qtb-total { font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.quote-actions { display: flex; gap: 10px; justify-content: flex-end; }
+@media (prefers-reduced-motion: reduce) { .search-dd { animation: none; } }
