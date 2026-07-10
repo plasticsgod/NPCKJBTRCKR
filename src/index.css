@@ -1961,3 +1961,39 @@ a.file-chip:hover svg { color: var(--accent); }
 
 /* Option C depth — soft elevation on content cards */
 .panel, .stat-card, .panel-card, .proj-group, .qline { box-shadow: 0 1px 2px rgba(20,17,13,.03), 0 6px 18px rgba(20,17,13,.05); }
+
+/* ==== Projects rail navigation ==========================================
+   burger = app section; rail = which project (sub-nav inside Projects) */
+.proj-layout { display: grid; grid-template-columns: 218px 1fr; align-items: start; }
+.proj-rail { position: sticky; top: 0; align-self: start; padding: 4px 16px 4px 2px; border-right: 1px solid var(--hairline); max-height: calc(100vh - 96px); overflow-y: auto; }
+.proj-rail-head { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; padding: 4px 10px 8px; }
+.proj-rail-list { display: flex; flex-direction: column; gap: 2px; }
+.proj-rail-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; text-align: left; border: none; background: transparent; cursor: pointer; padding: 8px 10px; border-radius: 8px; font-family: var(--ui); font-size: 13px; color: var(--ink-2); transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+.proj-rail-item:hover { background: var(--panel); color: var(--ink); }
+.proj-rail-item.on { background: var(--primary); color: #fff; }
+.proj-rail-item.drop { box-shadow: inset 0 0 0 2px var(--accent); background: var(--accent-tint); }
+.pri-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pri-count { flex: 0 0 auto; font-size: 11px; font-weight: 600; color: var(--ink-3); background: var(--panel); border-radius: 999px; padding: 1px 8px; min-width: 22px; text-align: center; }
+.pri-count.over { background: #fdecea; color: #c0392b; }
+.proj-rail-item.on .pri-count { background: rgba(255,255,255,.18); color: #fff; }
+.proj-rail-item.on .pri-count.over { background: rgba(255,255,255,.2); color: #ffd9d2; }
+.proj-rail-new { width: 100%; margin-top: 8px; font-family: var(--ui); font-size: 12px; font-weight: 600; color: var(--accent); background: transparent; border: 1px dashed var(--accent); border-radius: 8px; padding: 9px 10px; cursor: pointer; transition: background var(--dur-fast) var(--ease); }
+.proj-rail-new:hover { background: var(--accent-tint); }
+.proj-rail-newform { margin-top: 8px; }
+.proj-rail-newinput { width: 100%; font-family: var(--ui); font-size: 13px; padding: 9px 10px; border: 1px solid var(--accent); border-radius: 8px; background: #fff; color: var(--ink); }
+.proj-main { min-width: 0; padding-left: 20px; }
+
+/* Mobile: rail becomes a "current project" dropdown */
+.proj-mobile-nav { display: none; position: relative; margin-bottom: 14px; }
+.proj-mobile-pick { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; border: 1px solid var(--hairline); border-radius: 10px; background: #fff; font-family: var(--ui); font-size: 15px; font-weight: 600; color: var(--ink); cursor: pointer; }
+.proj-mobile-pick .chev { color: var(--ink-3); }
+.proj-mobile-drop { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 40; background: #fff; border: 1px solid var(--hairline); border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.14); padding: 6px; transform-origin: top; animation: picker-in var(--dur-fast) var(--ease); }
+.proj-mobile-drop .proj-rail-item { color: var(--ink); }
+
+@media (max-width: 860px) {
+  .proj-layout { grid-template-columns: 1fr; }
+  .proj-rail { display: none; }
+  .proj-main { padding-left: 0; }
+  .proj-mobile-nav { display: block; }
+}
+@media (prefers-reduced-motion: reduce) { .proj-mobile-drop { animation: none; } }
