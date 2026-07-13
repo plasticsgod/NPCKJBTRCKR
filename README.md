@@ -1,13 +1,13 @@
 # NutraPack App
 
-*Last updated: July 10, 2026*
+*Last updated: July 13, 2026*
 
 An internal operations app for the NutraPack team. Built with React + Vite, with
 Supabase as the backend (database, logins, file storage, live updates, and a few
 serverless functions). Every signed-in employee shares the same data, and changes
 appear for everyone in real time.
 
-It's one app with six sections:
+It's one app with seven sections:
 
 - **Dashboard** — YTD labels printed, **revenue and Label Profit** (from per-job
   cost/charge), active orders, top clients, open tasks, and SVG charts (monthly
@@ -29,9 +29,14 @@ It's one app with six sections:
   unit + quantity + a required per-line margin; manual shipping strip; grouped
   Factory → Tariff → Landed **Edit pricing** (append-only signed versions);
   Save quote + branded PDF export.
-- **Plastic Quotes** — history of every saved quote: search, expand line items,
-  re-download the PDF, or **"Send to plastics work orders"** (creates a
-  pre-filled order with cost & charge).
+- **Plastic Quotes** — history of every saved quote (with customer + quote date):
+  search, expand line items, re-download the PDF, or **"Send to plastics work
+  orders"** (creates a pre-filled order with cost & charge).
+- **Customers** — one record per company (contact name, email, phone, address,
+  notes). The list shows each customer's orders, revenue, and deposits owed; the
+  detail view pulls together **all** their label orders, plastics orders, and
+  quotes in one place. Jobs and quotes link to a customer automatically, and a new
+  company is created the first time you use its name.
 
 Across every page: **global search** (⌘K / Ctrl+K), a **notification bell** whose
 entries open the exact task, **toasts**, loading **skeletons**, a consistent
@@ -111,6 +116,10 @@ next.
 24. `add_workspace_members.sql` — invited full-access "members."
 25. `add_client_access.sql` — client role + `client_prices` foundation (client UI
     not built yet).
+26. `add_quote_date.sql` — `quote_date` on saved quotes.
+27. `add_customers.sql` — **customer records**: the `customers` table, `customer_id`
+    links on jobs / plastic_jobs / plastic_quotes, and a one-time backfill from the
+    company names already in use. Additive — the old text columns are kept.
 
 > **Why so many files?** These are the database changes as they were built up over
 > time. Steps 8 → 9 → 10 in particular *must* run in order: step 10 removes things
@@ -379,6 +388,7 @@ nutrapack-app/
    │  ├─ PlasticJobTable.jsx    the plastics orders table
    │  ├─ PlasticJobModal.jsx    plastics order modal: Details / Pricing / Shipping tabs
    │  ├─ PlasticQuotes.jsx      saved-quote history + send-to-work-orders
+   │  ├─ Customers.jsx         customer list + detail (orders, quotes, revenue)
    │  ├─ DatePicker.jsx         shared calendar control
    │  ├─ PlasticsEstimator.jsx  store-style quote builder + tabbed catalog
    │  ├─ PriceList.jsx          (unused — superseded by the builder's catalog)
@@ -424,7 +434,8 @@ The tables the app uses, and what each is for:
 | `task_likes` | legacy likes (superseded by `task_reactions`) |
 | `task_reactions` | emoji reactions on posts/replies |
 | `notifications` | in-app bell rows (assignments, mentions, comments; `task_id` opens the task) |
-| `plastic_quotes` | saved estimator quotes (snapshot of lines + total) |
+| `plastic_quotes` | saved estimator quotes (lines, total, customer, quote date) |
+| `customers` | one row per company (contact name, email, phone, address, notes) |
 | `plastic_jobs` | plastics work orders (qty/unit, cost/revenue, origin/port, pricing snapshot) |
 | `project_members` | guest access grants: email ↔ project |
 | `workspace_members` | invited full-access members |
@@ -435,6 +446,26 @@ public `task-images` bucket for comment image **and file** attachments (files li
 under a `files/` subpath).
 
 ---
+
+## Design & UI systems
+
+- **Theme:** warm off-white (`--bg`) with a **two-tone** system — near-black
+  (`--primary`) carries the weight (primary buttons, active tabs/toggles, the
+  selected project), and the brand orange (`--accent`, `#ff5b1f`) is the highlight
+  (badges, counts, focus rings, "Add to estimate", overdue). Status pills keep their
+  own colors (green = delivered/paid, yellow = waiting, red = in production,
+  blue = shipped).
+- **Motion:** `--ease` / `--dur` / `--dur-fast` variables; transform + opacity only
+  (GPU-cheap on phones). Modals, the task drawer, dropdowns, and pickers animate
+  from their anchor; buttons have a press state. All of it is disabled automatically
+  for anyone with "reduce motion" turned on.
+- **Loading:** `Skeletons.jsx` renders layout-matched placeholders on the Dashboard,
+  Work Orders, and Projects while data loads.
+- **Optimistic updates:** task fields and work-order status/facility change in the UI
+  instantly and revert if the save fails.
+- **Projects navigation:** the burger menu switches **app section**; inside Projects a
+  left **rail** (searchable, alphabetical) switches **project**. On phones the rail
+  becomes a "current project" dropdown.
 
 ## Notes & known loose ends
 
