@@ -8,6 +8,7 @@ import PlasticWorkOrders from "./components/PlasticWorkOrders";
 import Dashboard from "./components/Dashboard";
 import PlasticsEstimator from "./components/PlasticsEstimator";
 import PlasticQuotes from "./components/PlasticQuotes";
+import Customers from "./components/Customers";
 import { DashboardSkeleton, WorkOrdersSkeleton } from "./components/Skeletons";
 import Projects from "./projects/Projects";
 import JobModal from "./components/JobModal";
@@ -15,7 +16,7 @@ import PlasticJobModal from "./components/PlasticJobModal";
 import { Toaster, toast } from "./components/Toaster";
 import SearchOverlay from "./components/SearchOverlay";
 
-const PAGES = ["dashboard", "work_orders", "plastic_work_orders", "projects", "plastics", "plastic_quotes"];
+const PAGES = ["dashboard", "work_orders", "plastic_work_orders", "projects", "plastics", "plastic_quotes", "customers"];
 
 // Instant client-side check for the core team (matches the SQL allowlist) so
 // they never see a flash; invited "members" are confirmed via RPC below.
@@ -130,6 +131,7 @@ export default function App() {
       plastic_work_orders: "Plastics Work Orders",
       plastics: "Plastics Estimator",
       plastic_quotes: "Plastic Quotes",
+      customers: "Customers",
       projects: "Projects",
     };
     document.title = `${names[page] || "NutraPack"} · NutraPack App`;
@@ -300,6 +302,8 @@ export default function App() {
           />
         ) : page === "plastics" ? (
           <PlasticsEstimator userEmail={session.user.email} />
+        ) : page === "customers" ? (
+          <Customers />
         ) : page === "plastic_quotes" ? (
           <PlasticQuotes />
         ) : page === "plastic_work_orders" ? (
