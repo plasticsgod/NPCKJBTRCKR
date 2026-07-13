@@ -48,6 +48,7 @@ export default function App() {
 
   const [jobs, setJobs] = useState([]);
   const [plasticJobs, setPlasticJobs] = useState([]);
+  const [customerRows, setCustomerRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
   const [editingPlastic, setEditingPlastic] = useState(null);
@@ -179,8 +180,38 @@ export default function App() {
     return () => supabase.removeChannel(channel);
   }, [session, loadPlasticJobs]);
 
+  // --- Customers (the shared record every job/quote links to) ----------------
+  const loadCustomers = useCallback(async () => {
+    const { data } = await supabase.from("customers").select("id,name").order("name");
+    setCustomerRows(data ?? []);
+  }, []);
+
+  useEffect(() => {
+    if (!session) return;
+    loadCustomers();
+    const ch = supabase
+      .channel("customers-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "customers" }, loadCustomers)
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [session, loadCustomers]);
+
+  // Turn a typed company name into a customer record: reuse the existing one
+  // (case-insensitively) or create it. Returns the customer's id, or null.
+  async function resolveCustomerId(name) {
+    const n = (name || "").trim();
+    if (!n) return null;
+    const hit = customerRows.find((c) => c.name.toLowerCase() === n.toLowerCase());
+    if (hit) return hit.id;
+    const { data, error } = await supabase.from("customers").insert({ name: n }).select("id").single();
+    if (error) { console.error("Could not create customer:", error.message); return null; }
+    loadCustomers();
+    return data.id;
+  }
+
   // --- Create / update / delete ----------------------------------------------
   async function saveJob(job) {
+    job = { ...job, customer_id: await resolveCustomerId(job.brand) };
     if (job.id) {
       const { id, created_at, ...fields } = job;
       const { error } = await supabase.from("jobs").update(fields).eq("id", id);
@@ -225,10 +256,11 @@ export default function App() {
   }
 
   // List of existing customers (for the combobox dropdown)
-  const customers = [...new Set(jobs.map((j) => j.brand).filter(Boolean))].sort();
+  const customers = customerRows.map((c) => c.name);
 
   // --- Plastics: save / delete (mirrors jobs, separate table) -----------------
   async function savePlasticJob(job) {
+    job = { ...job, customer_id: await resolveCustomerId(job.brand) };
     if (job.id) {
       const { id, created_at, ...fields } = job;
       const { error } = await supabase.from("plastic_jobs").update(fields).eq("id", id);
@@ -251,7 +283,7 @@ export default function App() {
   }
 
   // Plastics customers are derived only from plastic_jobs — kept separate from labels.
-  const plasticCustomers = [...new Set(plasticJobs.map((j) => j.brand).filter(Boolean))].sort();
+  const plasticCustomers = customerRows.map((c) => c.name);
 
   // --- Render -----------------------------------------------------------------
   if (!authReady) return <div className="screen-center muted">Loading…</div>;

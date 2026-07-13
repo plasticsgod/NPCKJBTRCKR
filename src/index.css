@@ -2038,3 +2038,6 @@ a.file-chip:hover svg { color: var(--accent); }
   .cust-thead span:nth-child(2), .cust-trow .ct-contact,
   .cust-thead span:nth-child(5), .cust-trow span:last-child { display: none; }
 }
+.stat-sub { font-size: 11px; color: var(--ink-3); margin-top: 4px; }
+.stat-sub.warn { color: #b3402a; }
+.cr-amt.nocharge { color: var(--ink-3); font-family: var(--ui); font-size: 12px; }
