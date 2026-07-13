@@ -32,6 +32,13 @@ export default function PlasticsEstimator({ userEmail }) {
   const [plCat, setPlCat] = useState("all");
   const searchRef = useRef(null);
 
+  const [customerRows, setCustomerRows] = useState([]);
+
+  const loadCustomers = useCallback(async () => {
+    const { data } = await supabase.from("customers").select("id,name").order("name");
+    setCustomerRows(data ?? []);
+  }, []);
+
   const loadVersions = useCallback(async () => {
     const { data, error } = await supabase
       .from("pricing_versions").select("*").order("created_at", { ascending: false });
@@ -39,6 +46,8 @@ export default function PlasticsEstimator({ userEmail }) {
     else { setVersions(data ?? []); setVi(0); }
     setLoading(false);
   }, []);
+
+  useEffect(() => { loadCustomers(); }, [loadCustomers]);
 
   useEffect(() => {
     loadVersions();
@@ -128,11 +137,26 @@ export default function PlasticsEstimator({ userEmail }) {
     { id: "sets", label: "Sets", items: data.tubs.filter((t) => findItem(data, data.sets?.[t.id])).map((t) => ({ prod: "set:" + t.id, name: t.name.replace("Tub", "Set") + " + lid", item: t, kind: "set" })) },
   ];
 
+  // Reuse the matching customer record, or create it — so every quote links to
+  // a real customer and the directory fills itself as you work.
+  async function resolveCustomerId(name) {
+    const n = (name || "").trim();
+    if (!n) return null;
+    const hit = customerRows.find((c) => c.name.toLowerCase() === n.toLowerCase());
+    if (hit) return hit.id;
+    const { data, error } = await supabase.from("customers").insert({ name: n }).select("id").single();
+    if (error) { console.error("Could not create customer:", error.message); return null; }
+    loadCustomers();
+    return data.id;
+  }
+
   async function saveQuote() {
     if (savedLines.length === 0) { toast.error("Add at least one line with a margin first."); return; }
+    const customer_id = await resolveCustomerId(customer);
     const { error } = await supabase.from("plastic_quotes").insert({
       created_by: userEmail,
       customer: customer.trim() || null,
+      customer_id,
       quote_date: quoteDate || null,
       lines: savedLines,
       total,
@@ -233,8 +257,11 @@ export default function PlasticsEstimator({ userEmail }) {
         <>
           <div className="quote-meta-row">
             <label className="ss-fld qm-customer"><span>Customer / project</span>
-              <input type="text" placeholder="Who is this quote for?" value={customer}
+              <input type="text" list="quote-customer-list" placeholder="Type or pick a customer" value={customer}
                 onChange={(e) => setCustomer(e.target.value)} />
+              <datalist id="quote-customer-list">
+                {customerRows.map((c) => <option key={c.id} value={c.name} />)}
+              </datalist>
             </label>
             <label className="ss-fld"><span>Quote date</span>
               <input type="date" value={quoteDate} onChange={(e) => setQuoteDate(e.target.value)} />

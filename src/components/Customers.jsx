@@ -48,7 +48,9 @@ export default function Customers() {
       cj.filter((x) => EARNED.includes(x.status)).reduce((a, x) => a + (Number(x.revenue) || 0), 0) +
       cp.filter((x) => EARNED.includes(x.status)).reduce((a, x) => a + (Number(x.revenue) || 0), 0);
     const owed = cj.filter((x) => x.deposit === "Owed").length;
-    return { jobs: cj, plastics: cp, quotes: cq, orders: cj.length + cp.length, revenue, owed };
+    // Orders with no client charge entered — revenue can't count them.
+    const noCharge = [...cj, ...cp].filter((x) => !Number(x.revenue)).length;
+    return { jobs: cj, plastics: cp, quotes: cq, orders: cj.length + cp.length, revenue, owed, noCharge };
   }
 
   async function saveCustomer(form) {
@@ -99,7 +101,15 @@ export default function Customers() {
         </div>
 
         <div className="cust-stats">
-          <div className="stat-card"><span className="stat-label">Revenue</span><span className="stat-value">{money(s.revenue)}</span></div>
+          <div className="stat-card">
+            <span className="stat-label">Revenue</span>
+            <span className="stat-value">{money(s.revenue)}</span>
+            {s.noCharge > 0 && (
+              <span className="stat-sub warn">
+                {s.noCharge} order{s.noCharge > 1 ? "s" : ""} missing a client charge
+              </span>
+            )}
+          </div>
           <div className="stat-card"><span className="stat-label">Orders</span><span className="stat-value">{s.orders}</span></div>
           <div className="stat-card"><span className="stat-label">Quotes</span><span className="stat-value">{s.quotes.length}</span></div>
           <div className={"stat-card" + (s.owed ? " accent" : "")}>
@@ -118,7 +128,7 @@ export default function Customers() {
                 <span className="cr-name">{j.title || "Untitled"}</span>
                 <span className="cr-date">{fmtDate(j.created_at)}</span>
                 <span className={"pill " + "pill-" + (j.status || "").toLowerCase().replace(/\s+/g, "-")}>{j.status}</span>
-                <span className="cr-amt">{j.revenue ? money(j.revenue) : "—"}</span>
+                <span className={"cr-amt" + (Number(j.revenue) ? "" : " nocharge")}>{Number(j.revenue) ? money(j.revenue) : "no charge"}</span>
               </div>
             ))}
           </div>
@@ -132,7 +142,7 @@ export default function Customers() {
                 <span className="cr-name">{p.description || "Untitled"}</span>
                 <span className="cr-date">{fmtDate(p.created_at)}</span>
                 <span className={"pill " + "pill-" + (p.status || "").toLowerCase().replace(/\s+/g, "-")}>{p.status}</span>
-                <span className="cr-amt">{p.revenue ? money(p.revenue) : "—"}</span>
+                <span className={"cr-amt" + (Number(p.revenue) ? "" : " nocharge")}>{Number(p.revenue) ? money(p.revenue) : "no charge"}</span>
               </div>
             ))}
           </div>
