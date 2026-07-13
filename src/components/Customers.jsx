@@ -26,8 +26,8 @@ export default function Customers() {
   const load = useCallback(async () => {
     const [c, j, p, q] = await Promise.all([
       supabase.from("customers").select("*").order("name"),
-      supabase.from("jobs").select("id,title,brand,customer_id,status,revenue,deposit,created_at"),
-      supabase.from("plastic_jobs").select("id,description,brand,customer_id,status,revenue,created_at"),
+      supabase.from("jobs").select("id,job_title,brand,customer_id,status,revenue,deposit,created_at"),
+      supabase.from("plastic_jobs").select("id,job_title,brand,customer_id,status,revenue,created_at"),
       supabase.from("plastic_quotes").select("id,quote_no,customer,customer_id,total,quote_date,created_at"),
     ]);
     setCustomers(c.data || []);
@@ -125,7 +125,7 @@ export default function Customers() {
           <div className="cust-rows">
             {s.jobs.map((j) => (
               <div className="cust-row" key={j.id}>
-                <span className="cr-name">{j.title || "Untitled"}</span>
+                <span className="cr-name">{j.job_title || "Untitled"}</span>
                 <span className="cr-date">{fmtDate(j.created_at)}</span>
                 <span className={"pill " + "pill-" + (j.status || "").toLowerCase().replace(/\s+/g, "-")}>{j.status}</span>
                 <span className={"cr-amt" + (Number(j.revenue) ? "" : " nocharge")}>{Number(j.revenue) ? money(j.revenue) : "no charge"}</span>
@@ -139,7 +139,7 @@ export default function Customers() {
           <div className="cust-rows">
             {s.plastics.map((p) => (
               <div className="cust-row" key={p.id}>
-                <span className="cr-name">{p.description || "Untitled"}</span>
+                <span className="cr-name">{p.job_title || "Untitled"}</span>
                 <span className="cr-date">{fmtDate(p.created_at)}</span>
                 <span className={"pill " + "pill-" + (p.status || "").toLowerCase().replace(/\s+/g, "-")}>{p.status}</span>
                 <span className={"cr-amt" + (Number(p.revenue) ? "" : " nocharge")}>{Number(p.revenue) ? money(p.revenue) : "no charge"}</span>
