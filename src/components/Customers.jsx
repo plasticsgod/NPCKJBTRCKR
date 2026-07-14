@@ -18,22 +18,25 @@ export default function Customers() {
   const [jobs, setJobs] = useState([]);
   const [plastics, setPlastics] = useState([]);
   const [quotes, setQuotes] = useState([]);
+  const [clientLogins, setClientLogins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState(null);
   const [editing, setEditing] = useState(null); // customer object or {} for new
 
   const load = useCallback(async () => {
-    const [c, j, p, q] = await Promise.all([
+    const [c, j, p, q, cl] = await Promise.all([
       supabase.from("customers").select("*").order("name"),
       supabase.from("jobs").select("id,job_title,brand,customer_id,status,revenue,deposit,created_at"),
       supabase.from("plastic_jobs").select("id,job_title,brand,customer_id,status,revenue,created_at"),
       supabase.from("plastic_quotes").select("id,quote_no,customer,customer_id,total,quote_date,created_at"),
+      supabase.from("client_users").select("id,member_email,customer_id").order("member_email"),
     ]);
     setCustomers(c.data || []);
     setJobs(j.data || []);
     setPlastics(p.data || []);
     setQuotes(q.data || []);
+    setClientLogins(cl.data || []);
     setLoading(false);
   }, []);
 
@@ -69,6 +72,14 @@ export default function Customers() {
     if (res.error) { toast.error("Could not save: " + res.error.message); return; }
     toast.success(form.id ? "Customer saved" : "Customer added");
     setEditing(null);
+    load();
+  }
+
+  async function linkClient(clientId, customerId) {
+    const { error } = await supabase.from("client_users")
+      .update({ customer_id: customerId }).eq("id", clientId);
+    if (error) { toast.error("Could not link: " + error.message); return; }
+    toast.success(customerId ? "Client linked" : "Client unlinked");
     load();
   }
 
@@ -116,6 +127,32 @@ export default function Customers() {
             <span className="stat-label">Deposits owed</span>
             <span className="stat-value">{s.owed || "—"}</span>
           </div>
+        </div>
+
+        <div className="cust-sec">Client logins</div>
+        <div className="cust-clients">
+          {clientLogins.filter((cl) => cl.customer_id === open.id).map((cl) => (
+            <div className="cust-client-row" key={cl.id}>
+              <span className="cc-email">{cl.member_email}</span>
+              <span className="cc-tag">estimator access</span>
+              <button className="link" onClick={() => linkClient(cl.id, null)}>Unlink</button>
+            </div>
+          ))}
+          {clientLogins.filter((cl) => cl.customer_id === open.id).length === 0 && (
+            <p className="muted cust-none">No client logins for this company yet.</p>
+          )}
+
+          {clientLogins.some((cl) => !cl.customer_id) && (
+            <div className="cust-client-link">
+              <span className="muted">Link an existing client login:</span>
+              <select defaultValue="" onChange={(e) => { if (e.target.value) linkClient(e.target.value, open.id); }}>
+                <option value="">Choose…</option>
+                {clientLogins.filter((cl) => !cl.customer_id).map((cl) => (
+                  <option key={cl.id} value={cl.id}>{cl.member_email}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {open.notes && <div className="cust-notes"><span className="cust-sec">Notes</span><p>{open.notes}</p></div>}

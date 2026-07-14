@@ -38,6 +38,7 @@ export default function PlasticsEstimator({ userEmail, clientMode = false }) {
 
   const [customerRows, setCustomerRows] = useState([]);
   const [clientProducts, setClientProducts] = useState([]);
+  const [myCustomer, setMyCustomer] = useState(null); // {id,name} for a signed-in client
 
   // Final-price-only product list (a live DB view). This is ALL a client's
   // browser ever receives — no factory cost, tariff, or margin.
@@ -65,6 +66,16 @@ export default function PlasticsEstimator({ userEmail, clientMode = false }) {
   }, []);
 
   useEffect(() => { loadCustomers(); loadClientProducts(); }, [loadCustomers, loadClientProducts]);
+
+  // A signed-in client belongs to (at most) one customer — quotes are stamped
+  // with it, which is also what the database rules require.
+  useEffect(() => {
+    if (!clientMode) return;
+    supabase.from("client_users").select("customer_id, customers(name)").maybeSingle()
+      .then(({ data }) => {
+        if (data?.customer_id) setMyCustomer({ id: data.customer_id, name: data.customers?.name || "" });
+      });
+  }, [clientMode]);
 
   useEffect(() => {
     loadVersions();
@@ -191,7 +202,20 @@ export default function PlasticsEstimator({ userEmail, clientMode = false }) {
   }
 
   async function saveQuote() {
-    if (savedLines.length === 0) { toast.error("Add at least one line with a margin first."); return; }
+    if (savedLines.length === 0) {
+      toast.error(asClient ? "Add a product and quantity first." : "Add at least one line with a margin first.");
+      return;
+    }
+    if (clientMode) {
+      if (!myCustomer) { toast.error("Your account isn't linked to a company yet — contact us and we'll set it up."); return; }
+      const { error } = await supabase.from("plastic_quotes").insert({
+        created_by: userEmail, customer: myCustomer.name, customer_id: myCustomer.id,
+        quote_date: quoteDate || null, lines: savedLines, total,
+      });
+      if (error) { toast.error("Couldn't save quote — " + error.message); return; }
+      toast.success("Quote saved");
+      return;
+    }
     const customer_id = await resolveCustomerId(customer);
     const { error } = await supabase.from("plastic_quotes").insert({
       created_by: userEmail,
@@ -344,6 +368,11 @@ export default function PlasticsEstimator({ userEmail, clientMode = false }) {
       ) : (
         <>
           <div className="quote-meta-row">
+            {clientMode ? (
+              <label className="ss-fld qm-customer"><span>Company</span>
+                <input type="text" value={myCustomer?.name || "Not linked yet"} readOnly />
+              </label>
+            ) : (
             <label className="ss-fld qm-customer"><span>Customer / project</span>
               <input type="text" list="quote-customer-list" placeholder="Type or pick a customer" value={customer}
                 onChange={(e) => setCustomer(e.target.value)} />
@@ -351,6 +380,7 @@ export default function PlasticsEstimator({ userEmail, clientMode = false }) {
                 {customerRows.map((c) => <option key={c.id} value={c.name} />)}
               </datalist>
             </label>
+            )}
             <label className="ss-fld"><span>Quote date</span>
               <input type="date" value={quoteDate} onChange={(e) => setQuoteDate(e.target.value)} />
             </label>
@@ -401,7 +431,7 @@ export default function PlasticsEstimator({ userEmail, clientMode = false }) {
             <span className="qtb-total">{money2(total)}</span>
           </div>
           <div className="quote-actions">
-            {!asClient && <button className="btn-ghost" onClick={saveQuote}>Save quote</button>}
+            {(!asClient || (clientMode && myCustomer)) && <button className="btn-ghost" onClick={saveQuote}>Save quote</button>}
             <button className="btn-accent" onClick={exportPdf}>Export PDF</button>
           </div>
         </>

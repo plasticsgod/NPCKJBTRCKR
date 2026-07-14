@@ -184,9 +184,11 @@ function ChangeEmailModal({ currentEmail, onClose }) {
 // link, and grants the chosen access.
 function InviteModal({ onClose }) {
   const [email, setEmail] = useState("");
-  const [scope, setScope] = useState("project"); // 'project' | 'workspace'
+  const [scope, setScope] = useState("project"); // 'project' | 'workspace' | 'client'
   const [projects, setProjects] = useState([]);
   const [projectId, setProjectId] = useState("");
+  const [customers, setCustomers] = useState([]);
+  const [customerId, setCustomerId] = useState(""); // "" = not linked to a company
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState("");
@@ -195,6 +197,9 @@ function InviteModal({ onClose }) {
     supabase.from("projects").select("id,name").order("name").then(({ data }) => {
       setProjects(data || []);
       if (data && data.length) setProjectId((id) => id || data[0].id);
+    });
+    supabase.from("customers").select("id,name").order("name").then(({ data }) => {
+      setCustomers(data || []);
     });
   }, []);
 
@@ -206,7 +211,12 @@ function InviteModal({ onClose }) {
 
     setBusy(true);
     const { data, error: fnErr } = await supabase.functions.invoke("invite-user", {
-      body: { email: addr, scope, projectId: scope === "project" ? projectId : null },
+      body: {
+        email: addr,
+        scope,
+        projectId: scope === "project" ? projectId : null,
+        customerId: scope === "client" ? (customerId || null) : null,
+      },
     });
     setBusy(false);
 
@@ -241,6 +251,7 @@ function InviteModal({ onClose }) {
           <select className="pm-input" value={scope} onChange={(e) => setScope(e.target.value)}>
             <option value="project">Guest — one project only</option>
             <option value="workspace">Member — the whole app</option>
+            <option value="client">Client — plastics estimator only</option>
           </select>
         </label>
 
@@ -251,6 +262,19 @@ function InviteModal({ onClose }) {
               {projects.length === 0 && <option value="">No projects yet</option>}
               {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
+          </label>
+        )}
+
+        {scope === "client" && (
+          <label className="pm-field">
+            <span>Customer (optional)</span>
+            <select className="pm-input" value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
+              <option value="">None — link later</option>
+              {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <span className="pm-hint">
+              Linking lets their saved quotes show up on that customer's page. You can link later from Customers.
+            </span>
           </label>
         )}
 
