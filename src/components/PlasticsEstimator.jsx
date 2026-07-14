@@ -5,14 +5,18 @@ import {
   findItem, unitEconomics, setEconomics, unitsFromQty, money, money2,
 } from "../lib/pricing";
 import PricingEditor from "./PricingEditor";
-import { buildQuotePDF } from "../lib/quotePdf";
+import { buildQuotePDF, buildClientQuotePDF } from "../lib/quotePdf";
 import { toast } from "./Toaster";
 
 let _lineSeq = 0;
 const nextLineId = () => ++_lineSeq;
 const cap = (s) => s[0].toUpperCase() + s.slice(1);
 
-export default function PlasticsEstimator({ userEmail }) {
+export default function PlasticsEstimator({ userEmail, clientMode = false }) {
+  // "Client view" preview: internal users can flip the page into exactly what a
+  // client sees (final prices only). Clients get this same component locked on.
+  const [previewClient, setPreviewClient] = useState(false);
+  const asClient = clientMode || previewClient;
   const [versions, setVersions] = useState([]);
   const [vi, setVi] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -33,6 +37,15 @@ export default function PlasticsEstimator({ userEmail }) {
   const searchRef = useRef(null);
 
   const [customerRows, setCustomerRows] = useState([]);
+  const [clientProducts, setClientProducts] = useState([]);
+
+  // Final-price-only product list (a live DB view). This is ALL a client's
+  // browser ever receives — no factory cost, tariff, or margin.
+  const loadClientProducts = useCallback(async () => {
+    const { data, error } = await supabase.from("client_products").select("*");
+    if (error) { console.error("client_products:", error.message); return; }
+    setClientProducts(data ?? []);
+  }, []);
 
   const loadCustomers = useCallback(async () => {
     const { data } = await supabase.from("customers").select("id,name").order("name");
@@ -47,7 +60,7 @@ export default function PlasticsEstimator({ userEmail }) {
     setLoading(false);
   }, []);
 
-  useEffect(() => { loadCustomers(); }, [loadCustomers]);
+  useEffect(() => { loadCustomers(); loadClientProducts(); }, [loadCustomers, loadClientProducts]);
 
   useEffect(() => {
     loadVersions();
@@ -84,6 +97,8 @@ export default function PlasticsEstimator({ userEmail }) {
   // --- grouped search results -------------------------------------------------
   const q = search.trim().toLowerCase();
   const match = (arr) => arr.filter((x) => x.name.toLowerCase().includes(q));
+  const matchClient = (kind) => clientProducts.filter(
+    (p) => p.kind === kind && p.name.toLowerCase().includes(q));
   const resTubs = match(data.tubs);
   const resLids = match(data.lids);
   const resSets = match(data.tubs.filter((t) => findItem(data, data.sets?.[t.id]))); // paired tubs only
@@ -97,6 +112,21 @@ export default function PlasticsEstimator({ userEmail }) {
   const removeLine = (id) => setLines((ls) => ls.filter((l) => l.id !== id));
 
   // Price one builder line. Returns display values + a "saved" shape for PDF/save.
+  // In client mode the price comes straight from the final-price view — the
+  // browser never has factory cost, tariff, or margin to compute with.
+  function priceLineClient(l) {
+    const p = clientProducts.find((x) => x.prod === l.prod);
+    if (!p) return { unit: null, units: null, total: null, saved: null };
+    const qn = parseFloat(l.qty) || 0;
+    const units = l.mode === "units" ? qn
+      : l.mode === "pallets" ? qn * (Number(p.ppp) || 0)
+      : qn * (Number(p.pcs) || 0);
+    const unit = Number(p.unit_price);
+    const tot = units ? unit * units : null;
+    const saved = units ? { name: l.name, units, unit, total: tot } : null;
+    return { unit, units, total: tot, saved };
+  }
+
   function priceLine(l) {
     const [kind, id] = l.prod.split(":");
     const item = kind === "set" ? data.tubs.find((t) => t.id === id) : findItem(data, id);
@@ -117,10 +147,10 @@ export default function PlasticsEstimator({ userEmail }) {
     return { unit, units, total, saved };
   }
 
-  const priced = lines.map((l) => ({ l, ...priceLine(l) }));
+  const priced = lines.map((l) => ({ l, ...(asClient ? priceLineClient(l) : priceLine(l)) }));
   const savedLines = priced.map((p) => p.saved).filter(Boolean);
   const total = savedLines.reduce((a, s) => a + s.total, 0);
-  const needMargin = priced.filter((p) => p.l.marginIdx == null).length;
+  const needMargin = asClient ? 0 : priced.filter((p) => p.l.marginIdx == null).length;
 
   // Per-unit prices for the catalog at the bottom (reflects current shipping).
   function productPrices(kind, item) {
@@ -131,6 +161,12 @@ export default function PlasticsEstimator({ userEmail }) {
 
   // Catalog grouped by category. Add a new category here (e.g. "glass") and it
   // appears as a tab + section automatically.
+  const clientCatalog = [
+    { id: "tubs", label: "Tubs", items: clientProducts.filter((p) => p.kind === "tub") },
+    { id: "lids", label: "Lids", items: clientProducts.filter((p) => p.kind === "lid") },
+    { id: "sets", label: "Sets", items: clientProducts.filter((p) => p.kind === "set") },
+  ];
+
   const catalog = [
     { id: "tubs", label: "Tubs", items: data.tubs.map((t) => ({ prod: "tub:" + t.id, name: t.name, item: t, kind: "tub" })) },
     { id: "lids", label: "Lids", items: data.lids.map((l) => ({ prod: "lid:" + l.id, name: l.name, item: l, kind: "lid" })) },
@@ -165,16 +201,20 @@ export default function PlasticsEstimator({ userEmail }) {
     toast.success(`Quote saved${customer.trim() ? " for " + customer.trim() : ""}`);
   }
   function exportPdf() {
-    if (savedLines.length === 0) { toast.error("Add at least one line with a margin first."); return; }
-    buildQuotePDF({ customer: customer.trim() || null, lines: savedLines });
+    if (savedLines.length === 0) {
+      toast.error(asClient ? "Add a product and quantity first." : "Add at least one line with a margin first.");
+      return;
+    }
+    const q = { customer: customer.trim() || null, quote_date: quoteDate, lines: savedLines };
+    if (asClient) buildClientQuotePDF(q); else buildQuotePDF(q);
   }
 
   return (
     <div className="estv2">
       <div className="estv2-head">
         <div className="estv2-title">
-          <h1 className="page-h1">Plastics Estimator</h1>
-          {versions.length > 1 && (
+          <h1 className="page-h1">{asClient ? "Get a quote" : "Plastics Estimator"}</h1>
+          {!asClient && versions.length > 1 && (
             <select className="ver-select" value={vi} onChange={(e) => setVi(+e.target.value)}>
               {versions.map((v, i) => (
                 <option key={v.id} value={i}>{v.version_date} — {v.label}{i === 0 ? " (current)" : ""}</option>
@@ -182,10 +222,31 @@ export default function PlasticsEstimator({ userEmail }) {
             </select>
           )}
         </div>
-        <button className="btn-ghost" onClick={() => setEditorOpen(true)}>Edit pricing</button>
+        {!clientMode && (
+          <div className="estv2-actions">
+            <button className={"btn-ghost" + (previewClient ? " on" : "")}
+              onClick={() => setPreviewClient((v) => !v)}>
+              {previewClient ? "Exit client view" : "Client view"}
+            </button>
+            {!previewClient && <button className="btn-ghost" onClick={() => setEditorOpen(true)}>Edit pricing</button>}
+          </div>
+        )}
       </div>
 
+      {previewClient && !clientMode && (
+        <div className="client-preview-banner">
+          Viewing as a client — these are the prices a customer sees. Margins, costs, and shipping are hidden.
+        </div>
+      )}
+
+      {asClient && (
+        <div className="client-ship-note">
+          <b>Prices exclude shipping.</b> Contact us for freight pricing.
+        </div>
+      )}
+
       {/* Shipping strip — internal only; freight typed manually */}
+      {!asClient && (
       <div className="ship-strip">
         <span className="ship-strip-label">Shipping · internal only (sets freight per unit)</span>
         <div className="ship-strip-row">
@@ -215,6 +276,7 @@ export default function PlasticsEstimator({ userEmail }) {
           </label>
         </div>
       </div>
+      )}
 
       {/* Product search */}
       <div className="prod-search" ref={searchRef}>
@@ -224,7 +286,29 @@ export default function PlasticsEstimator({ userEmail }) {
             onFocus={() => setSearchOpen(true)}
             onChange={(e) => { setSearch(e.target.value); setSearchOpen(true); }} />
         </div>
-        {searchOpen && (
+        {searchOpen && asClient && (
+          <div className="search-dd">
+            {clientProducts.filter((p) => p.name.toLowerCase().includes(q)).length === 0 && (
+              <div className="search-dd-empty">No products match “{search}”.</div>
+            )}
+            {["tub", "lid", "set"].map((k) => {
+              const rows = matchClient(k);
+              if (!rows.length) return null;
+              const label = k === "tub" ? "Tubs" : k === "lid" ? "Lids" : "Sets (tub + lid)";
+              return (
+                <div key={k}>
+                  <div className="search-dd-cat">{label}</div>
+                  {rows.map((p) => (
+                    <button key={p.prod} className="search-dd-item" onClick={() => addLine(p.prod, p.name)}>
+                      {p.name}<span>+ add</span>
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {searchOpen && !asClient && (
           <div className="search-dd">
             {!hasResults && <div className="search-dd-empty">No products match “{search}”.</div>}
             {resTubs.length > 0 && <div className="search-dd-cat">Tubs</div>}
@@ -286,12 +370,14 @@ export default function PlasticsEstimator({ userEmail }) {
                 </div>
                 <input className="qline-qty" type="number" min="0" placeholder="Qty" value={l.qty}
                   onChange={(e) => updateLine(l.id, { qty: e.target.value })} />
-                <select className={"qline-margin" + (l.marginIdx == null ? " empty" : "")}
-                  value={l.marginIdx ?? ""}
-                  onChange={(e) => updateLine(l.id, { marginIdx: e.target.value === "" ? null : +e.target.value })}>
-                  <option value="">Pick margin</option>
-                  {MARGINS.map((m, i) => <option key={i} value={i}>{m.lab}</option>)}
-                </select>
+                {!asClient && (
+                  <select className={"qline-margin" + (l.marginIdx == null ? " empty" : "")}
+                    value={l.marginIdx ?? ""}
+                    onChange={(e) => updateLine(l.id, { marginIdx: e.target.value === "" ? null : +e.target.value })}>
+                    <option value="">Pick margin</option>
+                    {MARGINS.map((m, i) => <option key={i} value={i}>{m.lab}</option>)}
+                  </select>
+                )}
                 {units != null && unit != null && l.mode !== "units" && (
                   <span className="qline-units">{units.toLocaleString()} units</span>
                 )}
@@ -311,7 +397,7 @@ export default function PlasticsEstimator({ userEmail }) {
             <span className="qtb-total">{money2(total)}</span>
           </div>
           <div className="quote-actions">
-            <button className="btn-ghost" onClick={saveQuote}>Save quote</button>
+            {!asClient && <button className="btn-ghost" onClick={saveQuote}>Save quote</button>}
             <button className="btn-accent" onClick={exportPdf}>Export PDF</button>
           </div>
         </>
@@ -340,17 +426,20 @@ export default function PlasticsEstimator({ userEmail }) {
         <div className="pl-wrap">
           <div className="pl-table">
             <div className="pl-head">
-              <span className="pl-name">Product</span><span className="pl-num">Landed</span><span></span>
+              <span className="pl-name">Product</span>
+              <span className="pl-num">{asClient ? "Price / unit" : "Landed"}</span><span></span>
             </div>
-            {catalog.filter((c) => plCat === "all" || plCat === c.id).map((c) => (
+            {(asClient ? clientCatalog : catalog).filter((c) => plCat === "all" || plCat === c.id).map((c) => (
               <div key={c.id}>
                 {plCat === "all" && <div className="pl-cat">{c.label}</div>}
                 {c.items.map((row) => {
-                  const pr = productPrices(row.kind, row.item);
+                  const price = asClient
+                    ? Number(row.unit_price)
+                    : productPrices(row.kind, row.item).landed;
                   return (
                     <div className="pl-row" key={row.prod}>
                       <span className="pl-name">{row.name}</span>
-                      <span className="pl-num muted-num">{money(pr.landed, 3)}</span>
+                      <span className={"pl-num" + (asClient ? "" : " muted-num")}>{money(price, asClient ? 4 : 3)}</span>
                       <button className="pl-add" onClick={() => addLine(row.prod, row.name)}>Add to estimate</button>
                     </div>
                   );
