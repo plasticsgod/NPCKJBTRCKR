@@ -2041,3 +2041,10 @@ a.file-chip:hover svg { color: var(--accent); }
 .stat-sub { font-size: 11px; color: var(--ink-3); margin-top: 4px; }
 .stat-sub.warn { color: #b3402a; }
 .cr-amt.nocharge { color: var(--ink-3); font-family: var(--ui); font-size: 12px; }
+
+/* Client view (preview + real client mode) */
+.estv2-actions { display: flex; gap: 8px; }
+.btn-ghost.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+.client-preview-banner { display: flex; align-items: center; gap: 8px; background: var(--accent-tint); border: 1px solid var(--accent); border-radius: 10px; padding: 10px 14px; font-size: 13px; font-weight: 500; color: #9a3412; }
+.client-ship-note { background: var(--panel); border-left: 3px solid var(--accent); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--ink-2); }
+.client-ship-note b { color: var(--ink); }
