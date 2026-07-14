@@ -184,7 +184,7 @@ function ChangeEmailModal({ currentEmail, onClose }) {
 // link, and grants the chosen access.
 function InviteModal({ onClose }) {
   const [email, setEmail] = useState("");
-  const [scope, setScope] = useState("project"); // 'project' | 'workspace' | 'client'
+  const [scope, setScope] = useState("workspace"); // 'workspace' | 'project' | 'client'
   const [projects, setProjects] = useState([]);
   const [projectId, setProjectId] = useState("");
   const [customers, setCustomers] = useState([]);
@@ -249,9 +249,9 @@ function InviteModal({ onClose }) {
         <label className="pm-field">
           <span>Access</span>
           <select className="pm-input" value={scope} onChange={(e) => setScope(e.target.value)}>
-            <option value="project">Guest — one project only</option>
-            <option value="workspace">Member — the whole app</option>
-            <option value="client">Client — plastics estimator only</option>
+            <option value="workspace">Member</option>
+            <option value="project">Guest</option>
+            <option value="client">Client</option>
           </select>
         </label>
 
