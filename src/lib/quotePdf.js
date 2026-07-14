@@ -100,3 +100,78 @@ export async function buildQuotePDF(quote) {
   doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.text("Generated " + today.toLocaleString(), M, 772);
   doc.save(`Nutrapack-Draft-Quote-${ds}.pdf`);
 }
+
+// ---------------------------------------------------------------------------
+// CLIENT quote PDF — final prices only. Deliberately does NOT break lines into
+// product / freight / duty (that structure is internal). Shipping is excluded
+// and stated as such.
+// ---------------------------------------------------------------------------
+export async function buildClientQuotePDF(quote) {
+  let J;
+  try { J = await loadJsPDF(); }
+  catch { alert("PDF library is still loading — check your connection and try again."); return; }
+
+  const doc = new J({ unit: "pt", format: "letter" });
+  const W = doc.internal.pageSize.getWidth(), M = 50;
+  const navy = [17, 17, 17], ink = [17, 17, 17], soft = [106, 106, 106], signal = [255, 91, 31], line = [212, 207, 198];
+  const usd = (n) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const usd4 = (n) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+
+  doc.setFillColor(...navy); doc.rect(0, 0, W, 72, "F");
+  doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(22); doc.text("NUTRAPACK", M, 42);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(166, 162, 154); doc.text("Tub & Lid Pricing", M, 57);
+  doc.setFillColor(...signal); doc.rect(W - M - 120, 23, 120, 28, "F");
+  doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.text("QUOTE", W - M - 88, 41);
+
+  let y = 104;
+  const ds = (quote.quote_date || new Date().toISOString().slice(0, 10));
+  const meta = (lx, lab, val, vx) => {
+    doc.setTextColor(...soft); doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.text(lab, lx, y);
+    doc.setTextColor(...ink); doc.setFont("helvetica", "bold"); doc.text(String(val), vx, y);
+  };
+  meta(M, "Prepared for:", quote.customer || "—", M + 78);
+  meta(W - M - 185, "Date:", ds, W - M - 135); y += 26;
+
+  const cUnit = W - M - 150, cTot = W - M - 8;
+  doc.setFillColor(...navy); doc.rect(M, y - 13, W - 2 * M, 22, "F");
+  doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(9);
+  doc.text("LINE ITEMS", M + 8, y + 2);
+  doc.text("PER UNIT", cUnit, y + 2, { align: "right" });
+  doc.text("AMOUNT", cTot, y + 2, { align: "right" });
+  y += 26;
+
+  let total = 0;
+  (quote.lines || []).forEach((l) => {
+    total += l.total;
+    doc.setTextColor(...ink); doc.setFont("helvetica", "bold"); doc.setFontSize(11);
+    doc.text(l.name, M + 8, y);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+    doc.text(usd4(l.unit), cUnit, y, { align: "right" });
+    doc.setFont("helvetica", "bold");
+    doc.text(usd(l.total), cTot, y, { align: "right" });
+    y += 14;
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(...soft);
+    doc.text("Qty  " + l.units.toLocaleString() + " units", M + 8, y);
+    y += 18;
+    doc.setDrawColor(...line); doc.line(M, y - 6, W - M, y - 6);
+    y += 8;
+  });
+
+  doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.setTextColor(...ink);
+  doc.text("TOTAL", cUnit, y + 6, { align: "right" });
+  doc.text(usd(total), cTot, y + 6, { align: "right" });
+  y += 34;
+
+  // The shipping notice — required on every client quote.
+  doc.setFillColor(247, 245, 241); doc.rect(M, y - 12, W - 2 * M, 34, "F");
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(...signal);
+  doc.text("Prices exclude shipping.", M + 10, y + 4);
+  doc.setFont("helvetica", "normal"); doc.setTextColor(...soft);
+  doc.text("Contact us for freight pricing.", M + 10 + doc.getTextWidth("Prices exclude shipping. ") + 4, y + 4);
+  y += 40;
+
+  doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...soft);
+  doc.text("Estimate only — not a binding offer. Pricing subject to change.", M, y);
+
+  doc.save(`nutrapack-quote-${ds}.pdf`);
+}
