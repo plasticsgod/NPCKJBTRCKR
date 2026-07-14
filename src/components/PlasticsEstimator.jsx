@@ -42,7 +42,11 @@ export default function PlasticsEstimator({ userEmail, clientMode = false }) {
   // Final-price-only product list (a live DB view). This is ALL a client's
   // browser ever receives — no factory cost, tariff, or margin.
   const loadClientProducts = useCallback(async () => {
-    const { data, error } = await supabase.from("client_products").select("*");
+    const { data, error } = await supabase
+      .from("client_products")
+      .select("*")
+      .order("sort_group")
+      .order("pos");
     if (error) { console.error("client_products:", error.message); return; }
     setClientProducts(data ?? []);
   }, []);
