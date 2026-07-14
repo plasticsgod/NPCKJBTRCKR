@@ -2048,3 +2048,13 @@ a.file-chip:hover svg { color: var(--accent); }
 .client-preview-banner { display: flex; align-items: center; gap: 8px; background: var(--accent-tint); border: 1px solid var(--accent); border-radius: 10px; padding: 10px 14px; font-size: 13px; font-weight: 500; color: #9a3412; }
 .client-ship-note { background: var(--panel); border-left: 3px solid var(--accent); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--ink-2); }
 .client-ship-note b { color: var(--ink); }
+
+/* Customers: client logins + client-only shell */
+.cust-clients { display: flex; flex-direction: column; gap: 6px; }
+.cust-client-row { display: flex; align-items: center; gap: 10px; padding: 9px 8px; border-bottom: 1px solid var(--hairline-soft); }
+.cc-email { flex: 1; font-size: 13px; color: var(--ink); }
+.cc-tag { font-size: 11px; font-weight: 600; color: var(--accent); background: var(--accent-tint); border-radius: 999px; padding: 2px 9px; }
+.cust-client-link { display: flex; align-items: center; gap: 8px; padding: 10px 8px; flex-wrap: wrap; }
+.cust-client-link select { font-family: var(--ui); font-size: 13px; padding: 7px 10px; border: 1px solid var(--hairline); border-radius: 8px; background: #fff; color: var(--ink); }
+.pm-hint { display: block; font-size: 11px; color: var(--ink-3); margin-top: 4px; line-height: 1.4; }
+.client-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--hairline); }

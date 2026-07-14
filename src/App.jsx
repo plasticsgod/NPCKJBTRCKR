@@ -45,6 +45,8 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [recovery, setRecovery] = useState(isAuthActionHash);
   const [isInternal, setIsInternal] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+  const [roleReady, setRoleReady] = useState(false);
 
   const [jobs, setJobs] = useState([]);
   const [plasticJobs, setPlasticJobs] = useState([]);
@@ -115,12 +117,19 @@ export default function App() {
   // Decide what the signed-in person can see. Core team is known instantly;
   // invited "members" (full access) are confirmed via the same rule RLS uses.
   useEffect(() => {
-    if (!session) { setIsInternal(false); return; }
+    if (!session) { setIsInternal(false); setIsClient(false); setRoleReady(false); return; }
     const email = (session.user.email || "").toLowerCase();
     const known = KNOWN_INTERNAL.includes(email);
     setIsInternal(known);
-    supabase.rpc("app_is_internal").then(({ data, error }) => {
-      if (!error && typeof data === "boolean") setIsInternal(known || data);
+    if (known) { setIsClient(false); setRoleReady(true); return; }
+    Promise.all([
+      supabase.rpc("app_is_internal"),
+      supabase.rpc("app_is_client"),
+    ]).then(([int, cli]) => {
+      const internal = !int.error && int.data === true;
+      setIsInternal(internal);
+      setIsClient(!internal && !cli.error && cli.data === true);
+      setRoleReady(true);
     });
   }, [session]);
 
@@ -299,6 +308,23 @@ export default function App() {
       />
     );
   if (!session) return <Auth />;
+  if (session && !roleReady) return <div className="screen-center muted">Loading…</div>;
+
+  // Clients see ONLY the estimator — no sidebar, no other pages.
+  if (isClient) {
+    return (
+      <div className="app client-app">
+        <header className="header client-header">
+          <span className="brand-name">NutraPack</span>
+          <button className="link" onClick={() => supabase.auth.signOut()}>Sign out</button>
+        </header>
+        <main className="main">
+          <PlasticsEstimator userEmail={session.user.email} clientMode />
+        </main>
+        <Toaster />
+      </div>
+    );
+  }
 
   return (
     <div className="app">
