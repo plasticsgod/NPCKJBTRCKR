@@ -6,18 +6,18 @@ const DONE = ["Shipped", "Delivered"]; // counts as "printed"
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const JOB_STATUS_COLOR = {
-  "Not Submitted": "#9aa0a6",
-  "Waiting for proofs and approval": "#e0a000",
-  "In Queue": "#3b82f6",
+  "Not Submitted": "#b8b8b8",
+  "Waiting for proofs and approval": "#f0b429",
+  "In Queue": "#e85aa0",
   "Printing": "#e2445c",
-  "Shipped": "#14a07a",
-  "Delivered": "#2f9e44",
+  "Shipped": "#3f8ae0",
+  "Delivered": "#00c875",
 };
 const TASK_STATUS_COLOR = {
   "To do": "#8e8e93",
   "In progress": "#0a84ff",
   "Stuck": "#e2445c",
-  "Done": "#34c759",
+  "Done": "#00c875",
 };
 
 export default function Dashboard({ jobs = [] }) {
