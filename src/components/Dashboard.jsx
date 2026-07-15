@@ -14,10 +14,10 @@ const JOB_STATUS_COLOR = {
   "Delivered": "#2f9e44",
 };
 const TASK_STATUS_COLOR = {
-  "To do": "#6b7280",
-  "In progress": "#d98a00",
-  "Stuck": "#d64545",
-  "Done": "#2f9e44",
+  "To do": "#8e8e93",
+  "In progress": "#0a84ff",
+  "Stuck": "#e2445c",
+  "Done": "#34c759",
 };
 
 export default function Dashboard({ jobs = [] }) {
