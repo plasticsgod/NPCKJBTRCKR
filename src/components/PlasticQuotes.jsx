@@ -97,10 +97,8 @@ export default function PlasticQuotes() {
             <span className="page-meta">{quotes.length} {quotes.length === 1 ? "quote" : "quotes"}</span>
           </div>
           {quotes.length > 0 && (
-            <div className="page-head-right">
-              <input className="search-input" type="search" placeholder="Search customer or #…"
-                value={query} onChange={(e) => setQuery(e.target.value)} />
-            </div>
+            <input className="search-input page-search" type="search" placeholder="Search customer or #…"
+              value={query} onChange={(e) => setQuery(e.target.value)} />
           )}
         </div>
 

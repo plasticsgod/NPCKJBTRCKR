@@ -66,13 +66,13 @@ export default function WorkOrders({
             <h1 className="page-title">Label work orders</h1>
             <span className="page-meta">{filtered.length} {filtered.length === 1 ? "order" : "orders"}</span>
           </div>
+          <input className="search-input page-search" type="search"
+            placeholder="Search job, customer, PO…"
+            value={query} onChange={(e) => setQuery(e.target.value)} list="customers" />
+          <datalist id="customers">
+            {customers.map((c) => <option key={c} value={c} />)}
+          </datalist>
           <div className="page-head-right">
-            <input className="search-input" type="search"
-              placeholder="Search job, customer, PO…"
-              value={query} onChange={(e) => setQuery(e.target.value)} list="customers" />
-            <datalist id="customers">
-              {customers.map((c) => <option key={c} value={c} />)}
-            </datalist>
             {deleteMode && <button className="btn-ghost" onClick={exitDeleteMode}>Cancel</button>}
             <button className="btn-ghost del-btn" disabled={deleteMode && count === 0} onClick={onDeleteClick}>
               {deleteMode ? (count ? `Delete (${count})` : "Select orders…") : "Delete"}

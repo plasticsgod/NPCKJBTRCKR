@@ -213,9 +213,9 @@ export default function Customers() {
             <h1 className="page-title">Customers</h1>
             <span className="page-meta">{customers.length} {customers.length === 1 ? "company" : "companies"}</span>
           </div>
+          <input className="search-input page-search" type="search" placeholder="Search customers…"
+            value={query} onChange={(e) => setQuery(e.target.value)} />
           <div className="page-head-right">
-            <input className="search-input" type="search" placeholder="Search customers…"
-              value={query} onChange={(e) => setQuery(e.target.value)} />
             <button className="btn-accent" onClick={() => setEditing({})}>+ New customer</button>
           </div>
         </div>
