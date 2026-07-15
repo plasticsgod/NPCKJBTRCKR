@@ -1090,7 +1090,7 @@ button {
 .proj-list { display: flex; flex-direction: column; gap: 20px; }
 
 .proj-group { background: #fff; border: 1px solid var(--hairline); border-radius: 12px; overflow: hidden; }
-.proj-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--panel); border-left: 3px solid var(--accent); }
+.proj-head { display: flex; align-items: center; gap: 10px; padding: 16px 18px 4px; }
 .proj-collapse { background: none; border: none; cursor: pointer; font-size: 10px; color: var(--ink-3); width: 18px; }
 .proj-name { font-family: var(--ui); font-size: 16px; font-weight: 600; letter-spacing: 0; text-transform: none; cursor: default; }
 .proj-name-input { font-family: var(--ui); font-size: 16px; font-weight: 600; letter-spacing: 0; text-transform: none; border: 1px solid var(--accent); border-radius: 4px; padding: 2px 6px; background: #fff; }
@@ -1104,11 +1104,11 @@ button {
 /* Task table */
 .ptable-wrap { overflow-x: auto; }
 .ptable { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 520px; table-layout: fixed; }
-.ptable thead th { text-align: left; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); padding: 10px 12px; border-bottom: 1px solid var(--hairline-soft); background: var(--panel); }
+.ptable thead th { text-align: left; font-family: var(--ui); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; padding: 8px 12px; border-bottom: 1px solid var(--hairline-soft); }
 .ptask-row td { padding: 0; border-bottom: 1px solid var(--hairline-soft); vertical-align: middle; }
-.ptask-row:hover td { background: #faf9f7; }
+.ptask-row:hover td { background: var(--panel); }
 .ptask-row { cursor: pointer; }
-.col-item { width: 100%; padding: 12px 14px !important; }
+.col-item { width: 100%; padding: 15px 14px !important; }
 .item-cell { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .person-cell { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .item-cell .task-title,
@@ -1567,7 +1567,7 @@ a.file-chip:hover svg { color: var(--accent); }
 .proj-check { accent-color: var(--accent); cursor: pointer; margin-right: 8px; }
 .ptask-row.selected { background: rgba(255,91,31,.07); }
 .proj-name { cursor: text; }
-.proj-name:hover { text-decoration: underline dotted; text-underline-offset: 3px; }
+.proj-name:hover { color: var(--ink-2); }
 .task-title { cursor: text; }
 .task-title:hover { text-decoration: underline dotted; text-underline-offset: 3px; }
 
@@ -2116,3 +2116,7 @@ a.file-chip:hover svg { color: var(--accent); }
 .add-item-plus { width: 18px; height: 18px; border-radius: 6px; border: 1.5px dashed var(--accent); color: var(--accent); display: inline-flex; align-items: center; justify-content: center; font-size: 13px; line-height: 1; }
 .add-item-input { width: 100%; max-width: 420px; font-family: var(--ui); font-size: 14px; padding: 9px 12px; border: 1px solid var(--accent); border-radius: 8px; background: #fff; color: var(--ink); }
 .add-item-input:focus { outline: 2px solid var(--accent-tint); }
+
+/* Header checkbox: reveal on hover so the title reads clean by default */
+.proj-check { opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
+.proj-head:hover .proj-check, .proj-check:checked { opacity: 1; }
