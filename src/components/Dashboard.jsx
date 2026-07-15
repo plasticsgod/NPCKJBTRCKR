@@ -9,7 +9,7 @@ const JOB_STATUS_COLOR = {
   "Not Submitted": "#9aa0a6",
   "Waiting for proofs and approval": "#e0a000",
   "In Queue": "#3b82f6",
-  "Printing": "#ff5b1f",
+  "Printing": "#e2445c",
   "Shipped": "#14a07a",
   "Delivered": "#2f9e44",
 };
