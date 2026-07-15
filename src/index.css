@@ -2125,3 +2125,21 @@ a.file-chip:hover svg { color: var(--accent); }
 /* Shared surface: project header right cluster + WO/quote card float */
 .proj-head-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 .proj-progress > span { display: block; height: 100%; background: var(--primary); border-radius: 999px; transition: width var(--dur) var(--ease); }
+
+/* ==== Shared titled-card surface (Work Orders / Customers / Quotes) ======= */
+.page-card { background: #fff; border: 1px solid var(--hairline); border-radius: 14px; overflow: hidden; box-shadow: 0 1px 2px rgba(20,17,13,.03), 0 8px 22px rgba(20,17,13,.06); }
+.page-head { display: flex; align-items: center; gap: 14px; padding: 15px 20px 13px; flex-wrap: wrap; }
+.page-head-left { display: flex; align-items: baseline; gap: 12px; }
+.page-title { font-family: var(--ui); font-size: 18px; font-weight: 600; letter-spacing: -.01em; margin: 0; }
+.page-meta { font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+.page-head-right { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.page-head-right .search-input { min-width: 200px; }
+/* table/list sits flush inside the card (no double border/shadow) */
+.page-card .table-wrap { border: none; border-radius: 0; box-shadow: none; }
+.page-card .quotes-list { padding: 0 4px 4px; }
+@media (max-width: 640px) {
+  .page-head-right { width: 100%; margin-left: 0; }
+  .page-head-right .search-input { flex: 1; min-width: 0; }
+}
+.page-card .cust-table { padding: 0 12px 10px; }
+.page-card .cust-thead { padding: 12px 12px 10px; }
