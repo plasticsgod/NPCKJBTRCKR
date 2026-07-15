@@ -1272,8 +1272,8 @@ button {
 
 /* Status pills for project tasks */
 .tpill { display: block; width: 100%; min-height: 34px; font-family: var(--ui); font-size: 13px; font-weight: 600; letter-spacing: .01em; text-transform: none; padding: 8px 10px; border-radius: 7px; border: none; cursor: pointer; appearance: none; -webkit-appearance: none; text-align: center; text-align-last: center; color: #fff; }
-  .tpill-to-do        { background: #8e8e93; }
-  .tpill-in-progress  { background: #0a84ff; }
+  .tpill-to-do        { background: #b8b8b8; }
+  .tpill-in-progress  { background: #fdab3d; }
   .tpill-stuck        { background: #e2445c; }
   .tpill-done         { background: #00c875; }
 
