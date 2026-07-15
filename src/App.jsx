@@ -337,6 +337,7 @@ export default function App() {
         onSignOut={() => supabase.auth.signOut()}
         onSearch={() => setSearchOpen(true)}
         onOpenTask={openTaskFromSearch}
+        onHome={() => isInternal && setPage("dashboard")}
       />
 
       <Sidebar
