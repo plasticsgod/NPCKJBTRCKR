@@ -28,6 +28,7 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
   const isNew = !job.id;
   const [tab, setTab] = useState("details");
   const [form, setForm] = useState({ ...EMPTY, ...job });
+  const [stagedArtwork, setStagedArtwork] = useState([]); // links added before the job exists
 
   function set(key, value) {
     if (key === "status") {
@@ -51,6 +52,7 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
       print_qty: Number(form.print_qty) || 0,
       cost: form.cost === "" || form.cost == null ? null : Number(form.cost) || 0,
       revenue: form.revenue === "" || form.revenue == null ? null : Number(form.revenue) || 0,
+      __stagedArtwork: isNew ? stagedArtwork : [],
     });
   }
 
@@ -77,7 +79,7 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
           <div className="modal-tab-bar">
             <button type="button" className={tab === "details" ? "mtab on" : "mtab"} onClick={() => setTab("details")}>Details</button>
             {!isNew && <button type="button" className={tab === "proofs" ? "mtab on" : "mtab"} onClick={() => setTab("proofs")}>Proofs</button>}
-            {!isNew && <button type="button" className={tab === "artwork" ? "mtab on" : "mtab"} onClick={() => setTab("artwork")}>Artwork</button>}
+            <button type="button" className={tab === "artwork" ? "mtab on" : "mtab"} onClick={() => setTab("artwork")}>Artwork</button>
           </div>
           <button type="button" className="link" onClick={onClose}>Close</button>
         </div>
@@ -179,7 +181,7 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
         )}
 
         {tab === "proofs" && <ProofsPanel jobId={job.id} jobTitle={form.job_title} customer={form.brand} />}
-        {tab === "artwork" && <ArtworkPanel jobId={job.id} />}
+        {tab === "artwork" && <ArtworkPanel jobId={job.id} staged={stagedArtwork} setStaged={setStagedArtwork} />}
 
         <div className="modal-foot">
           <button type="button" className="btn-ghost" onClick={onClose}>Cancel</button>
@@ -319,8 +321,12 @@ function ProofsPanel({ jobId, jobTitle, customer }) {
 }
 
 // ---- Artwork panel (links only) --------------------------------------------
-function ArtworkPanel({ jobId }) {
-  const [links, setLinks] = useState([]);
+// Works in two modes: for an existing job it reads/writes job_artwork directly;
+// for a new job (no jobId) it stages links in memory, and JobModal saves them
+// once the job is created.
+function ArtworkPanel({ jobId, staged, setStaged }) {
+  const isStaged = !jobId;
+  const [dbLinks, setDbLinks] = useState([]);
   const [label, setLabel] = useState("");
   const [url, setUrl] = useState("");
   const [userEmail, setUserEmail] = useState("");
@@ -330,26 +336,37 @@ function ArtworkPanel({ jobId }) {
   }, []);
 
   const load = useCallback(async () => {
+    if (isStaged) return;
     const { data } = await supabase
       .from("job_artwork").select("*").eq("job_id", jobId).order("created_at", { ascending: false });
-    setLinks(data ?? []);
-  }, [jobId]);
+    setDbLinks(data ?? []);
+  }, [jobId, isStaged]);
 
   useEffect(() => { load(); }, [load]);
 
+  const links = isStaged ? staged : dbLinks;
+
   async function addLink() {
     if (!url.trim()) return;
-    await supabase.from("job_artwork").insert({
-      job_id: jobId,
-      label: label.trim() || "Artwork link",
-      url: url.trim(),
-      added_by: userEmail,
-    });
+    if (isStaged) {
+      setStaged([
+        { id: crypto.randomUUID(), label: label.trim() || "Artwork link", url: url.trim(), added_by: userEmail, _staged: true },
+        ...staged,
+      ]);
+    } else {
+      await supabase.from("job_artwork").insert({
+        job_id: jobId,
+        label: label.trim() || "Artwork link",
+        url: url.trim(),
+        added_by: userEmail,
+      });
+      load();
+    }
     setLabel(""); setUrl("");
-    load();
   }
 
   async function removeLink(id) {
+    if (isStaged) { setStaged(staged.filter((l) => l.id !== id)); return; }
     if (!confirm("Remove this artwork link?")) return;
     await supabase.from("job_artwork").delete().eq("id", id);
     load();
@@ -357,7 +374,10 @@ function ArtworkPanel({ jobId }) {
 
   return (
     <div className="modal-body files-panel">
-      <p className="panel-note">Add links to approved artwork files (Google Drive, Dropbox, etc.). Links are never auto-deleted.</p>
+      <p className="panel-note">
+        Add links to approved artwork files (Google Drive, Dropbox, etc.). Links are never auto-deleted.
+        {isStaged && " These save automatically when you create the job."}
+      </p>
       <div className="artwork-form">
         <label className="field">
           <span>Label</span>
@@ -381,7 +401,7 @@ function ArtworkPanel({ jobId }) {
               <span className="file-icon">🔗</span>
               <div className="file-info">
                 <span className="file-name">{l.label}</span>
-                <span className="file-meta">{l.added_by} · {fmtDate(l.created_at)}</span>
+                <span className="file-meta">{l._staged ? "Pending — saves with the job" : `${l.added_by} · ${fmtDate(l.created_at)}`}</span>
               </div>
               <a href={l.url} target="_blank" rel="noopener noreferrer" className="link">Open</a>
               <button type="button" className="link danger" onClick={() => removeLink(l.id)}>Remove</button>
