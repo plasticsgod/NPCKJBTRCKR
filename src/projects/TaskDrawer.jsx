@@ -191,6 +191,7 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
   const [newPost, setNewPost] = useState("");
   const [newImages, setNewImages] = useState([]);
   const [newFiles, setNewFiles] = useState([]);
+  const [dragOver, setDragOver] = useState(false);
   const [posting, setPosting] = useState(false);
 
   // --- Resizable drawer width (remembered in this browser) -------------------
@@ -367,7 +368,21 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
             <p className="feed-label">Updates</p>
 
             {/* Compose new post */}
-            <div className="compose-box">
+            <div
+              className={"compose-box" + (dragOver ? " dropping" : "")}
+              onDragOver={(e) => { e.preventDefault(); if (!posting) setDragOver(true); }}
+              onDragLeave={(e) => { if (e.currentTarget === e.target) setDragOver(false); }}
+              onDrop={(e) => {
+                e.preventDefault(); setDragOver(false);
+                if (posting) return;
+                const dropped = Array.from(e.dataTransfer.files || []);
+                if (!dropped.length) return;
+                const imgs = dropped.filter((f) => f.type.startsWith("image/"));
+                const docs = dropped.filter((f) => !f.type.startsWith("image/"));
+                if (imgs.length) setNewImages((prev) => [...prev, ...imgs].slice(0, MAX_IMAGES));
+                if (docs.length) setNewFiles((prev) => [...prev, ...docs].slice(0, MAX_FILES));
+              }}
+            >
               <span className="avatar sm" style={avatarStyle(userEmail)}>{nameInitials(userEmail)}</span>
               <div className="compose-right">
                 <MentionTextarea value={newPost} onChange={setNewPost} users={users}
@@ -379,6 +394,7 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
                   </button>
                 </div>
               </div>
+              {dragOver && <div className="compose-drophint">Drop files to attach</div>}
             </div>
 
             {posts.length === 0 && <p className="muted small feed-empty">No updates yet. Be the first to post.</p>}
