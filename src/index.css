@@ -2156,3 +2156,8 @@ a.file-chip:hover svg { color: var(--accent); }
 @media (max-width: 640px) {
   .page-search { flex: 1 1 100%; order: 3; }
 }
+
+/* Always-visible reply box: subtle when idle, full composer when focused */
+.reply-compose { margin-top: 6px; }
+.reply-compose:not(.open) .compose-ta { min-height: 0; background: var(--panel); border-radius: 999px; padding: 8px 14px; }
+.reply-compose.open .compose-foot { gap: 10px; justify-content: flex-end; }
