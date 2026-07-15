@@ -552,10 +552,82 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
   );
 }
 
+function fileIcon(name = "") {
+  const ext = name.split(".").pop().toLowerCase();
+  if (["png", "jpg", "jpeg", "gif", "webp", "heic"].includes(ext)) return "photo";
+  if (["xls", "xlsx", "csv", "numbers"].includes(ext)) return "spreadsheet";
+  if (["pdf"].includes(ext)) return "pdf";
+  if (["doc", "docx", "pages", "txt", "rtf"].includes(ext)) return "doc";
+  return "file";
+}
+const fileIconSvg = {
+  photo: "M4 5h16v14H4z M8 11l2 2 3-4 3 5H6z",
+  spreadsheet: "M4 4h16v16H4z M4 9h16 M9 9v11 M15 9v11",
+  pdf: "M6 3h9l3 3v15H6z M14 3v4h4",
+  doc: "M6 3h9l3 3v15H6z M9 12h6 M9 16h6",
+  file: "M6 3h9l3 3v15H6z",
+};
+
+function ProjectFiles({ tasks }) {
+  const [entries, setEntries] = useState(null);
+  const bucket = supabase.storage.from("task-images");
+  const url = (p) => bucket.getPublicUrl(p).data.publicUrl;
+  const titleOf = {};
+  tasks.forEach((t) => { titleOf[t.id] = t.title; });
+
+  useEffect(() => {
+    const ids = tasks.map((t) => t.id);
+    if (ids.length === 0) { setEntries([]); return; }
+    supabase.from("task_posts").select("task_id, author, created_at, images, files")
+      .in("task_id", ids).order("created_at", { ascending: false })
+      .then(({ data }) => {
+        const out = [];
+        (data || []).forEach((p) => {
+          (p.files || []).forEach((f) =>
+            out.push({ name: f.name, path: f.path, author: p.author, date: p.created_at, task: titleOf[p.task_id] }));
+          (p.images || []).forEach((path, i) =>
+            out.push({ name: `Image ${i + 1}`, path, image: true, author: p.author, date: p.created_at, task: titleOf[p.task_id] }));
+        });
+        setEntries(out);
+      });
+  }, [tasks]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (entries === null) return <div className="muted proj-files-loading">Loading files…</div>;
+  if (entries.length === 0)
+    return <div className="proj-files-empty">No files yet. Files attached to any task's updates show up here.</div>;
+
+  return (
+    <div className="proj-files">
+      {entries.map((e, i) => {
+        const ic = e.image ? "photo" : fileIcon(e.name);
+        return (
+          <a className="pf-card" key={i} href={url(e.path)} target="_blank" rel="noreferrer" title={`Download ${e.name}`}>
+            <span className="pf-ic">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d={fileIconSvg[ic]} />
+              </svg>
+            </span>
+            <span className="pf-meta">
+              <span className="pf-name">{e.name}</span>
+              <span className="pf-sub">{displayName(e.author)} · {e.task || "—"} · {new Date(e.date).toLocaleDateString()}</span>
+            </span>
+            <svg className="pf-dl" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 3v12m0 0 4-4m-4 4-4-4M4 19h16" />
+            </svg>
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
 function ProjectGroup({ project, tasks, users, userEmail, canEdit = true, solo = false, progress, selected, onToggleSelect, selectedTasks, onToggleTask, onUpdateName, onAddTask, onOpenTask, onUpdateTask, activity, reads, draggingTaskId, onDragTaskStart, onDragTaskEnd, isDropTarget, onDragOverProject, onDropTask }) {
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState(project.name);
   const [collapsed, setCollapsed] = useState(false);
+  const [tab, setTab] = useState("tasks"); // "tasks" | "files"
 
   function saveName() {
     setEditingName(false);
@@ -612,6 +684,15 @@ function ProjectGroup({ project, tasks, users, userEmail, canEdit = true, solo =
         {canEdit && <ProjectMembers project={project} />}
       </div>
       {(solo || !collapsed) && (
+        <div className="proj-tabs">
+          <button type="button" className={"proj-tab" + (tab === "tasks" ? " on" : "")} onClick={() => setTab("tasks")}>Tasks</button>
+          <button type="button" className={"proj-tab" + (tab === "files" ? " on" : "")} onClick={() => setTab("files")}>Files</button>
+        </div>
+      )}
+      {(solo || !collapsed) && tab === "files" && (
+        <ProjectFiles tasks={tasks} />
+      )}
+      {(solo || !collapsed) && tab === "tasks" && (
         <div className="ptable-wrap">
           <table className="ptable">
             <thead>
