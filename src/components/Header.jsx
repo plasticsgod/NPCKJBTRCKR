@@ -6,7 +6,7 @@ import { displayName, nameInitials, avatarStyle } from "../projects/userMap";
 
 const TITLES = { work_orders: "Work Orders", dashboard: "Dashboard", plastics: "Plastics Estimator", projects: "Projects" };
 
-export default function Header({ page, email, onMenu, onSignOut, onSearch, canInvite = true, onOpenTask }) {
+export default function Header({ page, email, onMenu, onSignOut, onSearch, canInvite = true, onOpenTask, onHome }) {
   return (
     <header className="header">
       <button className="burger" onClick={onMenu} aria-label="Open menu">
@@ -14,8 +14,10 @@ export default function Header({ page, email, onMenu, onSignOut, onSearch, canIn
       </button>
 
       <div className="brand">
-        <img className="brand-mark" src="/images/favicon.png" alt="NutraPack logo" />
-        <span className="brand-name">NutraPack App</span>
+        <button className="brand-home" onClick={onHome} aria-label="Go to dashboard" title="Dashboard">
+          <img className="brand-mark" src="/images/favicon.png" alt="NutraPack logo" />
+          <span className="brand-name">NutraPack App</span>
+        </button>
         <span className="brand-sub">{TITLES[page]}</span>
       </div>
 
