@@ -834,19 +834,22 @@ button {
   color: #fff;
 }
 .stat-label {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-3);
+  font-family: var(--ui);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--ink-2);
 }
 .stat-value {
-  font-family: var(--display);
+  font-family: var(--ui);
   font-size: 40px;
-  line-height: 1;
-  letter-spacing: 0.01em;
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: var(--ink);
 }
-.stat-value.money { font-size: clamp(26px, 4.4vw, 36px); }
+.stat-value.money { font-size: clamp(28px, 4.4vw, 38px); }
 .stat-foot {
   font-size: 12px;
   color: var(--ink-3);
@@ -908,7 +911,7 @@ button {
 .donut-wrap { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
 .donut { width: 140px; height: 140px; flex: 0 0 auto; }
 .donut-total { font-family: var(--display); font-size: 26px; fill: var(--ink); }
-.donut-sub { font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; fill: var(--ink-3); }
+.donut-sub { font-family: var(--ui); font-size: 10px; font-weight: 500; letter-spacing: 0; text-transform: none; fill: var(--ink-3); }
 .donut-legend { display: flex; flex-direction: column; gap: 9px; flex: 1 1 auto; min-width: 140px; }
 .donut-leg { display: flex; align-items: center; gap: 9px; font-size: 13px; }
 .donut-dot { width: 10px; height: 10px; border-radius: 3px; flex: 0 0 auto; }
@@ -956,7 +959,7 @@ button {
 .estimator { display: flex; flex-direction: column; gap: 20px; }
 .est-toolbar { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
 .est-toolbar .fld { display: flex; flex-direction: column; gap: 6px; min-width: 280px; }
-.est-toolbar label { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.est-toolbar label { font-family: var(--ui); font-size: 12px; font-weight: 500; letter-spacing: -.01em; text-transform: none; color: var(--ink-2); }
 .est-toolbar .inp { font-family: var(--ui); font-size: 14px; padding: 10px 12px; border: 1px solid var(--hairline); border-radius: 8px; background: #fff; }
 .est-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
 .est-col { display: flex; flex-direction: column; gap: 20px; }
@@ -1005,15 +1008,15 @@ button {
 .qx { background: none; border: none; cursor: pointer; color: var(--ink-3); font-size: 13px; }
 .qx:hover { color: #b3402a; }
 .qfoot { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; gap: 12px; flex-wrap: wrap; }
-.qtotal { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); }
+.qtotal { font-family: var(--ui); font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: -.01em; color: var(--ink-2); }
 .qtotal b { font-family: var(--display); font-size: 19px; color: var(--ink); margin-left: 10px; }
 
 .price-table { min-width: 920px; font-size: 13px; }
-.price-table .grouprow td { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); background: var(--panel); padding: 8px 12px; }
+.price-table .grouprow td { font-family: var(--ui); font-size: 11px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--ink-3); background: var(--panel); padding: 9px 12px; }
 .price-table .hero-col { font-weight: 600; }
 .tar-inp { width: 80px; font-family: var(--ui); font-size: 13px; padding: 5px 7px; border: 1px solid var(--hairline); border-radius: 6px; text-align: right; }
 
-.est-footer { font-family: var(--mono); font-size: 11px; color: var(--ink-3); text-align: center; text-transform: uppercase; letter-spacing: .04em; padding: 12px 0 4px; }
+.est-footer { font-family: var(--ui); font-size: 12px; color: var(--ink-3); text-align: center; text-transform: none; letter-spacing: -.01em; padding: 12px 0 4px; }
 
 .modal-wide { max-width: 720px; }
 .edit-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
@@ -1983,7 +1986,7 @@ a.file-chip:hover svg { color: var(--accent); }
    burger = app section; rail = which project (sub-nav inside Projects) */
 .proj-layout { display: grid; grid-template-columns: 218px 1fr; align-items: start; }
 .proj-rail { position: sticky; top: 0; align-self: start; padding: 4px 16px 4px 2px; border-right: 1px solid var(--hairline); max-height: calc(100vh - 96px); overflow-y: auto; }
-.proj-rail-head { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; padding: 4px 10px 8px; }
+.proj-rail-head { font-family: var(--ui); font-size: 11px; letter-spacing: .02em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; padding: 4px 10px 10px; }
 .proj-rail-list { display: flex; flex-direction: column; gap: 2px; }
 .proj-rail-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; text-align: left; border: none; background: transparent; cursor: pointer; padding: 8px 10px; border-radius: 8px; font-family: var(--ui); font-size: 13px; color: var(--ink-2); transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .proj-rail-item:hover { background: var(--panel); color: var(--ink); }
