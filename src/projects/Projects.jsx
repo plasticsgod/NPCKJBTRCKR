@@ -644,6 +644,11 @@ function ProjectGroup({ project, tasks, users, userEmail, canEdit = true, solo =
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState("");
 
+  const doneCount = tasks.filter((t) => (t.status || "To do") === "Done").length;
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const overdueCount = tasks.filter((t) => t.due_date && t.due_date < todayISO && (t.status || "To do") !== "Done").length;
+  const pct = tasks.length ? Math.round((doneCount / tasks.length) * 100) : 0;
+
   function saveName() {
     setEditingName(false);
     onUpdateName(project.id, name);
@@ -699,21 +704,15 @@ function ProjectGroup({ project, tasks, users, userEmail, canEdit = true, solo =
           <span className="proj-name" title={canEdit ? "Double-click to rename" : undefined}
             onDoubleClick={canEdit ? () => setEditingName(true) : undefined}>{project.name}</span>
         )}
-        {canEdit && <ProjectMembers project={project} />}
+        <div className="proj-head-right">
+          {(solo || !collapsed) && tasks.length > 0 && (
+            <span className="proj-progress" title={`${doneCount} of ${tasks.length} done${overdueCount ? ` · ${overdueCount} overdue` : ""}`}>
+              <span style={{ width: pct + "%" }} />
+            </span>
+          )}
+          {canEdit && <ProjectMembers project={project} />}
+        </div>
       </div>
-      {(solo || !collapsed) && (() => {
-        const done = tasks.filter((t) => (t.status || "To do") === "Done").length;
-        const today = new Date().toISOString().slice(0, 10);
-        const overdue = tasks.filter((t) => t.due_date && t.due_date < today && (t.status || "To do") !== "Done").length;
-        const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
-        return (
-          <div className="proj-substats">
-            <span className="proj-stat">{tasks.length} {tasks.length === 1 ? "item" : "items"} · {done} done</span>
-            <span className="proj-progress"><span style={{ width: pct + "%" }} /></span>
-            {overdue > 0 && <span className="proj-stat overdue">{overdue} overdue</span>}
-          </div>
-        );
-      })()}
       {(solo || !collapsed) && (
         <div className="proj-tabs">
           <button type="button" className={"proj-tab" + (tab === "tasks" ? " on" : "")} onClick={() => setTab("tasks")}>Tasks</button>
