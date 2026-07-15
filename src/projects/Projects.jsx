@@ -125,6 +125,18 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
     if (data) setOpenTaskId(data.id);
   }
 
+  // Inline quick-add: create with the typed title, no drawer, so you can rattle
+  // off several in a row.
+  async function addTaskInline(projectId, title) {
+    const t = title.trim();
+    if (!t) return;
+    await supabase.from("tasks").insert({
+      project_id: projectId, title: t, owners: [],
+      sort_order: tasks.filter((x) => x.project_id === projectId).length,
+    });
+    load();
+  }
+
   async function updateTask(id, fields) {
     // Reflect the change instantly; realtime reconciles, revert on error.
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...fields } : t)));
@@ -469,6 +481,7 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
               onToggleTask={toggleTask}
               onUpdateName={updateProjectName}
               onAddTask={addTask}
+              onAddTaskInline={addTaskInline}
               onOpenTask={handleOpenTask}
               onUpdateTask={updateTask}
               activity={activity}
@@ -623,11 +636,13 @@ function ProjectFiles({ tasks }) {
   );
 }
 
-function ProjectGroup({ project, tasks, users, userEmail, canEdit = true, solo = false, progress, selected, onToggleSelect, selectedTasks, onToggleTask, onUpdateName, onAddTask, onOpenTask, onUpdateTask, activity, reads, draggingTaskId, onDragTaskStart, onDragTaskEnd, isDropTarget, onDragOverProject, onDropTask }) {
+function ProjectGroup({ project, tasks, users, userEmail, canEdit = true, solo = false, progress, selected, onToggleSelect, selectedTasks, onToggleTask, onUpdateName, onAddTask, onAddTaskInline, onOpenTask, onUpdateTask, activity, reads, draggingTaskId, onDragTaskStart, onDragTaskEnd, isDropTarget, onDragOverProject, onDropTask }) {
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState(project.name);
   const [collapsed, setCollapsed] = useState(false);
   const [tab, setTab] = useState("tasks"); // "tasks" | "files"
+  const [adding, setAdding] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
 
   function saveName() {
     setEditingName(false);
@@ -668,8 +683,12 @@ function ProjectGroup({ project, tasks, users, userEmail, canEdit = true, solo =
             aria-label={`Select project ${project.name}`}
           />
         )}
-        <button className="proj-collapse" onClick={() => setCollapsed(!collapsed)} style={solo ? { display: "none" } : undefined}>
-          {collapsed ? "▶" : "▼"}
+        <button className="proj-collapse" onClick={() => setCollapsed(!collapsed)} style={solo ? { display: "none" } : undefined}
+          aria-label={collapsed ? "Expand" : "Collapse"}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+            strokeLinecap="round" strokeLinejoin="round" style={{ transform: collapsed ? "rotate(-90deg)" : "none", transition: "transform var(--dur-fast) var(--ease)" }} aria-hidden="true">
+            <path d="M6 9l6 6 6-6" />
+          </svg>
         </button>
         {editingName && canEdit ? (
           <input className="proj-name-input" value={name} autoFocus
@@ -680,9 +699,21 @@ function ProjectGroup({ project, tasks, users, userEmail, canEdit = true, solo =
           <span className="proj-name" title={canEdit ? "Double-click to rename" : undefined}
             onDoubleClick={canEdit ? () => setEditingName(true) : undefined}>{project.name}</span>
         )}
-        <span className="proj-count">{tasks.length} {tasks.length === 1 ? "item" : "items"}</span>
         {canEdit && <ProjectMembers project={project} />}
       </div>
+      {(solo || !collapsed) && (() => {
+        const done = tasks.filter((t) => (t.status || "To do") === "Done").length;
+        const today = new Date().toISOString().slice(0, 10);
+        const overdue = tasks.filter((t) => t.due_date && t.due_date < today && (t.status || "To do") !== "Done").length;
+        const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
+        return (
+          <div className="proj-substats">
+            <span className="proj-stat">{tasks.length} {tasks.length === 1 ? "item" : "items"} · {done} done</span>
+            <span className="proj-progress"><span style={{ width: pct + "%" }} /></span>
+            {overdue > 0 && <span className="proj-stat overdue">{overdue} overdue</span>}
+          </div>
+        );
+      })()}
       {(solo || !collapsed) && (
         <div className="proj-tabs">
           <button type="button" className={"proj-tab" + (tab === "tasks" ? " on" : "")} onClick={() => setTab("tasks")}>Tasks</button>
@@ -735,8 +766,25 @@ function ProjectGroup({ project, tasks, users, userEmail, canEdit = true, solo =
               })}
               {canEdit && (
                 <tr className="add-item-row">
-                  <td colSpan={5}>
-                    <button className="add-item-btn" onClick={() => onAddTask(project.id)}>+ Add item</button>
+                  <td className="col-check"></td>
+                  <td colSpan={4}>
+                    {adding ? (
+                      <input className="add-item-input" autoFocus value={newTitle}
+                        placeholder="Task name, then Enter"
+                        onChange={(e) => setNewTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            const v = newTitle.trim();
+                            if (v) { onAddTaskInline(project.id, v); setNewTitle(""); }
+                          }
+                          if (e.key === "Escape") { setAdding(false); setNewTitle(""); }
+                        }}
+                        onBlur={() => { if (!newTitle.trim()) setAdding(false); }} />
+                    ) : (
+                      <button className="add-item-btn" onClick={() => setAdding(true)}>
+                        <span className="add-item-plus">+</span> Add a task…
+                      </button>
+                    )}
                   </td>
                 </tr>
               )}
