@@ -1043,21 +1043,22 @@ button {
 .chk-col { width: 40px; text-align: center; }
 .chk-col input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent); }
 .row.selected td { background: #fff3ec; }
-.del-btn { color: #b3402a; border-color: #e8c4b8; }
-.del-btn:not(:disabled):hover { background: #fff3ec; border-color: #b3402a; }
+.del-btn { background: rgba(226, 68, 92, 0.12); color: #d70015; }
+.del-btn:not(:disabled):hover { background: rgba(226, 68, 92, 0.22); }
 .del-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .btn-danger {
-  background: #b3402a;
+  background: #e2445c;
   color: #fff;
   border: none;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 14px;
-  padding: 11px 18px;
+  letter-spacing: -0.01em;
+  padding: 10px 18px;
   border-radius: 999px;
 }
-.btn-danger:hover { background: #962f1c; }
+.btn-danger:hover { background: #c92a44; }
 
 .confirm-modal { max-width: 420px; }
 .confirm-modal .modal-body { font-size: 14px; color: var(--ink-2); }

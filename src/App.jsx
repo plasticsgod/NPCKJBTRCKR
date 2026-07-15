@@ -220,19 +220,26 @@ export default function App() {
 
   // --- Create / update / delete ----------------------------------------------
   async function saveJob(job) {
-    job = { ...job, customer_id: await resolveCustomerId(job.brand) };
-    if (job.id) {
-      const { id, created_at, ...fields } = job;
+    const { __stagedArtwork = [], ...jobData } = job;
+    const withCust = { ...jobData, customer_id: await resolveCustomerId(jobData.brand) };
+    if (withCust.id) {
+      const { id, created_at, ...fields } = withCust;
       const { error } = await supabase.from("jobs").update(fields).eq("id", id);
       if (error) return toast.error("Could not save changes: " + error.message);
       setEditing(null);
       toast.success("Work order saved");
     } else {
-      const { data, error } = await supabase.from("jobs").insert(job).select().single();
+      const { data, error } = await supabase.from("jobs").insert(withCust).select().single();
       if (error) return toast.error("Could not create the job: " + error.message);
-      // Keep the modal open in edit mode so Proofs & Artwork become available now.
+      if (__stagedArtwork.length) {
+        const rows = __stagedArtwork.map((a) => ({
+          job_id: data.id, label: a.label, url: a.url, added_by: session.user.email,
+        }));
+        await supabase.from("job_artwork").insert(rows);
+      }
+      // Keep the modal open in edit mode so Proofs & Artwork stay available.
       setEditing(data);
-      toast.success("Job created — you can now add proofs & artwork");
+      toast.success("Job created — proofs & artwork are ready");
     }
     loadJobs();
   }
