@@ -1,22 +1,25 @@
 # NutraPack App
 
-*Last updated: July 13, 2026*
+*Last updated: July 15, 2026*
 
 An internal operations app for the NutraPack team. Built with React + Vite, with
 Supabase as the backend (database, logins, file storage, live updates, and a few
 serverless functions). Every signed-in employee shares the same data, and changes
 appear for everyone in real time.
 
-It's one app with seven sections:
+It's one app with seven sections (plus a separate client-facing view):
 
 - **Dashboard** — YTD labels printed, **revenue and Label Profit** (from per-job
   cost/charge), active orders, top clients, open tasks, and SVG charts (monthly
   trend, orders by status, top clients, tasks donut).
 - **Projects** — a Monday.com-style task tracker: projects, tasks, multiple
   assignees, due dates, and a per-task activity feed with posts, threaded replies,
-  **emoji reactions**, image **and file attachments**, and name-based `@mentions`.
-  Tasks filter/sort, drag between projects, and each project has a **Members**
-  button for guest access.
+  **emoji reactions**, image **and file attachments** (drag files onto the composer),
+  and name-based `@mentions`. Each project has a clean header with a **progress bar**,
+  **Tasks / Files tabs** (Files gathers every attachment across the project's tasks),
+  an inline **"Add a task…"** row, drag between projects, and a **Members** button for
+  guest access. Clicking a task notification jumps to Projects and opens that task on
+  its own project.
 - **Label Work Orders** — the print-job tracker. Create, edit, search, bulk-delete.
   Jobs printed at Sttark link to their Sttark order for automatic status. Each job
   has **cost / client charge / deposit** fields plus **Proofs** (branded cover
@@ -35,8 +38,16 @@ It's one app with seven sections:
 - **Customers** — one record per company (contact name, email, phone, address,
   notes). The list shows each customer's orders, revenue, and deposits owed; the
   detail view pulls together **all** their label orders, plastics orders, and
-  quotes in one place. Jobs and quotes link to a customer automatically, and a new
-  company is created the first time you use its name.
+  quotes in one place, plus a **Client logins** section to link/unlink client
+  accounts. Jobs and quotes link to a customer automatically, and a new company is
+  created the first time you use its name.
+
+**Client estimator (separate view).** External customers can be invited as a
+**Client** (avatar menu → invite). A client signs in and sees **only** a self-serve
+version of the estimator — final prices only (`(factory + tariff) ÷ 0.5`, shipping
+quoted separately), no costs or margins, and their own saved quotes. It reads live
+from internal pricing, so published price changes reach clients with no extra step.
+Internal users can preview it with the **"Client view"** toggle on the estimator.
 
 Across every page: **global search** (⌘K / Ctrl+K), a **notification bell** whose
 entries open the exact task, **toasts**, loading **skeletons**, a consistent
@@ -114,12 +125,14 @@ next.
 23. `add_guest_access.sql` — **the access-control rewrite**: roles, `project_members`,
     and row-level rules (internal team hard-coded; guests see only their projects).
 24. `add_workspace_members.sql` — invited full-access "members."
-25. `add_client_access.sql` — client role + `client_prices` foundation (client UI
-    not built yet).
+25. `add_client_access.sql` — client role foundation (`client_users`, `app_is_client()`).
 26. `add_quote_date.sql` — `quote_date` on saved quotes.
 27. `add_customers.sql` — **customer records**: the `customers` table, `customer_id`
     links on jobs / plastic_jobs / plastic_quotes, and a one-time backfill from the
     company names already in use. Additive — the old text columns are kept.
+28. `add_client_estimator.sql` — **client estimator**: the live `client_products` view
+    (final prices only), `customer_id` on `client_users`, and quote RLS so a client
+    sees/creates only their own company's quotes. Run *after* `add_client_access.sql`.
 
 > **Why so many files?** These are the database changes as they were built up over
 > time. Steps 8 → 9 → 10 in particular *must* run in order: step 10 removes things
@@ -439,7 +452,9 @@ The tables the app uses, and what each is for:
 | `plastic_jobs` | plastics work orders (qty/unit, cost/revenue, origin/port, pricing snapshot) |
 | `project_members` | guest access grants: email ↔ project |
 | `workspace_members` | invited full-access members |
-| `client_users` / `client_prices` | client-role foundation (UI not built yet) |
+| `client_users` | client logins (optional `customer_id`); client estimator is **live** |
+| `client_products` (view) | live final-price list clients see (`(factory+tariff)/0.5`, freight excluded) |
+| `client_prices` | superseded by `client_products` — dead |
 
 Plus two **storage buckets**: a private `job-files` bucket for proof files, and a
 public `task-images` bucket for comment image **and file** attachments (files live
