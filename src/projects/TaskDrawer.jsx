@@ -465,6 +465,13 @@ function KebabMenu({ onEdit, onDelete }) {
 
 function PostCard({ post, users, userEmail, taskTitle, projectName, owners, reactions, onToggleReaction, onDelete, onReply }) {
   const [replyOpen, setReplyOpen] = useState(false);
+  const replyRef = useRef(null);
+
+  // "Reply" button = same as clicking the box: open it and focus the field.
+  function openReply() {
+    setReplyOpen(true);
+    setTimeout(() => replyRef.current?.querySelector("textarea")?.focus(), 0);
+  }
   const [reply, setReply] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -555,14 +562,21 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, owners, reac
         </div>
       )}
 
-      {/* Reactions */}
+      {/* Reactions + reply action */}
       <div className="post-actions">
         <ReactionBar targetType="post" targetId={post.id} reactions={reactions[post.id]}
           userEmail={userEmail} onToggle={onToggleReaction} />
+        <button className="post-reply-btn" onClick={openReply}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M9 17l-5-5 5-5" /><path d="M4 12h11a4 4 0 0 1 4 4v2" />
+          </svg>
+          Reply{replies.length ? ` (${replies.length})` : ""}
+        </button>
       </div>
 
       {/* Always-visible reply box; controls reveal on focus/content */}
-      <div className={"reply-compose" + (replyOpen ? " open" : "")}>
+      <div className={"reply-compose" + (replyOpen ? " open" : "")} ref={replyRef}>
         <span className="avatar sm" style={avatarStyle(userEmail)}>{nameInitials(userEmail)}</span>
         <div className="compose-right">
           <MentionTextarea value={reply} onChange={setReply} users={users}
