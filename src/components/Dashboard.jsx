@@ -14,8 +14,8 @@ const JOB_STATUS_COLOR = {
   "Delivered": "#00c875",
 };
 const TASK_STATUS_COLOR = {
-  "To do": "#8e8e93",
-  "In progress": "#0a84ff",
+  "To do": "#b8b8b8",
+  "In progress": "#fdab3d",
   "Stuck": "#e2445c",
   "Done": "#00c875",
 };
