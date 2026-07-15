@@ -22,6 +22,9 @@ export default function WorkOrders({
       setSttark(s);
       const updates = [];
       for (const j of linked) {
+        // "Delivered" is a human-confirmed final state. Sttark only knows the
+        // order shipped (it can't see customer receipt), so never auto-revert it.
+        if (j.status === "Delivered") continue;
         const mapped = mapSttarkStatus(s[j.sttark_order_id]?.status_label);
         if (mapped && mapped !== j.status)
           updates.push(supabase.from("jobs").update({ status: mapped }).eq("id", j.id));
@@ -57,32 +60,26 @@ export default function WorkOrders({
 
   return (
     <>
-      <div className="toolbar">
-        <input
-          className="search-input"
-          type="search"
-          placeholder="Search by job, customer, PO, or Sttark ID…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          list="customers"
-        />
-        <datalist id="customers">
-          {customers.map((c) => <option key={c} value={c} />)}
-        </datalist>
-
-        <span className="count">{filtered.length} {filtered.length === 1 ? "order" : "orders"}</span>
-
-        <button className="btn-accent push-right" onClick={onNew}>+ New Job</button>
-
-        {deleteMode && <button className="btn-ghost" onClick={exitDeleteMode}>Cancel</button>}
-        <button
-          className="btn-ghost del-btn"
-          disabled={deleteMode && count === 0}
-          onClick={onDeleteClick}
-        >
-          {deleteMode ? (count ? `Delete (${count})` : "Select orders…") : "Delete"}
-        </button>
-      </div>
+      <div className="page-card">
+        <div className="page-head">
+          <div className="page-head-left">
+            <h1 className="page-title">Label work orders</h1>
+            <span className="page-meta">{filtered.length} {filtered.length === 1 ? "order" : "orders"}</span>
+          </div>
+          <div className="page-head-right">
+            <input className="search-input" type="search"
+              placeholder="Search job, customer, PO…"
+              value={query} onChange={(e) => setQuery(e.target.value)} list="customers" />
+            <datalist id="customers">
+              {customers.map((c) => <option key={c} value={c} />)}
+            </datalist>
+            {deleteMode && <button className="btn-ghost" onClick={exitDeleteMode}>Cancel</button>}
+            <button className="btn-ghost del-btn" disabled={deleteMode && count === 0} onClick={onDeleteClick}>
+              {deleteMode ? (count ? `Delete (${count})` : "Select orders…") : "Delete"}
+            </button>
+            <button className="btn-accent" onClick={onNew}>+ New Job</button>
+          </div>
+        </div>
 
       {jobs.length === 0 ? (
         <div className="empty">
@@ -107,6 +104,7 @@ export default function WorkOrders({
           sttark={sttark}
         />
       )}
+      </div>
 
       {confirmOpen && (
         <div className="overlay">

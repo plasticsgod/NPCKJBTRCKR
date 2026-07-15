@@ -90,32 +90,26 @@ export default function PlasticQuotes() {
 
   return (
     <div className="quotes-page">
-      <div className="quotes-head">
-        <div>
-          <h1 className="page-h1">Plastic Quotes</h1>
-          <span className="quotes-sub">
-            {quotes.length} saved quote{quotes.length === 1 ? "" : "s"}
-          </span>
+      <div className="page-card">
+        <div className="page-head">
+          <div className="page-head-left">
+            <h1 className="page-title">Plastic quotes</h1>
+            <span className="page-meta">{quotes.length} {quotes.length === 1 ? "quote" : "quotes"}</span>
+          </div>
+          {quotes.length > 0 && (
+            <div className="page-head-right">
+              <input className="search-input" type="search" placeholder="Search customer or #…"
+                value={query} onChange={(e) => setQuery(e.target.value)} />
+            </div>
+          )}
         </div>
-        {quotes.length > 0 && (
-          <input
-            className="search-input"
-            type="search"
-            placeholder="Search by customer or #…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        )}
-      </div>
 
       {quotes.length === 0 ? (
-        <div className="panel">
-          <p className="muted">
-            No saved quotes yet. Build one in the Plastics Estimator and hit “Save quote.”
-          </p>
+        <div className="empty">
+          <p className="muted">No saved quotes yet. Build one in the Plastics Estimator and hit “Save quote.”</p>
         </div>
       ) : visible.length === 0 ? (
-        <div className="panel"><p className="muted">No quotes match “{query}”.</p></div>
+        <div className="empty"><p className="muted">No quotes match “{query}”.</p></div>
       ) : (
         <div className="quotes-list">
           {visible.map((row) => {
@@ -130,7 +124,7 @@ export default function PlasticQuotes() {
                     {new Date(row.quote_date ? row.quote_date + "T00:00:00" : row.created_at).toLocaleDateString()} · {lines.length} line{lines.length === 1 ? "" : "s"}
                   </span>
                   <span className="quote-total">{money2(row.total || 0)}</span>
-                  <span className="quote-caret">{open ? "▴" : "▾"}</span>
+                  <svg className="quote-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform var(--dur-fast) var(--ease)" }} aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
                 </button>
 
                 {open && (
@@ -172,6 +166,7 @@ export default function PlasticQuotes() {
           })}
         </div>
       )}
+      </div>
     </div>
   );
 }

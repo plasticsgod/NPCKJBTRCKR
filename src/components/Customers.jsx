@@ -207,38 +207,46 @@ export default function Customers() {
   // ---- List view -----------------------------------------------------------
   return (
     <div className="cust-page">
-      <div className="toolbar">
-        <input className="search-input" type="search" placeholder="Search customers…"
-          value={query} onChange={(e) => setQuery(e.target.value)} />
-        <button className="btn-accent push-right" onClick={() => setEditing({})}>+ New customer</button>
-      </div>
-
-      {customers.length === 0 ? (
-        <div className="empty">
-          <p className="empty-title">No customers yet</p>
-          <p className="muted">Customers appear here as you use them on jobs and quotes.</p>
-        </div>
-      ) : (
-        <div className="cust-table">
-          <div className="cust-thead">
-            <span>Company</span><span>Contact</span>
-            <span className="num">Orders</span><span className="num">Revenue</span><span className="num">Deposits owed</span>
+      <div className="page-card">
+        <div className="page-head">
+          <div className="page-head-left">
+            <h1 className="page-title">Customers</h1>
+            <span className="page-meta">{customers.length} {customers.length === 1 ? "company" : "companies"}</span>
           </div>
-          {shown.map((c) => {
-            const s = statsFor(c.id);
-            return (
-              <button className="cust-trow" key={c.id} onClick={() => setOpenId(c.id)}>
-                <span className="ct-co">{c.name}</span>
-                <span className="ct-contact">{c.email || c.contact_name || "—"}</span>
-                <span className="num">{s.orders}</span>
-                <span className="num">{money(s.revenue)}</span>
-                <span className={"num" + (s.owed ? " owed" : "")}>{s.owed || "—"}</span>
-              </button>
-            );
-          })}
-          {shown.length === 0 && <p className="muted cust-none">No customers match “{query}”.</p>}
+          <div className="page-head-right">
+            <input className="search-input" type="search" placeholder="Search customers…"
+              value={query} onChange={(e) => setQuery(e.target.value)} />
+            <button className="btn-accent" onClick={() => setEditing({})}>+ New customer</button>
+          </div>
         </div>
-      )}
+
+        {customers.length === 0 ? (
+          <div className="empty">
+            <p className="empty-title">No customers yet</p>
+            <p className="muted">Customers appear here as you use them on jobs and quotes.</p>
+          </div>
+        ) : (
+          <div className="cust-table">
+            <div className="cust-thead">
+              <span>Company</span><span>Contact</span>
+              <span className="num">Orders</span><span className="num">Revenue</span><span className="num">Deposits owed</span>
+            </div>
+            {shown.map((c) => {
+              const s = statsFor(c.id);
+              return (
+                <button className="cust-trow" key={c.id} onClick={() => setOpenId(c.id)}>
+                  <span className="ct-co">{c.name}</span>
+                  <span className="ct-contact">{c.email || c.contact_name || "—"}</span>
+                  <span className="num">{s.orders}</span>
+                  <span className="num">{money(s.revenue)}</span>
+                  <span className={"num" + (s.owed ? " owed" : "")}>{s.owed || "—"}</span>
+                </button>
+              );
+            })}
+            {shown.length === 0 && <p className="muted cust-none">No customers match “{query}”.</p>}
+          </div>
+        )}
+      </div>
 
       {editing && <CustomerModal customer={editing} onSave={saveCustomer} onClose={() => setEditing(null)} />}
     </div>
