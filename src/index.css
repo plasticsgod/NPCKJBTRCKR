@@ -237,6 +237,7 @@ button {
 
 .main {
   flex: 1;
+  min-width: 0;
   padding: clamp(20px, 3vw, 36px) clamp(20px, 4vw, 48px);
 }
 
@@ -2127,7 +2128,8 @@ a.file-chip:hover svg { color: var(--accent); }
 .proj-progress > span { display: block; height: 100%; background: var(--primary); border-radius: 999px; transition: width var(--dur) var(--ease); }
 
 /* ==== Shared titled-card surface (Work Orders / Customers / Quotes) ======= */
-.page-card { background: #fff; border: 1px solid var(--hairline); border-radius: 14px; overflow: hidden; box-shadow: 0 1px 2px rgba(20,17,13,.03), 0 8px 22px rgba(20,17,13,.06); }
+.page-card { background: #fff; border: 1px solid var(--hairline); border-radius: 14px; overflow: hidden; box-shadow: 0 1px 2px rgba(20,17,13,.03), 0 8px 22px rgba(20,17,13,.06); display: flex; flex-direction: column; min-width: 0; }
+.page-card > * { min-width: 0; }
 .page-head { display: flex; align-items: center; gap: 14px; padding: 15px 20px 13px; flex-wrap: wrap; }
 .page-head-left { display: flex; align-items: baseline; gap: 12px; }
 .page-title { font-family: var(--ui); font-size: 18px; font-weight: 600; letter-spacing: -.01em; margin: 0; }
