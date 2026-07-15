@@ -169,13 +169,16 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
     setOpenTaskId(taskId);
   }
 
-  // Open a task requested from global search, once tasks have loaded. Clearing
-  // the request in App prevents it re-opening when you later revisit Projects.
+  // Open a task requested from a notification or global search, once tasks have
+  // loaded — and switch the rail to that task's project so the context behind the
+  // drawer is correct (not whichever project happened to be selected before).
   useEffect(() => {
-    if (focusTaskId && tasks.some((t) => t.id === focusTaskId)) {
-      handleOpenTask(focusTaskId);
-      onTaskFocused && onTaskFocused();
-    }
+    if (!focusTaskId) return;
+    const t = tasks.find((x) => x.id === focusTaskId);
+    if (!t) return;
+    setActiveProjectId(t.project_id);
+    handleOpenTask(focusTaskId);
+    onTaskFocused && onTaskFocused();
   }, [focusTaskId, tasks]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function deleteTask(id) {
