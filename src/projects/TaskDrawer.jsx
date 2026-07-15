@@ -124,7 +124,7 @@ function RichText({ body, users }) {
 }
 
 // Mention-aware textarea with @ autocomplete
-function MentionTextarea({ value, onChange, users, placeholder, rows = 3 }) {
+function MentionTextarea({ value, onChange, users, placeholder, rows = 3, onFocus }) {
   const [suggestions, setSuggestions] = useState([]);
   const [mentionQ, setMentionQ] = useState("");
   const ref = useRef(null);
@@ -170,7 +170,7 @@ function MentionTextarea({ value, onChange, users, placeholder, rows = 3 }) {
   return (
     <div className="mention-wrap">
       <textarea ref={ref} rows={rows} value={value} onChange={handleChange}
-        placeholder={placeholder} className="compose-ta" />
+        placeholder={placeholder} className="compose-ta" onFocus={onFocus} />
       {suggestions.length > 0 && (
         <ul className="mention-list">
           {suggestions.map((u) => (
@@ -464,7 +464,7 @@ function KebabMenu({ onEdit, onDelete }) {
 }
 
 function PostCard({ post, users, userEmail, taskTitle, projectName, owners, reactions, onToggleReaction, onDelete, onReply }) {
-  const [showReply, setShowReply] = useState(false);
+  const [replyOpen, setReplyOpen] = useState(false);
   const [reply, setReply] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -489,7 +489,7 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, owners, reac
     setReplyImages([]);
     setReplyFiles([]);
     setSubmitting(false);
-    setShowReply(false);
+    setReplyOpen(false);
     onReply();
   }
 
@@ -555,29 +555,35 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, owners, reac
         </div>
       )}
 
-      {/* Reactions + reply actions */}
+      {/* Reactions */}
       <div className="post-actions">
         <ReactionBar targetType="post" targetId={post.id} reactions={reactions[post.id]}
           userEmail={userEmail} onToggle={onToggleReaction} />
-        <button className="link" onClick={() => setShowReply(!showReply)}>
-          {showReply ? "Cancel" : `Reply${replies.length ? ` (${replies.length})` : ""}`}
-        </button>
       </div>
-      {showReply && (
-        <div className="reply-compose">
-          <span className="avatar sm" style={avatarStyle(userEmail)}>{nameInitials(userEmail)}</span>
-          <div className="compose-right">
-            <MentionTextarea value={reply} onChange={setReply} users={users}
-              placeholder="Write a reply… Use @ to mention" rows={2} />
-            <Attach images={replyImages} setImages={setReplyImages} files={replyFiles} setFiles={setReplyFiles} disabled={submitting} />
-            <div className="compose-foot">
-              <button className="btn-accent" onClick={submitReply} disabled={(!reply.trim() && replyImages.length === 0 && replyFiles.length === 0) || submitting}>
-                {submitting ? "…" : "Reply"}
-              </button>
-            </div>
-          </div>
+
+      {/* Always-visible reply box; controls reveal on focus/content */}
+      <div className={"reply-compose" + (replyOpen ? " open" : "")}>
+        <span className="avatar sm" style={avatarStyle(userEmail)}>{nameInitials(userEmail)}</span>
+        <div className="compose-right">
+          <MentionTextarea value={reply} onChange={setReply} users={users}
+            placeholder="Write a reply… Use @ to mention"
+            rows={replyOpen ? 2 : 1}
+            onFocus={() => setReplyOpen(true)} />
+          {replyOpen && (
+            <>
+              <Attach images={replyImages} setImages={setReplyImages} files={replyFiles} setFiles={setReplyFiles} disabled={submitting} />
+              <div className="compose-foot">
+                <button className="link" onClick={() => {
+                  setReply(""); setReplyImages([]); setReplyFiles([]); setReplyOpen(false);
+                }}>Cancel</button>
+                <button className="btn-accent" onClick={submitReply} disabled={(!reply.trim() && replyImages.length === 0 && replyFiles.length === 0) || submitting}>
+                  {submitting ? "…" : "Reply"}
+                </button>
+              </div>
+            </>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
