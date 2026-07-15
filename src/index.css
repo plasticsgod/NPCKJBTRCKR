@@ -1347,7 +1347,7 @@ button {
 .compose-box, .reply-compose { display: flex; gap: 10px; align-items: flex-start; }
 .compose-right { flex: 1; display: flex; flex-direction: column; gap: 8px; }
 .compose-ta { width: 100%; font-family: var(--ui); font-size: 14px; padding: 10px 12px; border: 1px solid var(--hairline); border-radius: 8px; resize: none; overflow-y: auto; min-height: 44px; max-height: 260px; box-sizing: border-box; }
-.compose-ta:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.compose-ta:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
 .compose-foot { display: flex; justify-content: flex-end; align-items: center; }
 
 /* Post card */
@@ -2158,8 +2158,27 @@ a.file-chip:hover svg { color: var(--accent); }
 }
 
 /* Always-visible reply box: subtle when idle, full composer when focused */
-.reply-compose { margin-top: 6px; }
-.reply-compose:not(.open) .compose-ta { min-height: 0; background: var(--panel); border-radius: 999px; padding: 8px 14px; }
+/* Reply box — soft and rounded to match the app (no hard border / OS outline) */
+.reply-compose { margin-top: 8px; align-items: center; }
+.reply-compose.open { align-items: flex-start; }
+.reply-compose .compose-ta {
+  border: none;
+  background: var(--panel);
+  border-radius: 14px;
+  min-height: 0;
+  transition: background var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+.reply-compose:not(.open) .compose-ta {
+  height: 40px;
+  padding: 9px 16px;
+  border-radius: 999px;
+}
+.reply-compose:not(.open) .compose-ta:hover { background: var(--hairline-soft); }
+.reply-compose .compose-ta:focus {
+  outline: none;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--hairline), 0 0 0 4px var(--accent-tint);
+}
 .reply-compose.open .compose-foot { gap: 10px; justify-content: flex-end; }
 
 /* Reply action button next to reactions */
