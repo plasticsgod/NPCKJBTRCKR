@@ -2161,3 +2161,9 @@ a.file-chip:hover svg { color: var(--accent); }
 .reply-compose { margin-top: 6px; }
 .reply-compose:not(.open) .compose-ta { min-height: 0; background: var(--panel); border-radius: 999px; padding: 8px 14px; }
 .reply-compose.open .compose-foot { gap: 10px; justify-content: flex-end; }
+
+/* Reply action button next to reactions */
+.post-reply-btn { display: inline-flex; align-items: center; gap: 6px; font-family: var(--ui); font-size: 13px; font-weight: 500; color: var(--ink-2); background: none; border: none; cursor: pointer; padding: 5px 8px; border-radius: 8px; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+.post-reply-btn:hover { background: var(--panel); color: var(--ink); }
+.post-reply-btn svg { color: var(--ink-3); }
+.post-reply-btn:hover svg { color: var(--accent); }
