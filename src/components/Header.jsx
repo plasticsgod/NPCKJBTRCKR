@@ -223,7 +223,13 @@ function InviteModal({ onClose }) {
     setBusy(false);
 
     if (fnErr || data?.error) {
-      setError(data?.error || fnErr?.message || "Could not send the invite.");
+      // supabase-js hides the function's JSON error behind a generic message;
+      // dig the real one out of the response body when present.
+      let real = data?.error || "";
+      if (!real && fnErr?.context && typeof fnErr.context.json === "function") {
+        try { const b = await fnErr.context.json(); real = b?.error || ""; } catch { /* ignore */ }
+      }
+      setError(real || fnErr?.message || "Could not send the invite.");
       return;
     }
     setDone(
