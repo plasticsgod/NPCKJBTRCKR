@@ -66,8 +66,8 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
     if (!form.files_delete_after) return null;
     const d = new Date(form.files_delete_after);
     const days = Math.ceil((d - new Date()) / 86400000);
-    if (days <= WARN_DAYS && days >= 0) return `⚠️ Proof files will be auto-deleted in ${days} day${days !== 1 ? "s" : ""}.`;
-    if (days < 0) return "⚠️ Proof files are scheduled for deletion.";
+    if (days <= WARN_DAYS && days >= 0) return `Proof files will be auto-deleted in ${days} day${days !== 1 ? "s" : ""}.`;
+    if (days < 0) return "Proof files are scheduled for deletion.";
     return null;
   })();
 
@@ -305,7 +305,7 @@ function ProofsPanel({ jobId, jobTitle, customer }) {
         <div className="file-list">
           {files.map((f) => (
             <div className="file-row" key={f.id}>
-              <span className="file-icon">{fileIcon(f.mime_type)}</span>
+              <span className="file-icon"><Glyph kind={fileKind(f.mime_type)} /></span>
               <div className="file-info">
                 <span className="file-name">{f.name}</span>
                 <span className="file-meta">{fmtSize(f.size)} · {f.uploaded_by} · {fmtDate(f.created_at)}</span>
@@ -398,7 +398,7 @@ function ArtworkPanel({ jobId, staged, setStaged }) {
         <div className="file-list">
           {links.map((l) => (
             <div className="file-row" key={l.id}>
-              <span className="file-icon">🔗</span>
+              <span className="file-icon"><Glyph kind="link" /></span>
               <div className="file-info">
                 <span className="file-name">{l.label}</span>
                 <span className="file-meta">{l._staged ? "Pending — saves with the job" : `${l.added_by} · ${fmtDate(l.created_at)}`}</span>
@@ -413,11 +413,25 @@ function ArtworkPanel({ jobId, staged, setStaged }) {
   );
 }
 
-function fileIcon(mime) {
-  if (!mime) return "📄";
-  if (mime.includes("pdf")) return "📕";
-  if (mime.includes("image")) return "🖼️";
-  return "📄";
+const GLYPH_PATHS = {
+  link: "M9 15l6-6 M11 6l1-1a3.5 3.5 0 015 5l-1 1 M13 18l-1 1a3.5 3.5 0 01-5-5l1-1",
+  image: "M4 5h16v14H4z M4 15l4-4 3 3 4-5 5 6",
+  pdf: "M6 3h9l3 3v15H6z M14 3v4h4",
+  file: "M6 3h9l3 3v15H6z M14 3v4h4",
+};
+function Glyph({ kind = "file" }) {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={GLYPH_PATHS[kind] || GLYPH_PATHS.file} />
+    </svg>
+  );
+}
+function fileKind(mime) {
+  if (!mime) return "file";
+  if (mime.includes("pdf")) return "pdf";
+  if (mime.includes("image")) return "image";
+  return "file";
 }
 function fmtSize(bytes) {
   if (!bytes) return "—";
