@@ -48,9 +48,10 @@ export default function PlasticsEstimator({ userEmail, clientMode = false }) {
       .select("*")
       .order("sort_group")
       .order("pos");
-    if (error) { console.error("client_products:", error.message); return; }
-    setClientProducts(data ?? []);
-  }, []);
+    if (error) { console.error("client_products:", error.message); }
+    else setClientProducts(data ?? []);
+    if (clientMode) setLoading(false);
+  }, [clientMode]);
 
   const loadCustomers = useCallback(async () => {
     const { data } = await supabase.from("customers").select("id,name").order("name");
@@ -65,7 +66,7 @@ export default function PlasticsEstimator({ userEmail, clientMode = false }) {
     setLoading(false);
   }, []);
 
-  useEffect(() => { loadCustomers(); loadClientProducts(); }, [loadCustomers, loadClientProducts]);
+  useEffect(() => { loadClientProducts(); if (!clientMode) loadCustomers(); }, [loadCustomers, loadClientProducts, clientMode]);
 
   // A signed-in client belongs to (at most) one customer — quotes are stamped
   // with it, which is also what the database rules require.
@@ -78,12 +79,13 @@ export default function PlasticsEstimator({ userEmail, clientMode = false }) {
   }, [clientMode]);
 
   useEffect(() => {
+    if (clientMode) return;              // clients never read the internal pricing table
     loadVersions();
     const ch = supabase.channel("pricing-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "pricing_versions" }, loadVersions)
       .subscribe();
     return () => supabase.removeChannel(ch);
-  }, [loadVersions]);
+  }, [loadVersions, clientMode]);
 
   useEffect(() => {
     function onDown(e) { if (searchRef.current && !searchRef.current.contains(e.target)) setSearchOpen(false); }
