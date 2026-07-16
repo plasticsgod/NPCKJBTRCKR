@@ -2215,9 +2215,25 @@ a.file-chip:hover svg { color: var(--accent); }
 .post-reply-btn svg { color: var(--ink-3); }
 .post-reply-btn:hover svg { color: var(--accent); }
 
-/* Content entrance — subtle rise + fade when a view mounts */
-@keyframes content-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-.page-card, .stat-card, .panel, .proj-group, .quote-card { animation: content-in var(--dur) var(--ease) both; }
+/* Content entrance — clearly perceptible rise + fade when a view mounts */
+@keyframes content-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+.page-card, .stat-card, .panel, .proj-group, .quote-card { animation: content-in 360ms var(--ease) both; }
+
+/* Staggered cascade — table rows and dashboard cards ease in one after another */
+.ptable tbody tr, .table tbody tr, .cust-trow, .quote-card { animation: content-in 380ms var(--ease) both; }
+.table tbody tr:nth-child(1), .ptable tbody tr:nth-child(1), .cust-trow:nth-child(1) { animation-delay: 30ms; }
+.table tbody tr:nth-child(2), .ptable tbody tr:nth-child(2), .cust-trow:nth-child(2) { animation-delay: 70ms; }
+.table tbody tr:nth-child(3), .ptable tbody tr:nth-child(3), .cust-trow:nth-child(3) { animation-delay: 110ms; }
+.table tbody tr:nth-child(4), .ptable tbody tr:nth-child(4), .cust-trow:nth-child(4) { animation-delay: 150ms; }
+.table tbody tr:nth-child(5), .ptable tbody tr:nth-child(5), .cust-trow:nth-child(5) { animation-delay: 190ms; }
+.table tbody tr:nth-child(6), .ptable tbody tr:nth-child(6), .cust-trow:nth-child(6) { animation-delay: 230ms; }
+.table tbody tr:nth-child(7), .ptable tbody tr:nth-child(7), .cust-trow:nth-child(7) { animation-delay: 270ms; }
+.table tbody tr:nth-child(n+8), .ptable tbody tr:nth-child(n+8), .cust-trow:nth-child(n+8) { animation-delay: 300ms; }
+.stat-card:nth-child(2) { animation-delay: 60ms; }
+.stat-card:nth-child(3) { animation-delay: 120ms; }
+.stat-card:nth-child(4) { animation-delay: 180ms; }
+
 @media (prefers-reduced-motion: reduce) {
-  .page-card, .stat-card, .panel, .proj-group, .quote-card { animation: none; }
+  .page-card, .stat-card, .panel, .proj-group, .quote-card,
+  .ptable tbody tr, .table tbody tr, .cust-trow { animation: none; }
 }
