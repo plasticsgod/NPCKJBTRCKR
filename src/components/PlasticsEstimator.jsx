@@ -94,7 +94,7 @@ export default function PlasticsEstimator({ userEmail, clientMode = false }) {
   }, []);
 
   if (loading) return <div className="muted pad">Loading pricing…</div>;
-  if (versions.length === 0)
+  if (!clientMode && versions.length === 0)
     return (
       <div className="empty">
         <p className="empty-title">No pricing yet</p>
@@ -103,7 +103,7 @@ export default function PlasticsEstimator({ userEmail, clientMode = false }) {
     );
 
   const version = versions[vi];
-  const data = version.data; // { tubs, lids, sets, freight }
+  const data = version?.data ?? { tubs: [], lids: [], sets: {}, freight: {} }; // clients render from client_products, not this
 
   // Tariffs come straight from the version (edited via "Edit pricing").
   const ov = {};
