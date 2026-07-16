@@ -1107,11 +1107,11 @@ button {
 .upload-icon { font-size: 24px; color: var(--ink-3); }
 .file-list { display: flex; flex-direction: column; gap: 8px; }
 .file-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--panel); border-radius: 10px; }
-.file-icon { font-size: 20px; flex-shrink: 0; }
+.file-icon { flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px; background: var(--accent-tint); color: var(--accent); display: inline-flex; align-items: center; justify-content: center; }
 .file-info { flex: 1; min-width: 0; }
 .file-name { display: block; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .file-meta { display: block; font-size: 11px; color: var(--ink-3); margin-top: 1px; }
-.delete-warning { background: #fff8e6; border: 1px solid #ecdca8; color: #8a6d1f; border-radius: 8px; padding: 10px 14px; font-size: 13px; }
+.delete-warning { background: rgba(240,180,41,.12); border: 0.5px solid rgba(240,180,41,.35); color: #9a6b00; border-radius: 10px; padding: 10px 14px; font-size: 13px; font-weight: 500; }
 
 /* ---- Artwork panel -------------------------------------------------------- */
 .panel-note { font-size: 13px; color: var(--ink-3); background: var(--panel); border-radius: 8px; padding: 10px 14px; }
@@ -1285,7 +1285,7 @@ button {
 .date-input:focus { outline: 1px solid var(--accent); border-radius: 4px; background: #fff; padding: 2px 4px; }
 
 /* Status pills for project tasks */
-.tpill { display: block; width: 100%; min-height: 34px; font-family: var(--ui); font-size: 13px; font-weight: 600; letter-spacing: .01em; text-transform: none; padding: 8px 10px; border-radius: 7px; border: none; cursor: pointer; appearance: none; -webkit-appearance: none; text-align: center; text-align-last: center; color: #fff; }
+.tpill { display: block; width: 100%; min-height: 34px; font-family: var(--ui); font-size: 13px; font-weight: 500; letter-spacing: -.01em; text-transform: none; padding: 8px 10px; border-radius: 999px; border: none; cursor: pointer; appearance: none; -webkit-appearance: none; text-align: center; text-align-last: center; color: #fff; transition: background var(--dur) var(--ease); }
   .tpill-to-do        { background: #b8b8b8; }
   .tpill-in-progress  { background: #fdab3d; }
   .tpill-stuck        { background: #e2445c; }
@@ -2214,3 +2214,10 @@ a.file-chip:hover svg { color: var(--accent); }
 .post-reply-btn:hover { background: var(--panel); color: var(--ink); }
 .post-reply-btn svg { color: var(--ink-3); }
 .post-reply-btn:hover svg { color: var(--accent); }
+
+/* Content entrance — subtle rise + fade when a view mounts */
+@keyframes content-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.page-card, .stat-card, .panel, .proj-group, .quote-card { animation: content-in var(--dur) var(--ease) both; }
+@media (prefers-reduced-motion: reduce) {
+  .page-card, .stat-card, .panel, .proj-group, .quote-card { animation: none; }
+}
