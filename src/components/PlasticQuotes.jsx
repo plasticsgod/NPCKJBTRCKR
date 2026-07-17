@@ -92,7 +92,7 @@ export default function PlasticQuotes() {
     const description = lines.map((l) => `${(l.units || 0).toLocaleString()} × ${l.name}`).join("\n");
 
     const { error } = await supabase.from("plastic_jobs").insert({
-      job_title: `Quote #${q.quote_no}${q.customer ? " — " + q.customer : ""}`,
+      job_title: `Quote${q.customer ? " — " + q.customer : ""}`,
       brand: q.customer || null,
       description,
       qty,
@@ -111,9 +111,7 @@ export default function PlasticQuotes() {
 
   const q = query.trim().toLowerCase();
   const visible = q
-    ? quotes.filter((row) =>
-        (row.customer || "").toLowerCase().includes(q) ||
-        ("#" + row.quote_no).includes(q))
+    ? quotes.filter((row) => (row.customer || "").toLowerCase().includes(q))
     : quotes;
 
   return (
@@ -144,7 +142,6 @@ export default function PlasticQuotes() {
             return (
               <div className={"quote-card" + (open ? " open" : "")} key={row.id}>
                 <button className="quote-row" onClick={() => toggleOpen(row.id)}>
-                  <span className="quote-no">#{row.quote_no}</span>
                   <span className="quote-customer">{row.customer || "—"}</span>
                   <span className="quote-meta">
                     {new Date(row.quote_date ? row.quote_date + "T00:00:00" : row.created_at).toLocaleDateString()} · {lines.length} line{lines.length === 1 ? "" : "s"}
