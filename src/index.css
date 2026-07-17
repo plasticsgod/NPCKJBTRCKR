@@ -2279,3 +2279,4 @@ a.file-chip:hover svg { color: var(--accent); }
 .cq-note-body { flex: 1; font-size: 13px; color: var(--ink); }
 .cq-note-date { font-size: 11px; color: var(--ink-3); flex: 0 0 auto; }
 .cq-readonly { margin-top: 10px; }
+.client-unlinked { font-size: 13px; color: #9a6b00; background: rgba(240,180,41,.12); border: 0.5px solid rgba(240,180,41,.3); border-radius: 10px; padding: 10px 14px; margin: 4px 0 12px; }
