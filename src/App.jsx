@@ -7,6 +7,7 @@ import WorkOrders from "./components/WorkOrders";
 import PlasticWorkOrders from "./components/PlasticWorkOrders";
 import Dashboard from "./components/Dashboard";
 import PlasticsEstimator from "./components/PlasticsEstimator";
+import ClientQuotes from "./components/ClientQuotes";
 import PlasticQuotes from "./components/PlasticQuotes";
 import Customers from "./components/Customers";
 import { DashboardSkeleton, WorkOrdersSkeleton } from "./components/Skeletons";
@@ -47,6 +48,7 @@ export default function App() {
   const [isInternal, setIsInternal] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [roleReady, setRoleReady] = useState(false);
+  const [clientTab, setClientTab] = useState("estimator"); // client view: 'estimator' | 'quotes'
 
   const [jobs, setJobs] = useState([]);
   const [plasticJobs, setPlasticJobs] = useState([]);
@@ -323,10 +325,18 @@ export default function App() {
       <div className="app client-app">
         <header className="header client-header">
           <span className="brand-name">NutraPack</span>
+          <nav className="client-tabs">
+            <button className={"client-tab" + (clientTab === "estimator" ? " on" : "")}
+              onClick={() => setClientTab("estimator")}>Estimator</button>
+            <button className={"client-tab" + (clientTab === "quotes" ? " on" : "")}
+              onClick={() => setClientTab("quotes")}>My Quotes</button>
+          </nav>
           <button className="link" onClick={() => supabase.auth.signOut()}>Sign out</button>
         </header>
         <main className="main">
-          <PlasticsEstimator userEmail={session.user.email} clientMode />
+          {clientTab === "estimator"
+            ? <PlasticsEstimator userEmail={session.user.email} clientMode onSubmitted={() => setClientTab("quotes")} />
+            : <ClientQuotes userEmail={session.user.email} />}
         </main>
         <Toaster />
       </div>
