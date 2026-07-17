@@ -63,6 +63,8 @@ export default function App() {
   const [navOpen, setNavOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [focusTaskId, setFocusTaskId] = useState(null);
+  const [focusQuoteId, setFocusQuoteId] = useState(null);        // member: open this quote in Plastic Quotes
+  const [clientFocusQuoteId, setClientFocusQuoteId] = useState(null); // client: open this quote in My Quotes
 
   function setPage(p) {
     setPageState(p);
@@ -336,13 +338,14 @@ export default function App() {
             <button className={"client-tab" + (clientTab === "quotes" ? " on" : "")}
               onClick={() => setClientTab("quotes")}>My Quotes</button>
           </nav>
-          <NotificationBell userEmail={session.user.email} />
+          <NotificationBell userEmail={session.user.email}
+            onOpenQuote={(qid) => { setClientTab("quotes"); setClientFocusQuoteId(qid); }} />
           <button className="link" onClick={() => supabase.auth.signOut()}>Sign out</button>
         </header>
         <main className="main">
           {clientTab === "estimator"
             ? <PlasticsEstimator userEmail={session.user.email} clientMode onSubmitted={() => setClientTab("quotes")} />
-            : <ClientQuotes userEmail={session.user.email} />}
+            : <ClientQuotes userEmail={session.user.email} focusQuoteId={clientFocusQuoteId} onFocused={() => setClientFocusQuoteId(null)} />}
         </main>
         <Toaster />
       </div>
@@ -360,6 +363,7 @@ export default function App() {
         onSignOut={() => supabase.auth.signOut()}
         onSearch={() => setSearchOpen(true)}
         onOpenTask={openTaskFromSearch}
+        onOpenQuote={(qid) => { setPage("plastic_quotes"); setFocusQuoteId(qid); }}
         onHome={() => isInternal && setPage("dashboard")}
       />
 
@@ -387,7 +391,7 @@ export default function App() {
         ) : page === "customers" ? (
           <Customers />
         ) : page === "plastic_quotes" ? (
-          <PlasticQuotes />
+          <PlasticQuotes focusQuoteId={focusQuoteId} onFocused={() => setFocusQuoteId(null)} />
         ) : page === "plastic_work_orders" ? (
           <PlasticWorkOrders
             jobs={plasticJobs}
