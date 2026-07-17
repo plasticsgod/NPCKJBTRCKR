@@ -2239,11 +2239,11 @@ a.file-chip:hover svg { color: var(--accent); }
 }
 
 /* ==== Client view: tabs + My Quotes ====================================== */
-.client-tabs { display: flex; gap: 4px; margin-left: 24px; }
+.client-tabs { display: flex; gap: 4px; margin-left: 24px; margin-right: auto; }
 .client-tab { font-family: var(--ui); font-size: 14px; font-weight: 500; color: var(--ink-2); background: none; border: none; padding: 8px 14px; border-radius: 999px; cursor: pointer; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .client-tab:hover { background: rgba(120,120,128,.10); color: var(--ink); }
 .client-tab.on { background: var(--primary); color: #fff; }
-.client-header .link { margin-left: auto; }
+.client-header .link { margin-left: 8px; }
 
 .client-note-field { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 12px; }
 .client-note-field span { font-size: 13px; font-weight: 500; color: var(--ink-2); }

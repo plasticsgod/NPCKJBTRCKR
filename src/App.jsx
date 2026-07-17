@@ -8,6 +8,7 @@ import PlasticWorkOrders from "./components/PlasticWorkOrders";
 import Dashboard from "./components/Dashboard";
 import PlasticsEstimator from "./components/PlasticsEstimator";
 import ClientQuotes from "./components/ClientQuotes";
+import NotificationBell from "./components/NotificationBell";
 import PlasticQuotes from "./components/PlasticQuotes";
 import Customers from "./components/Customers";
 import { DashboardSkeleton, WorkOrdersSkeleton } from "./components/Skeletons";
@@ -331,6 +332,7 @@ export default function App() {
             <button className={"client-tab" + (clientTab === "quotes" ? " on" : "")}
               onClick={() => setClientTab("quotes")}>My Quotes</button>
           </nav>
+          <NotificationBell userEmail={session.user.email} />
           <button className="link" onClick={() => supabase.auth.signOut()}>Sign out</button>
         </header>
         <main className="main">
