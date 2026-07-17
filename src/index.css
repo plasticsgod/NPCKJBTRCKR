@@ -1764,7 +1764,7 @@ a.file-chip:hover svg { color: var(--accent); }
 .quote-card.open { border-color: var(--ink-3); }
 .quote-row {
   width: 100%; display: grid;
-  grid-template-columns: 64px 1fr auto auto auto 24px;
+  grid-template-columns: 1fr auto auto auto 24px;
   align-items: center; gap: 14px;
   padding: 16px 18px;
   background: none; border: none; cursor: pointer; text-align: left;
@@ -1786,7 +1786,7 @@ a.file-chip:hover svg { color: var(--accent); }
 .quote-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
 @media (max-width: 640px) {
-  .quote-row { grid-template-columns: 50px 1fr auto auto 18px; }
+  .quote-row { grid-template-columns: 1fr auto auto 18px; }
   .quote-row .quote-meta { display: none; }
   .quotes-head .search-input { max-width: none; width: 100%; }
 }
