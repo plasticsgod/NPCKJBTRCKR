@@ -14,7 +14,6 @@ function fmtDate(iso) {
 export default function ClientQuotes() {
   const [quotes, setQuotes] = useState(null);
   const [openId, setOpenId] = useState(null);
-  const [notes, setNotes] = useState([]);
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -26,12 +25,8 @@ export default function ClientQuotes() {
 
   useEffect(() => { load(); }, [load]);
 
-  const openQuote = useCallback(async (id) => {
-    if (openId === id) { setOpenId(null); return; }
-    setOpenId(id);
-    const { data } = await supabase
-      .from("quote_notes").select("*").eq("quote_id", id).order("created_at", { ascending: true });
-    setNotes(data ?? []);
+  const openQuote = useCallback((id) => {
+    setOpenId(openId === id ? null : id);
   }, [openId]);
 
   if (quotes === null) return <div className="muted pad">Loading your quotes…</div>;
@@ -92,21 +87,12 @@ export default function ClientQuotes() {
                         </div>
                       )}
 
-                      <div className="cq-notes">
-                        <div className="cq-notes-head">Notes</div>
-                        {notes.length === 0 ? (
-                          <p className="muted small">No notes on this quote.</p>
-                        ) : (
-                          notes.map((n) => (
-                            <div className={"cq-note" + (n.is_client ? " mine" : "")} key={n.id}>
-                              <span className="cq-note-who">{n.is_client ? "You" : "NutraPack"}</span>
-                              <span className="cq-note-body">{n.body}</span>
-                              <span className="cq-note-date">{fmtDate(n.created_at)}</span>
-                            </div>
-                          ))
-                        )}
-                        <p className="muted small cq-readonly">Notes are read-only once a quote is sent. Need a change? Build a new quote.</p>
-                      </div>
+                      {q.client_note && (
+                        <div className="quote-baked-note">
+                          <span className="quote-baked-label">Note</span>
+                          <span>{q.client_note}</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

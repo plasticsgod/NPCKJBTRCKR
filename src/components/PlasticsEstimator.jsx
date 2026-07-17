@@ -225,11 +225,6 @@ export default function PlasticsEstimator({ userEmail, clientMode = false, onSub
           status: "pending", client_note: clientNote.trim() || null,
         });
         if (error) { toast.error("Couldn't send quote — " + error.message); return; }
-        if (clientNote.trim()) {
-          await supabase.from("quote_notes").insert({
-            quote_id: quoteId, author: userEmail, is_client: true, body: clientNote.trim(),
-          });
-        }
         setClientNote("");
         toast.success("Sent for approval — we'll review it shortly.");
         onSubmitted && onSubmitted();
@@ -247,8 +242,10 @@ export default function PlasticsEstimator({ userEmail, clientMode = false, onSub
       quote_date: quoteDate || null,
       lines: savedLines,
       total,
+      client_note: clientNote.trim() || null,
     });
     if (error) { toast.error("Couldn't save quote — " + error.message); return; }
+    setClientNote("");
     toast.success(`Quote saved${customer.trim() ? " for " + customer.trim() : ""}`);
   }
   function exportPdf() {
@@ -256,7 +253,7 @@ export default function PlasticsEstimator({ userEmail, clientMode = false, onSub
       toast.error(asClient ? "Add a product and quantity first." : "Add at least one line with a margin first.");
       return;
     }
-    const q = { customer: customer.trim() || null, quote_date: quoteDate, lines: savedLines };
+    const q = { customer: customer.trim() || null, quote_date: quoteDate, lines: savedLines, note: clientNote.trim() || null };
     if (asClient) buildClientQuotePDF(q); else buildQuotePDF(q);
   }
 
@@ -453,13 +450,11 @@ export default function PlasticsEstimator({ userEmail, clientMode = false, onSub
             </span>
             <span className="qtb-total">{money2(total)}</span>
           </div>
-          {clientMode && (
-            <label className="client-note-field">
-              <span>Add a note (optional)</span>
-              <textarea rows={2} value={clientNote} onChange={(e) => setClientNote(e.target.value)}
-                placeholder="Anything we should know — timing, sizes, questions…" />
-            </label>
-          )}
+          <label className="client-note-field">
+            <span>Add a note (optional — becomes part of the quote)</span>
+            <textarea rows={2} value={clientNote} onChange={(e) => setClientNote(e.target.value)}
+              placeholder="e.g. Specific PMS color, matte finish, delivery timing…" />
+          </label>
           <div className="quote-actions">
             {clientMode
               ? <button className="btn-accent" onClick={saveQuote}>Send for approval</button>

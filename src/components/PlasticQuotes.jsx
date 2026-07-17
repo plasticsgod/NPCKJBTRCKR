@@ -13,8 +13,6 @@ export default function PlasticQuotes() {
   const [openId, setOpenId] = useState(null);
   const [query, setQuery] = useState("");
   const [userEmail, setUserEmail] = useState("");
-  const [notesByQuote, setNotesByQuote] = useState({});
-  const [noteDraft, setNoteDraft] = useState("");
   const [decide, setDecide] = useState(null); // { id, action: 'approved'|'rejected' }
   const [decisionNote, setDecisionNote] = useState("");
 
@@ -28,17 +26,10 @@ export default function PlasticQuotes() {
     setQuotes(data || []);
   }, []);
 
-  const loadNotes = useCallback(async (id) => {
-    const { data } = await supabase
-      .from("quote_notes").select("*").eq("quote_id", id).order("created_at", { ascending: true });
-    setNotesByQuote((prev) => ({ ...prev, [id]: data ?? [] }));
-  }, []);
-
   function toggleOpen(id) {
     const next = openId === id ? null : id;
     setOpenId(next);
-    setDecide(null); setDecisionNote(""); setNoteDraft("");
-    if (next) loadNotes(next);
+    setDecide(null); setDecisionNote("");
   }
 
   async function confirmDecision() {
@@ -54,16 +45,6 @@ export default function PlasticQuotes() {
     setDecide(null); setDecisionNote("");
     toast.success(action === "approved" ? "Quote approved" : "Quote rejected");
     load();
-  }
-
-  async function addMemberNote(id) {
-    if (!noteDraft.trim()) return;
-    const { error } = await supabase.from("quote_notes").insert({
-      quote_id: id, author: userEmail, is_client: false, body: noteDraft.trim(),
-    });
-    if (error) { toast.error("Couldn't add note — " + error.message); return; }
-    setNoteDraft("");
-    loadNotes(id);
   }
 
   useEffect(() => {
@@ -82,7 +63,7 @@ export default function PlasticQuotes() {
   }
 
   function download(q) {
-    buildQuotePDF({ customer: q.customer, lines: q.lines || [] });
+    buildQuotePDF({ customer: q.customer, lines: q.lines || [], note: q.client_note, quote_date: q.quote_date });
   }
 
   // Create a plastics work order from a saved quote, carrying over what we know.
@@ -141,7 +122,7 @@ export default function PlasticQuotes() {
         <div className="page-head">
           <div className="page-head-left">
             <h1 className="page-title">Plastic quotes</h1>
-            <span className="page-meta">{quotes.length} {quotes.length === 1 ? "quote" : "quotes"}</span>
+            <span className="page-meta"></span>
           </div>
           {quotes.length > 0 && (
             <input className="search-input page-search" type="search" placeholder="Search customer or #…"
@@ -168,7 +149,7 @@ export default function PlasticQuotes() {
                   <span className="quote-meta">
                     {new Date(row.quote_date ? row.quote_date + "T00:00:00" : row.created_at).toLocaleDateString()} · {lines.length} line{lines.length === 1 ? "" : "s"}
                   </span>
-                  {row.status && <span className={"q-badge q-" + row.status}>{row.status[0].toUpperCase() + row.status.slice(1)}</span>}
+                  <span className="quote-badge-cell">{row.status && <span className={"q-badge q-" + row.status}>{row.status[0].toUpperCase() + row.status.slice(1)}</span>}</span>
                   <span className="quote-total">{money2(row.total || 0)}</span>
                   <svg className="quote-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform var(--dur-fast) var(--ease)" }} aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
                 </button>
@@ -236,28 +217,13 @@ export default function PlasticQuotes() {
                       </div>
                     )}
 
-                    {/* Notes thread (client + members) */}
-                    <div className="quote-notes">
-                      <div className="quote-notes-head">Notes</div>
-                      {(notesByQuote[row.id] || []).length === 0 && !row.client_note ? (
-                        <p className="muted small">No notes yet.</p>
-                      ) : (
-                        <div className="quote-notes-list">
-                          {(notesByQuote[row.id] || []).map((n) => (
-                            <div className={"quote-note" + (n.is_client ? " from-client" : "")} key={n.id}>
-                              <span className="quote-note-who">{n.is_client ? (row.customer || "Client") : "NutraPack"}</span>
-                              <span className="quote-note-body">{n.body}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <div className="quote-note-add">
-                        <input value={openId === row.id ? noteDraft : ""} placeholder="Add an internal note…"
-                          onChange={(e) => setNoteDraft(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addMemberNote(row.id); } }} />
-                        <button className="btn-ghost" onClick={() => addMemberNote(row.id)} disabled={!noteDraft.trim()}>Add note</button>
+                    {/* The note that was written when the quote was built — part of the quote */}
+                    {row.client_note && (
+                      <div className="quote-baked-note">
+                        <span className="quote-baked-label">Note</span>
+                        <span>{row.client_note}</span>
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
               </div>
