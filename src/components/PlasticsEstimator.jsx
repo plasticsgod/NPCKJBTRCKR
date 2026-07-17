@@ -442,16 +442,20 @@ export default function PlasticsEstimator({ userEmail, clientMode = false, onSub
             </span>
             <span className="qtb-total">{money2(total)}</span>
           </div>
-          {clientMode && myCustomer && (
-            <label className="client-note-field">
-              <span>Add a note (optional)</span>
-              <textarea rows={2} value={clientNote} onChange={(e) => setClientNote(e.target.value)}
-                placeholder="Anything we should know — timing, sizes, questions…" />
-            </label>
+          {clientMode && (
+            myCustomer ? (
+              <label className="client-note-field">
+                <span>Add a note (optional)</span>
+                <textarea rows={2} value={clientNote} onChange={(e) => setClientNote(e.target.value)}
+                  placeholder="Anything we should know — timing, sizes, questions…" />
+              </label>
+            ) : (
+              <p className="client-unlinked">Your account isn’t linked to a company yet — contact us and we’ll set it up so you can send quotes for approval.</p>
+            )
           )}
           <div className="quote-actions">
             {clientMode
-              ? (myCustomer && <button className="btn-accent" onClick={saveQuote}>Send for approval</button>)
+              ? <button className="btn-accent" onClick={saveQuote} disabled={!myCustomer}>Send for approval</button>
               : <button className="btn-ghost" onClick={saveQuote}>Save quote</button>}
             <button className={clientMode ? "btn-ghost" : "btn-accent"} onClick={exportPdf}>Export PDF</button>
           </div>
