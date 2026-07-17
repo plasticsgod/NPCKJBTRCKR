@@ -60,6 +60,11 @@ export default function NotificationBell({ userEmail, onOpenTask }) {
   function openNotification(n) {
     if (!n.read) markRead(n.id);
     setOpen(false);
+    if (n.type && n.type.startsWith("quote_")) {
+      // Members: jump to the quotes page. Clients have their own tab and no hash router.
+      if (n.type === "quote_submitted") window.location.hash = "plastic-quotes";
+      return;
+    }
     // Open the exact task the notification is about; fall back to the Projects
     // page for older notifications that predate task links.
     if (n.task_id && onOpenTask) onOpenTask(n.task_id);
@@ -68,8 +73,9 @@ export default function NotificationBell({ userEmail, onOpenTask }) {
 
   function label(n) {
     const who = displayName(n.actor) || "Someone";
-    if (n.type === "assignment") return `${who} assigned you to "${n.task}"`;
-    if (n.type === "comment") return `${who} commented on "${n.task}"`;
+    if (n.type === "quote_submitted") return `New quote from ${n.task || who} — awaiting approval`;
+    if (n.type === "quote_approved") return `Your quote${n.task ? " for " + n.task : ""} was approved`;
+    if (n.type === "quote_rejected") return `Your quote${n.task ? " for " + n.task : ""} was rejected`;
     return `${who} mentioned you in "${n.task}"`;
   }
 

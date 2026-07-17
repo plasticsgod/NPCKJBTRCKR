@@ -43,6 +43,15 @@ export default function PlasticQuotes() {
       decided_at: new Date().toISOString(),
     }).eq("id", id);
     if (error) { toast.error("Couldn't update — " + error.message); return; }
+    // Notify the client who submitted it (best-effort).
+    const q = quotes.find((x) => x.id === id);
+    if (q?.created_by) {
+      await supabase.from("notifications").insert({
+        recipient: q.created_by, actor: userEmail,
+        type: action === "approved" ? "quote_approved" : "quote_rejected",
+        task: q.customer || null, body: decisionNote.trim() || null,
+      }).catch(() => {});
+    }
     setDecide(null); setDecisionNote("");
     toast.success(action === "approved" ? "Quote approved" : "Quote rejected");
     load();
