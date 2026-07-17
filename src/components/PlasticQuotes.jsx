@@ -15,6 +15,7 @@ export default function PlasticQuotes() {
   const [userEmail, setUserEmail] = useState("");
   const [decide, setDecide] = useState(null); // { id, action: 'approved'|'rejected' }
   const [decisionNote, setDecisionNote] = useState("");
+  const [confirmId, setConfirmId] = useState(null); // quote pending delete confirmation
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserEmail(data.user?.email || ""));
@@ -56,10 +57,10 @@ export default function PlasticQuotes() {
   }, [load]);
 
   async function remove(id) {
-    if (!confirm("Delete this saved quote?")) return;
     const { error } = await supabase.from("plastic_quotes").delete().eq("id", id);
     if (error) { toast.error("Couldn't delete — " + error.message); return; }
     toast.success("Quote deleted");
+    setConfirmId(null);
   }
 
   function download(q) {
@@ -184,7 +185,7 @@ export default function PlasticQuotes() {
                             <button className="del-btn btn-ghost" onClick={() => { setDecide({ id: row.id, action: "rejected" }); setDecisionNote(""); }}>Reject</button>
                           </>
                         )}
-                        <button className="btn-ghost" onClick={() => remove(row.id)}>Delete</button>
+                        <button className="btn-ghost" onClick={() => setConfirmId(row.id)}>Delete</button>
                         <button className="btn-ghost" onClick={() => sendToWorkOrders(row)}>Send to plastics work orders</button>
                         <button className="btn-accent" onClick={() => download(row)}>Download PDF</button>
                       </div>
@@ -229,6 +230,23 @@ export default function PlasticQuotes() {
         </div>
       )}
       </div>
+
+      {confirmId && (
+        <div className="overlay" onClick={() => setConfirmId(null)}>
+          <div className="modal confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h2>Delete quote?</h2>
+            </div>
+            <div className="modal-body">
+              <p>Are you sure you want to delete this quote? This cannot be undone.</p>
+            </div>
+            <div className="modal-foot">
+              <button className="btn-ghost" onClick={() => setConfirmId(null)}>Cancel</button>
+              <button className="btn-danger" onClick={() => remove(confirmId)}>Delete quote</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
