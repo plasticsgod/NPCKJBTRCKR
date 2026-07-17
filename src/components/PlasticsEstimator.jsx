@@ -210,24 +210,39 @@ export default function PlasticsEstimator({ userEmail, clientMode = false, onSub
       return;
     }
     if (clientMode) {
-      if (!myCustomer) { toast.error("Your account isn't linked to a company yet — contact us and we'll set it up."); return; }
-      const quoteId = crypto.randomUUID();
-      const { error } = await supabase.from("plastic_quotes").insert({
-        id: quoteId,
-        created_by: userEmail, customer: myCustomer.name, customer_id: myCustomer.id,
-        quote_date: quoteDate || null, lines: savedLines, total,
-        status: "pending", client_note: clientNote.trim() || null,
-      });
-      if (error) { toast.error("Couldn't send quote — " + error.message); return; }
-      // Attach the client's note to the thread too, so members see it in context.
-      if (clientNote.trim()) {
-        await supabase.from("quote_notes").insert({
-          quote_id: quoteId, author: userEmail, is_client: true, body: clientNote.trim(),
-        });
+      console.log("[send-for-approval] lines:", lines.length, "priced:", savedLines.length, "customer:", myCustomer);
+      if (savedLines.length === 0) {
+        toast.error("Add a product and enter a quantity before sending.");
+        alert("Add a product and enter a quantity before sending."); // visible even if toasts don't render
+        return;
       }
-      setClientNote("");
-      toast.success("Sent for approval — we'll review it shortly.");
-      onSubmitted && onSubmitted();
+      if (!myCustomer) { toast.error("Your account isn't linked to a company yet — contact us and we'll set it up."); return; }
+      try {
+        const quoteId = crypto.randomUUID();
+        const { error } = await supabase.from("plastic_quotes").insert({
+          id: quoteId,
+          created_by: userEmail, customer: myCustomer.name, customer_id: myCustomer.id,
+          quote_date: quoteDate || null, lines: savedLines, total,
+          status: "pending", client_note: clientNote.trim() || null,
+        });
+        if (error) {
+          console.error("[send-for-approval] insert error:", error);
+          toast.error("Couldn't send quote — " + error.message);
+          alert("Couldn't send quote — " + error.message);
+          return;
+        }
+        if (clientNote.trim()) {
+          await supabase.from("quote_notes").insert({
+            quote_id: quoteId, author: userEmail, is_client: true, body: clientNote.trim(),
+          });
+        }
+        setClientNote("");
+        toast.success("Sent for approval — we'll review it shortly.");
+        onSubmitted && onSubmitted();
+      } catch (e) {
+        console.error("[send-for-approval] threw:", e);
+        alert("Something went wrong sending the quote: " + (e?.message || e));
+      }
       return;
     }
     const customer_id = await resolveCustomerId(customer);
