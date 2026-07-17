@@ -227,10 +227,12 @@ export default function PlasticsEstimator({ userEmail, clientMode = false, onSub
         if (error) { toast.error("Couldn't send quote — " + error.message); return; }
         // Notify the members who review quotes (best-effort).
         const REVIEWERS = ["taylor.knox@nutrapack.co", "jeff.weisser@nutrapack.co", "eduardonutramedia@gmail.com"];
-        await supabase.from("notifications").insert(REVIEWERS.map((m) => ({
-          recipient: m, actor: userEmail, type: "quote_submitted",
-          task: myCustomer?.name || userEmail, body: clientNote.trim() || null,
-        }))).catch(() => {});
+        try {
+          await supabase.from("notifications").insert(REVIEWERS.map((m) => ({
+            recipient: m, actor: userEmail, type: "quote_submitted",
+            task: myCustomer?.name || userEmail, body: clientNote.trim() || null,
+          })));
+        } catch { /* non-blocking */ }
         setClientNote("");
         toast.success("Sent for approval — we'll review it shortly.");
         onSubmitted && onSubmitted();

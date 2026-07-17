@@ -46,14 +46,18 @@ export default function PlasticQuotes() {
     // Notify the client who submitted it — in-app bell + email (both best-effort).
     const q = quotes.find((x) => x.id === id);
     if (q?.created_by) {
-      await supabase.from("notifications").insert({
-        recipient: q.created_by, actor: userEmail,
-        type: action === "approved" ? "quote_approved" : "quote_rejected",
-        task: q.customer || null, body: decisionNote.trim() || null,
-      }).catch(() => {});
-      supabase.functions.invoke("notify-quote-decision", {
-        body: { email: q.created_by, status: action, customer: q.customer, note: decisionNote.trim() || null, total: q.total },
-      }).catch(() => {});
+      try {
+        await supabase.from("notifications").insert({
+          recipient: q.created_by, actor: userEmail,
+          type: action === "approved" ? "quote_approved" : "quote_rejected",
+          task: q.customer || null, body: decisionNote.trim() || null,
+        });
+      } catch { /* non-blocking */ }
+      try {
+        await supabase.functions.invoke("notify-quote-decision", {
+          body: { email: q.created_by, status: action, customer: q.customer, note: decisionNote.trim() || null, total: q.total },
+        });
+      } catch { /* email is best-effort */ }
     }
     setDecide(null); setDecisionNote("");
     toast.success(action === "approved" ? "Quote approved — client emailed" : "Quote rejected — client emailed");
