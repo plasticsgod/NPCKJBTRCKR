@@ -2280,3 +2280,25 @@ a.file-chip:hover svg { color: var(--accent); }
 .cq-note-date { font-size: 11px; color: var(--ink-3); flex: 0 0 auto; }
 .cq-readonly { margin-top: 10px; }
 .client-unlinked { font-size: 13px; color: #9a6b00; background: rgba(240,180,41,.12); border: 0.5px solid rgba(240,180,41,.3); border-radius: 10px; padding: 10px 14px; margin: 4px 0 12px; }
+
+/* ==== Plastic Quotes: approval workflow ================================== */
+.q-badge { font-size: 12px; font-weight: 600; padding: 3px 11px; border-radius: 999px; white-space: nowrap; }
+.q-pending  { background: rgba(240,180,41,.16); color: #9a6b00; }
+.q-approved { background: rgba(0,200,117,.16); color: #0f7a4d; }
+.q-rejected { background: rgba(226,68,92,.14); color: #c2261f; }
+.quote-decide { margin: 4px 16px 12px; padding: 14px; background: var(--panel); border-radius: 12px; }
+.quote-decide .field { margin-bottom: 10px; }
+.quote-decide-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.quote-decision { margin: 4px 16px 12px; padding: 10px 14px; border-radius: 10px; font-size: 13px; }
+.quote-decision.q-approved { background: rgba(0,200,117,.10); color: #0f7a4d; }
+.quote-decision.q-rejected { background: rgba(226,68,92,.10); color: #c2261f; }
+.quote-notes { margin: 4px 16px 16px; }
+.quote-notes-head { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); margin-bottom: 8px; }
+.quote-notes-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }
+.quote-note { display: flex; gap: 10px; padding: 7px 0; border-bottom: 0.5px solid var(--hairline-soft); }
+.quote-note-who { font-size: 12px; font-weight: 600; color: var(--ink-2); flex: 0 0 auto; width: 90px; }
+.quote-note.from-client .quote-note-who { color: var(--accent); }
+.quote-note-body { flex: 1; font-size: 13px; color: var(--ink); }
+.quote-note-add { display: flex; gap: 8px; }
+.quote-note-add input { flex: 1; font-family: var(--ui); font-size: 14px; padding: 9px 13px; border: 0.5px solid #e3e3e8; border-radius: var(--radius-ctl); background: #f5f5f7; }
+.quote-note-add input:focus { outline: none; background: #fff; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
