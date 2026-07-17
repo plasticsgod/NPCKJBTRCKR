@@ -8,6 +8,7 @@ import { displayName, nameInitials, avatarStyle } from "./userMap";
 import Avatar from "./Avatar";
 import DatePicker from "../components/DatePicker";
 import { ProjectsSkeleton } from "../components/Skeletons";
+import ConfirmModal from "../components/ConfirmModal";
 import { toast } from "../components/Toaster";
 
 // Classifies a task's due date for highlighting and filtering.
@@ -42,6 +43,7 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
   const [selProjects, setSelProjects] = useState(() => new Set());
   const [selTasks, setSelTasks] = useState(() => new Set());
   const [pendingDelete, setPendingDelete] = useState(null);
+  const [confirmState, setConfirmState] = useState(null);
   // Activity-feed indicator: per-task update counts + this user's read state.
   const [activity, setActivity] = useState({}); // { [taskId]: { count, latest, latestAuthor } }
   const [reads, setReads] = useState({});       // { [taskId]: last_read_at ISO }
@@ -193,13 +195,20 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
     onTaskFocused && onTaskFocused();
   }, [focusTaskId, tasks]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function deleteTask(id) {
-    if (!confirm("Delete this task?")) return;
+  async function doDeleteTask(id) {
     const { error } = await supabase.from("tasks").delete().eq("id", id);
     if (error) { toast.error("Couldn't delete task — " + error.message); return; }
     setOpenTaskId(null);
     toast.success("Task deleted");
     load();
+  }
+  function deleteTask(id) {
+    setConfirmState({
+      title: "Delete task?",
+      message: "Are you sure you want to delete this task? This cannot be undone.",
+      confirmLabel: "Delete task",
+      onConfirm: () => doDeleteTask(id),
+    });
   }
 
   // --- Selection helpers ------------------------------------------------------
@@ -544,23 +553,22 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
       )}
 
       {pendingDelete && (
-        <div className="confirm-overlay" onClick={() => setPendingDelete(null)}>
-          <div className="confirm-bar" onClick={(e) => e.stopPropagation()}>
-            <svg className="confirm-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              <line x1="10" y1="11" x2="10" y2="17" />
-              <line x1="14" y1="11" x2="14" y2="17" />
-            </svg>
-            <span className="confirm-msg">
-              Delete {pendingDelete.total} item{pendingDelete.total === 1 ? "" : "s"}? This can't be undone.
-            </span>
-            <button className="confirm-cancel" onClick={() => setPendingDelete(null)}>Cancel</button>
-            <button className="confirm-delete" onClick={confirmDeleteNow}>Delete</button>
+        <div className="overlay" onClick={() => setPendingDelete(null)}>
+          <div className="modal confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h2>Delete {pendingDelete.total} item{pendingDelete.total === 1 ? "" : "s"}?</h2>
+            </div>
+            <div className="modal-body">
+              <p>Are you sure you want to delete {pendingDelete.total === 1 ? "this item" : "these items"}? This cannot be undone.</p>
+            </div>
+            <div className="modal-foot">
+              <button className="btn-ghost" onClick={() => setPendingDelete(null)}>Cancel</button>
+              <button className="btn-danger" onClick={confirmDeleteNow}>Delete {pendingDelete.total === 1 ? "item" : "items"}</button>
+            </div>
           </div>
         </div>
       )}
+      <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
     </div>
   );
 }
@@ -1042,6 +1050,7 @@ function ProjectMembers({ project }) {
   const [members, setMembers] = useState(null); // null = loading
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirmState, setConfirmState] = useState(null);
   const btnRef = useRef(null);
   const panelRef = useRef(null);
 
@@ -1092,13 +1101,20 @@ function ProjectMembers({ project }) {
     load();
   }
 
-  async function removeMember(memberEmail) {
-    if (!confirm(`Remove ${memberEmail} from "${project.name}"? They'll lose access to this project.`)) return;
+  async function doRemoveMember(memberEmail) {
     const { error } = await supabase.from("project_members").delete()
       .eq("project_id", project.id).eq("member_email", memberEmail);
     if (error) { toast.error("Could not remove: " + error.message); return; }
     toast.success("Access removed");
     load();
+  }
+  function removeMember(memberEmail) {
+    setConfirmState({
+      title: "Remove access?",
+      message: `Remove ${memberEmail} from "${project.name}"? They'll lose access to this project.`,
+      confirmLabel: "Remove",
+      onConfirm: () => doRemoveMember(memberEmail),
+    });
   }
 
   const count = members?.length ?? 0;
@@ -1145,6 +1161,7 @@ function ProjectMembers({ project }) {
           </div>
         </div>
       )}
+      <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
     </div>
   );
 }

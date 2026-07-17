@@ -6,6 +6,7 @@ import { displayName, nameInitials, avatarStyle } from "./userMap";
 import Avatar from "./Avatar";
 import { timeAgo, fullTime } from "../lib/time";
 import DatePicker from "../components/DatePicker";
+import ConfirmModal from "../components/ConfirmModal";
 
 // --- Image attachments -------------------------------------------------------
 const IMG_BUCKET = "task-images";
@@ -186,6 +187,13 @@ function MentionTextarea({ value, onChange, users, placeholder, rows = 3, onFocu
 
 export default function TaskDrawer({ task, projectName, userEmail, users, onClose, onUpdate, onDelete }) {
   const [local, setLocal] = useState({ ...task, owners: task.owners || [] });
+  const [confirmState, setConfirmState] = useState(null);
+  function deletePost(id, images, files) {
+    setConfirmState({ title: "Delete update?", message: "Are you sure you want to delete this update? This cannot be undone.", confirmLabel: "Delete", onConfirm: () => doDeletePost(id, images, files) });
+  }
+  function deleteReply(id, images, files) {
+    setConfirmState({ title: "Delete reply?", message: "Are you sure you want to delete this reply? This cannot be undone.", confirmLabel: "Delete", onConfirm: () => doDeleteReply(id, images, files) });
+  }
   const [posts, setPosts] = useState([]);
   const [reactions, setReactions] = useState({}); // { [target_id]: { [emoji]: [user_email, ...] } }
   const [newPost, setNewPost] = useState("");
@@ -307,8 +315,7 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
     loadPosts();
   }
 
-  async function deletePost(id, images, files) {
-    if (!confirm("Delete this update?")) return;
+  async function doDeletePost(id, images, files) {
     if (images?.length) await supabase.storage.from(IMG_BUCKET).remove(images);
     if (files?.length) await supabase.storage.from(IMG_BUCKET).remove(files.map((f) => f.path));
     await supabase.from("task_posts").delete().eq("id", id);
@@ -412,6 +419,7 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
           <button className="link danger" onClick={() => onDelete(task.id)}>Delete task</button>
         </div>
       </aside>
+      <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
     </div>
   );
 }
@@ -500,8 +508,7 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, owners, reac
     onReply();
   }
 
-  async function deleteReply(id, images, files) {
-    if (!confirm("Delete this reply?")) return;
+  async function doDeleteReply(id, images, files) {
     if (images?.length) await supabase.storage.from(IMG_BUCKET).remove(images);
     if (files?.length) await supabase.storage.from(IMG_BUCKET).remove(files.map((f) => f.path));
     await supabase.from("task_replies").delete().eq("id", id);
