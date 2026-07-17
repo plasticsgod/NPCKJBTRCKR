@@ -211,16 +211,18 @@ export default function PlasticsEstimator({ userEmail, clientMode = false, onSub
     }
     if (clientMode) {
       if (!myCustomer) { toast.error("Your account isn't linked to a company yet — contact us and we'll set it up."); return; }
-      const { data, error } = await supabase.from("plastic_quotes").insert({
+      const quoteId = crypto.randomUUID();
+      const { error } = await supabase.from("plastic_quotes").insert({
+        id: quoteId,
         created_by: userEmail, customer: myCustomer.name, customer_id: myCustomer.id,
         quote_date: quoteDate || null, lines: savedLines, total,
         status: "pending", client_note: clientNote.trim() || null,
-      }).select("id").single();
+      });
       if (error) { toast.error("Couldn't send quote — " + error.message); return; }
       // Attach the client's note to the thread too, so members see it in context.
-      if (clientNote.trim() && data?.id) {
+      if (clientNote.trim()) {
         await supabase.from("quote_notes").insert({
-          quote_id: data.id, author: userEmail, is_client: true, body: clientNote.trim(),
+          quote_id: quoteId, author: userEmail, is_client: true, body: clientNote.trim(),
         });
       }
       setClientNote("");
