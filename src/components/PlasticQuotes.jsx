@@ -8,7 +8,7 @@ import { toast } from "./Toaster";
 // History of every quote saved from the Plastics Estimator. Each row can be
 // expanded to see its line items, re-exported to the same branded PDF, or
 // deleted.
-export default function PlasticQuotes() {
+export default function PlasticQuotes({ focusQuoteId, onFocused }) {
   const [quotes, setQuotes] = useState(null); // null = loading
   const [openId, setOpenId] = useState(null);
   const [query, setQuery] = useState("");
@@ -50,7 +50,7 @@ export default function PlasticQuotes() {
         await supabase.from("notifications").insert({
           recipient: q.created_by, actor: userEmail,
           type: action === "approved" ? "quote_approved" : "quote_rejected",
-          task: q.customer || null, body: decisionNote.trim() || null,
+          task: q.customer || null, body: decisionNote.trim() || null, link: id,
         });
       } catch { /* non-blocking */ }
       try {
@@ -71,6 +71,15 @@ export default function PlasticQuotes() {
       .subscribe();
     return () => supabase.removeChannel(ch);
   }, [load]);
+
+  // Open the quote a notification pointed at.
+  useEffect(() => {
+    if (focusQuoteId) {
+      setOpenId(focusQuoteId);
+      setQuery("");
+      onFocused && onFocused();
+    }
+  }, [focusQuoteId, onFocused]);
 
   async function remove(id) {
     const { error } = await supabase.from("plastic_quotes").delete().eq("id", id);

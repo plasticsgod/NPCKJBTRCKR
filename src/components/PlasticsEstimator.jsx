@@ -230,7 +230,7 @@ export default function PlasticsEstimator({ userEmail, clientMode = false, onSub
         try {
           await supabase.from("notifications").insert(REVIEWERS.map((m) => ({
             recipient: m, actor: userEmail, type: "quote_submitted",
-            task: myCustomer?.name || userEmail, body: clientNote.trim() || null,
+            task: myCustomer?.name || userEmail, body: clientNote.trim() || null, link: quoteId,
           })));
         } catch { /* non-blocking */ }
         setClientNote("");

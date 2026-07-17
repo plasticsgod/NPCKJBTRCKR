@@ -11,7 +11,7 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export default function ClientQuotes() {
+export default function ClientQuotes({ focusQuoteId, onFocused }) {
   const [quotes, setQuotes] = useState(null);
   const [openId, setOpenId] = useState(null);
 
@@ -24,6 +24,13 @@ export default function ClientQuotes() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (focusQuoteId) {
+      setOpenId(focusQuoteId);
+      onFocused && onFocused();
+    }
+  }, [focusQuoteId, onFocused]);
 
   const openQuote = useCallback((id) => {
     setOpenId(openId === id ? null : id);

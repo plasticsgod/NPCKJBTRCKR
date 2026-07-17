@@ -5,7 +5,7 @@ import { timeAgo, fullTime } from "../lib/time";
 
 // Header notification bell. Shows the current user's in-app notifications
 // (task assignments and @mentions), with an unread badge and live updates.
-export default function NotificationBell({ userEmail, onOpenTask }) {
+export default function NotificationBell({ userEmail, onOpenTask, onOpenQuote }) {
   const [items, setItems] = useState([]);
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -61,8 +61,8 @@ export default function NotificationBell({ userEmail, onOpenTask }) {
     if (!n.read) markRead(n.id);
     setOpen(false);
     if (n.type && n.type.startsWith("quote_")) {
-      // Members: jump to the quotes page. Clients have their own tab and no hash router.
-      if (n.type === "quote_submitted") window.location.hash = "plastic-quotes";
+      if (onOpenQuote) onOpenQuote(n.link || null);
+      else if (n.type === "quote_submitted") window.location.hash = "plastic_quotes";
       return;
     }
     // Open the exact task the notification is about; fall back to the Projects

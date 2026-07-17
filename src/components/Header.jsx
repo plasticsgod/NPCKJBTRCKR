@@ -6,7 +6,7 @@ import { displayName, nameInitials, avatarStyle } from "../projects/userMap";
 
 const TITLES = { work_orders: "Work Orders", dashboard: "Dashboard", plastics: "Plastics Estimator", projects: "Projects" };
 
-export default function Header({ page, email, onMenu, onSignOut, onSearch, canInvite = true, onOpenTask, onHome }) {
+export default function Header({ page, email, onMenu, onSignOut, onSearch, canInvite = true, onOpenTask, onOpenQuote, onHome }) {
   return (
     <header className="header">
       <button className="burger" onClick={onMenu} aria-label="Open menu">
@@ -28,7 +28,7 @@ export default function Header({ page, email, onMenu, onSignOut, onSearch, canIn
             <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
           </svg>
         </button>
-        <NotificationBell userEmail={email} onOpenTask={onOpenTask} />
+        <NotificationBell userEmail={email} onOpenTask={onOpenTask} onOpenQuote={onOpenQuote} />
         <ProfileMenu email={email} onSignOut={onSignOut} canInvite={canInvite} />
       </div>
     </header>
