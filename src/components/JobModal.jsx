@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../supabaseClient";
 import { STATUSES, FACILITIES } from "../supabaseClient";
 import DatePicker from "./DatePicker";
+import ConfirmModal from "./ConfirmModal";
 
 const EMPTY = {
   job_title: "",
@@ -197,6 +198,10 @@ function ProofsPanel({ jobId, jobTitle, customer }) {
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [userEmail, setUserEmail] = useState("");
+  const [confirmState, setConfirmState] = useState(null);
+  function remove(file) {
+    setConfirmState({ title: "Delete file?", message: `Delete "${file.name}"? This cannot be undone.`, confirmLabel: "Delete", onConfirm: () => doRemove(file) });
+  }
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserEmail(data.user?.email || ""));
@@ -281,8 +286,7 @@ function ProofsPanel({ jobId, jobTitle, customer }) {
     URL.revokeObjectURL(url);
   }
 
-  async function remove(file) {
-    if (!confirm(`Delete "${file.name}"? This cannot be undone.`)) return;
+  async function doRemove(file) {
     await supabase.storage.from("job-files").remove([file.storage_path]);
     await supabase.from("job_files").delete().eq("id", file.id);
     load();
@@ -316,6 +320,7 @@ function ProofsPanel({ jobId, jobTitle, customer }) {
           ))}
         </div>
       )}
+      <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
     </div>
   );
 }
@@ -330,6 +335,11 @@ function ArtworkPanel({ jobId, staged, setStaged }) {
   const [label, setLabel] = useState("");
   const [url, setUrl] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [confirmState, setConfirmState] = useState(null);
+  function removeLink(id) {
+    if (isStaged) { setStaged(staged.filter((l) => l.id !== id)); return; }
+    setConfirmState({ title: "Remove link?", message: "Remove this artwork link?", confirmLabel: "Remove", onConfirm: () => doRemoveLink(id) });
+  }
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserEmail(data.user?.email || ""));
@@ -365,9 +375,7 @@ function ArtworkPanel({ jobId, staged, setStaged }) {
     setLabel(""); setUrl("");
   }
 
-  async function removeLink(id) {
-    if (isStaged) { setStaged(staged.filter((l) => l.id !== id)); return; }
-    if (!confirm("Remove this artwork link?")) return;
+  async function doRemoveLink(id) {
     await supabase.from("job_artwork").delete().eq("id", id);
     load();
   }
@@ -409,6 +417,7 @@ function ArtworkPanel({ jobId, staged, setStaged }) {
           ))}
         </div>
       )}
+      <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
     </div>
   );
 }
