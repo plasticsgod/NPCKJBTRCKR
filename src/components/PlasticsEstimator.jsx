@@ -210,27 +210,21 @@ export default function PlasticsEstimator({ userEmail, clientMode = false, onSub
       return;
     }
     if (clientMode) {
-      console.log("[send-for-approval] lines:", lines.length, "priced:", savedLines.length, "customer:", myCustomer);
       if (savedLines.length === 0) {
         toast.error("Add a product and enter a quantity before sending.");
-        alert("Add a product and enter a quantity before sending."); // visible even if toasts don't render
         return;
       }
-      if (!myCustomer) { toast.error("Your account isn't linked to a company yet — contact us and we'll set it up."); return; }
       try {
         const quoteId = crypto.randomUUID();
         const { error } = await supabase.from("plastic_quotes").insert({
           id: quoteId,
-          created_by: userEmail, customer: myCustomer.name, customer_id: myCustomer.id,
+          created_by: userEmail,
+          customer: myCustomer?.name || userEmail,   // company if linked, else the client's email
+          customer_id: myCustomer?.id ?? null,
           quote_date: quoteDate || null, lines: savedLines, total,
           status: "pending", client_note: clientNote.trim() || null,
         });
-        if (error) {
-          console.error("[send-for-approval] insert error:", error);
-          toast.error("Couldn't send quote — " + error.message);
-          alert("Couldn't send quote — " + error.message);
-          return;
-        }
+        if (error) { toast.error("Couldn't send quote — " + error.message); return; }
         if (clientNote.trim()) {
           await supabase.from("quote_notes").insert({
             quote_id: quoteId, author: userEmail, is_client: true, body: clientNote.trim(),
@@ -240,8 +234,8 @@ export default function PlasticsEstimator({ userEmail, clientMode = false, onSub
         toast.success("Sent for approval — we'll review it shortly.");
         onSubmitted && onSubmitted();
       } catch (e) {
-        console.error("[send-for-approval] threw:", e);
-        alert("Something went wrong sending the quote: " + (e?.message || e));
+        toast.error("Something went wrong sending the quote.");
+        console.error("[send-for-approval]", e);
       }
       return;
     }
@@ -460,19 +454,15 @@ export default function PlasticsEstimator({ userEmail, clientMode = false, onSub
             <span className="qtb-total">{money2(total)}</span>
           </div>
           {clientMode && (
-            myCustomer ? (
-              <label className="client-note-field">
-                <span>Add a note (optional)</span>
-                <textarea rows={2} value={clientNote} onChange={(e) => setClientNote(e.target.value)}
-                  placeholder="Anything we should know — timing, sizes, questions…" />
-              </label>
-            ) : (
-              <p className="client-unlinked">Your account isn’t linked to a company yet — contact us and we’ll set it up so you can send quotes for approval.</p>
-            )
+            <label className="client-note-field">
+              <span>Add a note (optional)</span>
+              <textarea rows={2} value={clientNote} onChange={(e) => setClientNote(e.target.value)}
+                placeholder="Anything we should know — timing, sizes, questions…" />
+            </label>
           )}
           <div className="quote-actions">
             {clientMode
-              ? <button className="btn-accent" onClick={saveQuote} disabled={!myCustomer}>Send for approval</button>
+              ? <button className="btn-accent" onClick={saveQuote}>Send for approval</button>
               : <button className="btn-ghost" onClick={saveQuote}>Save quote</button>}
             <button className={clientMode ? "btn-ghost" : "btn-accent"} onClick={exportPdf}>Export PDF</button>
           </div>
