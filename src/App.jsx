@@ -9,6 +9,7 @@ import Dashboard from "./components/Dashboard";
 import PlasticsEstimator from "./components/PlasticsEstimator";
 import ClientQuotes from "./components/ClientQuotes";
 import NotificationBell from "./components/NotificationBell";
+import ConfirmModal from "./components/ConfirmModal";
 import PlasticQuotes from "./components/PlasticQuotes";
 import Customers from "./components/Customers";
 import { DashboardSkeleton, WorkOrdersSkeleton } from "./components/Skeletons";
@@ -50,6 +51,7 @@ export default function App() {
   const [isClient, setIsClient] = useState(false);
   const [roleReady, setRoleReady] = useState(false);
   const [clientTab, setClientTab] = useState("estimator"); // client view: 'estimator' | 'quotes'
+  const [confirmState, setConfirmState] = useState(null);
 
   const [jobs, setJobs] = useState([]);
   const [plasticJobs, setPlasticJobs] = useState([]);
@@ -247,11 +249,13 @@ export default function App() {
     loadJobs();
   }
 
-  async function deleteJob(id) {
-    if (!confirm("Delete this job? This cannot be undone.")) return;
+  async function doDeleteJob(id) {
     const { error } = await supabase.from("jobs").delete().eq("id", id);
     if (error) return toast.error("Could not delete: " + error.message);
     loadJobs();
+  }
+  function deleteJob(id) {
+    setConfirmState({ title: "Delete job?", message: "Delete this job? This cannot be undone.", confirmLabel: "Delete job", onConfirm: () => doDeleteJob(id) });
   }
 
   // Bulk delete (the Work Orders page shows its own confirm popup first)
@@ -446,6 +450,7 @@ export default function App() {
           onOpenProject={openProjectFromSearch}
         />
       )}
+      <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
     </div>
   );
 }
