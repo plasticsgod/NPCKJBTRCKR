@@ -1764,7 +1764,7 @@ a.file-chip:hover svg { color: var(--accent); }
 .quote-card.open { border-color: var(--ink-3); }
 .quote-row {
   width: 100%; display: grid;
-  grid-template-columns: 64px 1fr auto auto 24px;
+  grid-template-columns: 64px 1fr auto auto auto 24px;
   align-items: center; gap: 14px;
   padding: 16px 18px;
   background: none; border: none; cursor: pointer; text-align: left;
@@ -1786,7 +1786,7 @@ a.file-chip:hover svg { color: var(--accent); }
 .quote-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
 @media (max-width: 640px) {
-  .quote-row { grid-template-columns: 50px 1fr auto 18px; }
+  .quote-row { grid-template-columns: 50px 1fr auto auto 18px; }
   .quote-row .quote-meta { display: none; }
   .quotes-head .search-input { max-width: none; width: 100%; }
 }
@@ -2302,3 +2302,9 @@ a.file-chip:hover svg { color: var(--accent); }
 .quote-note-add { display: flex; gap: 8px; }
 .quote-note-add input { flex: 1; font-family: var(--ui); font-size: 14px; padding: 9px 13px; border: 0.5px solid #e3e3e8; border-radius: var(--radius-ctl); background: #f5f5f7; }
 .quote-note-add input:focus { outline: none; background: #fff; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+.quote-badge-cell { display: flex; justify-content: flex-end; min-width: 0; }
+.quote-row .quote-total { white-space: nowrap; text-align: right; }
+
+/* The note baked into a quote (read-only, part of the quote) */
+.quote-baked-note { display: flex; gap: 12px; align-items: baseline; margin: 4px 16px 16px; padding: 12px 14px; background: var(--panel); border-radius: 12px; font-size: 13px; color: var(--ink); line-height: 1.5; }
+.quote-baked-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); flex: 0 0 auto; }
