@@ -2031,13 +2031,15 @@ a.file-chip:hover svg { color: var(--accent); }
 /* ==== Customers ========================================================== */
 .cust-page, .cust-detail { display: flex; flex-direction: column; gap: 16px; }
 .cust-table { display: flex; flex-direction: column; }
-.cust-thead, .cust-trow { display: grid; grid-template-columns: 1.5fr 1.5fr .7fr 1fr 1fr; gap: 12px; align-items: center; }
+.cust-thead, .cust-trow { display: grid; grid-template-columns: 1.5fr 1.8fr .7fr 1fr; gap: 12px; align-items: center; }
 .cust-thead { padding: 0 12px 10px; font-family: var(--ui); font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); }
 .cust-thead .num, .cust-trow .num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
 .cust-trow { width: 100%; text-align: left; border: none; background: #fff; border-top: 1px solid var(--hairline-soft); padding: 13px 12px; cursor: pointer; font-family: var(--ui); font-size: 13px; color: var(--ink); border-radius: 8px; transition: background var(--dur-fast) var(--ease); }
 .cust-trow:hover { background: var(--panel); }
 .ct-co { font-weight: 600; }
-.ct-contact { color: var(--ink-2); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ct-contact { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ct-name { color: var(--ink); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ct-email { color: var(--ink-3); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cust-trow .num.owed { color: #c0392b; font-weight: 700; }
 
 /* Detail */
@@ -2059,9 +2061,8 @@ a.file-chip:hover svg { color: var(--accent); }
 .cust-none { font-size: 13px; padding: 8px 4px; }
 @media (max-width: 860px) {
   .cust-stats { grid-template-columns: repeat(2, 1fr); }
-  .cust-thead, .cust-trow { grid-template-columns: 1.4fr .7fr 1fr; }
-  .cust-thead span:nth-child(2), .cust-trow .ct-contact,
-  .cust-thead span:nth-child(5), .cust-trow span:last-child { display: none; }
+  .cust-thead, .cust-trow { grid-template-columns: 1.4fr 1.4fr .7fr; }
+  .cust-thead span:nth-child(4), .cust-trow span:nth-child(4) { display: none; }
 }
 .stat-sub { font-size: 11px; color: var(--ink-3); margin-top: 4px; }
 .stat-sub.warn { color: #b3402a; }
