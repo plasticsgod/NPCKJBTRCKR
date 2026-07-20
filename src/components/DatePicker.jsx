@@ -1,4 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 
 const MONTHS = ["January","February","March","April","May","June",
                  "July","August","September","October","November","December"];
@@ -20,10 +21,15 @@ export default function DatePicker({ value, onChange, placeholder = "Set date" }
     return { year: d.getFullYear(), month: d.getMonth() };
   });
   const ref = useRef(null);
+  const menuRef = useRef(null);
   const triggerRef = useRef(null);
 
   useEffect(() => {
-    function onClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    function onClick(e) {
+      if (ref.current && ref.current.contains(e.target)) return;
+      if (menuRef.current && menuRef.current.contains(e.target)) return;
+      setOpen(false);
+    }
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
@@ -102,8 +108,8 @@ export default function DatePicker({ value, onChange, placeholder = "Set date" }
         )}
       </button>
 
-      {open && coords && (
-        <div className="dp-popup" style={{ position: "fixed", top: coords.top, left: coords.left }}>
+      {open && coords && createPortal(
+        <div className="dp-popup" ref={menuRef} style={{ position: "fixed", top: coords.top, left: coords.left, zIndex: 1000 }}>
           <div className="dp-head">
             <button type="button" className="dp-nav" onClick={prevMonth}>‹</button>
             <span className="dp-month">{MONTHS[view.month]} {view.year}</span>
@@ -137,8 +143,7 @@ export default function DatePicker({ value, onChange, placeholder = "Set date" }
               setOpen(false);
             }}>Today</button>
           </div>
-        </div>
-      )}
+        </div>, document.body)}
     </div>
   );
 }
