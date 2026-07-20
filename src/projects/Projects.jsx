@@ -509,6 +509,7 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
 
       {openTask && (
         <TaskDrawer
+          key={openTask.id}
           task={openTask}
           projectName={openProject?.name}
           userEmail={userEmail}
