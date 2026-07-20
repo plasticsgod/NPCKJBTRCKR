@@ -229,17 +229,19 @@ export default function Customers() {
           <div className="cust-table">
             <div className="cust-thead">
               <span>Company</span><span>Contact</span>
-              <span className="num">Orders</span><span className="num">Revenue</span><span className="num">Deposits owed</span>
+              <span className="num">Orders</span><span className="num">Revenue</span>
             </div>
             {shown.map((c) => {
               const s = statsFor(c.id);
               return (
                 <button className="cust-trow" key={c.id} onClick={() => setOpenId(c.id)}>
                   <span className="ct-co">{c.name}</span>
-                  <span className="ct-contact">{c.email || c.contact_name || "—"}</span>
+                  <span className="ct-contact">
+                    <span className="ct-name">{c.contact_name || "—"}</span>
+                    {c.email && <span className="ct-email">{c.email}</span>}
+                  </span>
                   <span className="num">{s.orders}</span>
                   <span className="num">{money(s.revenue)}</span>
-                  <span className={"num" + (s.owed ? " owed" : "")}>{s.owed || "—"}</span>
                 </button>
               );
             })}
