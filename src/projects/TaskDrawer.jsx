@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "../supabaseClient";
 import { TASK_STATUSES } from "./constants";
 import { notifyAssignment, notifyMentions, notifyComment } from "./notifications";
@@ -819,12 +820,17 @@ function StatusPicker({ value, onChange }) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState(null);
   const ref = useRef(null);
+  const menuRef = useRef(null);
   const triggerRef = useRef(null);
   const current = value || "To do";
   const slug = (s) => s.toLowerCase().replace(/\s+/g, "-");
 
   useEffect(() => {
-    function onClickOutside(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    function onClickOutside(e) {
+      if (ref.current && ref.current.contains(e.target)) return;
+      if (menuRef.current && menuRef.current.contains(e.target)) return;
+      setOpen(false);
+    }
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
@@ -861,9 +867,9 @@ function StatusPicker({ value, onChange }) {
         onClick={() => setOpen((o) => !o)}>
         {current}
       </button>
-      {open && coords && (
-        <div className="status-menu"
-          style={{ position: "fixed", top: coords.top, left: coords.left, minWidth: coords.width }}>
+      {open && coords && createPortal(
+        <div className="status-menu" ref={menuRef}
+          style={{ position: "fixed", top: coords.top, left: coords.left, minWidth: coords.width, zIndex: 1000 }}>
           {TASK_STATUSES.map((s) => (
             <button key={s} type="button"
               className={"status-option tpill-" + slug(s) + (s === current ? " is-current" : "")}
@@ -871,8 +877,7 @@ function StatusPicker({ value, onChange }) {
               {s}
             </button>
           ))}
-        </div>
-      )}
+        </div>, document.body)}
     </div>
   );
 }
@@ -882,10 +887,15 @@ function MultiPersonPicker({ owners, users, onToggle }) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState(null);
   const ref = useRef(null);
+  const menuRef = useRef(null);
   const triggerRef = useRef(null);
 
   useEffect(() => {
-    function onClickOutside(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    function onClickOutside(e) {
+      if (ref.current && ref.current.contains(e.target)) return;
+      if (menuRef.current && menuRef.current.contains(e.target)) return;
+      setOpen(false);
+    }
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
@@ -927,8 +937,8 @@ function MultiPersonPicker({ owners, users, onToggle }) {
         }
         <span className="assign-caret">▾</span>
       </div>
-      {open && coords && (
-        <div className="person-dropdown" style={{ position: "fixed", top: coords.top, left: coords.left }}>
+      {open && coords && createPortal(
+        <div className="person-dropdown" ref={menuRef} style={{ position: "fixed", top: coords.top, left: coords.left, zIndex: 1000 }}>
           {users.map(u => (
             <label key={u} className="person-option">
               <input type="checkbox" checked={owners.includes(u)}
@@ -943,8 +953,7 @@ function MultiPersonPicker({ owners, users, onToggle }) {
               Clear all
             </button>
           )}
-        </div>
-      )}
+        </div>, document.body)}
     </div>
   );
 }
