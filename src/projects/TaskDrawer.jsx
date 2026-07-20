@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "../supabaseClient";
+import { toast } from "../components/Toaster";
 import { TASK_STATUSES } from "./constants";
 import { notifyAssignment, notifyMentions, notifyComment } from "./notifications";
 import { displayName, nameInitials, avatarStyle } from "./userMap";
@@ -306,12 +307,21 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
     const images = newImages.length ? await uploadImages(newImages, task.id) : [];
     const files = newFiles.length ? await uploadFiles(newFiles, task.id) : [];
     const mentions = parseMentions(body, users);
-    await supabase.from("task_posts").insert({ task_id: task.id, author: userEmail, body, mentions, images, files });
+    // Optimistic: show the update immediately (dimmed) so it doesn't pop in later.
+    const tempId = "temp-" + (crypto.randomUUID ? crypto.randomUUID() : Date.now());
+    const optimistic = { id: tempId, task_id: task.id, author: userEmail, body, mentions, images, files, created_at: new Date().toISOString(), task_replies: [], _pending: true };
+    setPosts((prev) => [...prev, optimistic]);
+    setNewPost(""); setNewImages([]); setNewFiles([]);
+    const { error } = await supabase.from("task_posts").insert({ task_id: task.id, author: userEmail, body, mentions, images, files });
+    if (error) {
+      setPosts((prev) => prev.filter((p) => p.id !== tempId));
+      setNewPost(body);
+      toast.error("Couldn't post update — " + error.message);
+      setPosting(false);
+      return;
+    }
     notifyMentions({ mentions, task: task.title, project: projectName || "", mentionedBy: userEmail, body, taskId: task.id });
     notifyComment({ owners: local.owners || [], author: userEmail, task: task.title, project: projectName || "", body, mentions, taskId: task.id });
-    setNewPost("");
-    setNewImages([]);
-    setNewFiles([]);
     setPosting(false);
     loadPosts();
   }
@@ -483,12 +493,15 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, owners, reac
   }
   const [reply, setReply] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [optimisticReplies, setOptimisticReplies] = useState([]);
+  // Clear optimistic replies once the real ones arrive from a reload.
+  useEffect(() => { setOptimisticReplies([]); }, [post.task_replies]);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(post.body);
   const [savingEdit, setSavingEdit] = useState(false);
   const [replyImages, setReplyImages] = useState([]);
   const [replyFiles, setReplyFiles] = useState([]);
-  const replies = post.task_replies ?? [];
+  const replies = [...(post.task_replies ?? []), ...optimisticReplies];
   const mine = post.author === userEmail;
 
   async function submitReply() {
@@ -498,14 +511,21 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, owners, reac
     const images = replyImages.length ? await uploadImages(replyImages, post.task_id) : [];
     const files = replyFiles.length ? await uploadFiles(replyFiles, post.task_id) : [];
     const mentions = parseMentions(body, users);
-    await supabase.from("task_replies").insert({ post_id: post.id, author: userEmail, body, mentions, images, files });
+    // Optimistic: show the reply immediately (dimmed) until the reload confirms it.
+    const tempId = "temp-" + (crypto.randomUUID ? crypto.randomUUID() : Date.now());
+    setOptimisticReplies((prev) => [...prev, { id: tempId, post_id: post.id, author: userEmail, body, mentions, images, files, created_at: new Date().toISOString(), _pending: true }]);
+    setReply(""); setReplyImages([]); setReplyFiles([]); setReplyOpen(false);
+    const { error } = await supabase.from("task_replies").insert({ post_id: post.id, author: userEmail, body, mentions, images, files });
+    if (error) {
+      setOptimisticReplies((prev) => prev.filter((r) => r.id !== tempId));
+      setReply(body); setReplyOpen(true);
+      toast.error("Couldn't post reply — " + error.message);
+      setSubmitting(false);
+      return;
+    }
     notifyMentions({ mentions, task: taskTitle, project: projectName || "", mentionedBy: userEmail, body, taskId: post.task_id });
     notifyComment({ owners: owners || [], author: userEmail, task: taskTitle, project: projectName || "", body, mentions, taskId: post.task_id });
-    setReply("");
-    setReplyImages([]);
-    setReplyFiles([]);
     setSubmitting(false);
-    setReplyOpen(false);
     onReply();
   }
 
@@ -529,7 +549,7 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, owners, reac
   }
 
   return (
-    <div className="post-card">
+    <div className={"post-card post-in" + (post._pending ? " post-pending" : "")}>
       <div className="post-head">
         <Avatar email={post.author} />
         <div className="post-meta">
@@ -627,7 +647,7 @@ function ReplyItem({ reply, users, userEmail, reactions, onToggleReaction, onCha
   }
 
   return (
-    <div className="reply">
+    <div className={"reply post-in" + (reply._pending ? " post-pending" : "")}>
       <Avatar email={reply.author} size="sm" />
       <div className="reply-content">
         <div className="reply-meta">
