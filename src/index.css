@@ -2282,3 +2282,15 @@ a.file-chip:hover svg { color: var(--accent); }
 /* The note baked into a quote (read-only, part of the quote) */
 .quote-baked-note { display: flex; gap: 12px; align-items: baseline; margin: 4px 16px 16px; padding: 12px 14px; background: var(--panel); border-radius: 12px; font-size: 13px; color: var(--ink); line-height: 1.5; }
 .quote-baked-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); flex: 0 0 auto; }
+
+/* Update/reply posting feedback: gentle entrance + faint "pending" dim */
+@keyframes post-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.post-in { animation: post-in 320ms var(--ease) both; }
+.post-pending { opacity: .55; transition: opacity var(--dur) var(--ease); }
+@media (prefers-reduced-motion: reduce) {
+  .post-in { animation: none; }
+  .post-pending { opacity: .6; }
+}
