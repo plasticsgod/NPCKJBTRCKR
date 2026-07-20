@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "../supabaseClient";
 import { TASK_STATUSES, statusClass } from "./constants";
 import { useUsers } from "./useUsers";
@@ -898,12 +899,17 @@ function StatusPicker({ value, onChange, readOnly }) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState(null);
   const ref = useRef(null);
+  const menuRef = useRef(null);
   const triggerRef = useRef(null);
   const current = value || "To do";
   const slug = (s) => s.toLowerCase().replace(/\s+/g, "-");
 
   useEffect(() => {
-    function onClickOutside(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    function onClickOutside(e) {
+      if (ref.current && ref.current.contains(e.target)) return;
+      if (menuRef.current && menuRef.current.contains(e.target)) return;
+      setOpen(false);
+    }
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
@@ -948,9 +954,9 @@ function StatusPicker({ value, onChange, readOnly }) {
           {current}
         </button>
       )}
-      {open && coords && !readOnly && (
-        <div className="status-menu"
-          style={{ position: "fixed", top: coords.top, left: coords.left, minWidth: coords.width, transformOrigin: coords.flip ? "bottom left" : "top left" }}>
+      {open && coords && !readOnly && createPortal(
+        <div className="status-menu" ref={menuRef}
+          style={{ position: "fixed", top: coords.top, left: coords.left, minWidth: coords.width, zIndex: 1000, transformOrigin: coords.flip ? "bottom left" : "top left" }}>
           {TASK_STATUSES.map((s) => (
             <button key={s} type="button"
               className={"status-option tpill-" + slug(s) + (s === current ? " is-current" : "")}
@@ -958,8 +964,7 @@ function StatusPicker({ value, onChange, readOnly }) {
               {s}
             </button>
           ))}
-        </div>
-      )}
+        </div>, document.body)}
     </div>
   );
 }
@@ -968,10 +973,15 @@ function MultiPersonPicker({ owners, users, onToggle, readOnly }) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState(null);
   const ref = useRef(null);
+  const menuRef = useRef(null);
   const triggerRef = useRef(null);
 
   useEffect(() => {
-    function onClickOutside(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    function onClickOutside(e) {
+      if (ref.current && ref.current.contains(e.target)) return;
+      if (menuRef.current && menuRef.current.contains(e.target)) return;
+      setOpen(false);
+    }
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
@@ -1019,8 +1029,8 @@ function MultiPersonPicker({ owners, users, onToggle, readOnly }) {
         }
         {!readOnly && <span className="assign-caret">▾</span>}
       </div>
-      {open && coords && !readOnly && (
-        <div className="person-dropdown" style={{ position: "fixed", top: coords.top, left: coords.left, transformOrigin: coords.flip ? "bottom left" : "top left" }}>
+      {open && coords && !readOnly && createPortal(
+        <div className="person-dropdown" ref={menuRef} style={{ position: "fixed", top: coords.top, left: coords.left, zIndex: 1000, transformOrigin: coords.flip ? "bottom left" : "top left" }}>
           {users.map(u => (
             <label key={u} className="person-option">
               <input type="checkbox" checked={owners.includes(u)}
@@ -1035,8 +1045,7 @@ function MultiPersonPicker({ owners, users, onToggle, readOnly }) {
               Clear all
             </button>
           )}
-        </div>
-      )}
+        </div>, document.body)}
     </div>
   );
 }
