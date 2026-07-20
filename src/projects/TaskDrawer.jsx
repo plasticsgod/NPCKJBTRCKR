@@ -307,21 +307,24 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
     const images = newImages.length ? await uploadImages(newImages, task.id) : [];
     const files = newFiles.length ? await uploadFiles(newFiles, task.id) : [];
     const mentions = parseMentions(body, users);
-    // Optimistic: show the update immediately (dimmed) so it doesn't pop in later.
-    const tempId = "temp-" + (crypto.randomUUID ? crypto.randomUUID() : Date.now());
-    const optimistic = { id: tempId, task_id: task.id, author: userEmail, body, mentions, images, files, created_at: new Date().toISOString(), task_replies: [], _pending: true };
+    const toastId = toast.loading("Posting…");
+    // Use a client-generated id so the optimistic item and the reloaded row share
+    // the same React key — the entrance animation then plays exactly once.
+    const id = crypto.randomUUID ? crypto.randomUUID() : "temp-" + Date.now();
+    const optimistic = { id, task_id: task.id, author: userEmail, body, mentions, images, files, created_at: new Date().toISOString(), task_replies: [], _pending: true };
     setPosts((prev) => [...prev, optimistic]);
     setNewPost(""); setNewImages([]); setNewFiles([]);
-    const { error } = await supabase.from("task_posts").insert({ task_id: task.id, author: userEmail, body, mentions, images, files });
+    const { error } = await supabase.from("task_posts").insert({ id, task_id: task.id, author: userEmail, body, mentions, images, files });
     if (error) {
-      setPosts((prev) => prev.filter((p) => p.id !== tempId));
+      setPosts((prev) => prev.filter((p) => p.id !== id));
       setNewPost(body);
-      toast.error("Couldn't post update — " + error.message);
+      toast.update(toastId, "Couldn't post update", { type: "error", duration: 5000 });
       setPosting(false);
       return;
     }
     notifyMentions({ mentions, task: task.title, project: projectName || "", mentionedBy: userEmail, body, taskId: task.id });
     notifyComment({ owners: local.owners || [], author: userEmail, task: task.title, project: projectName || "", body, mentions, taskId: task.id });
+    toast.update(toastId, "Posted", { type: "success", duration: 1800 });
     setPosting(false);
     loadPosts();
   }
@@ -511,20 +514,22 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, owners, reac
     const images = replyImages.length ? await uploadImages(replyImages, post.task_id) : [];
     const files = replyFiles.length ? await uploadFiles(replyFiles, post.task_id) : [];
     const mentions = parseMentions(body, users);
-    // Optimistic: show the reply immediately (dimmed) until the reload confirms it.
-    const tempId = "temp-" + (crypto.randomUUID ? crypto.randomUUID() : Date.now());
-    setOptimisticReplies((prev) => [...prev, { id: tempId, post_id: post.id, author: userEmail, body, mentions, images, files, created_at: new Date().toISOString(), _pending: true }]);
+    const toastId = toast.loading("Posting…");
+    // Same client-generated id trick so the reply animates in only once.
+    const id = crypto.randomUUID ? crypto.randomUUID() : "temp-" + Date.now();
+    setOptimisticReplies((prev) => [...prev, { id, post_id: post.id, author: userEmail, body, mentions, images, files, created_at: new Date().toISOString(), _pending: true }]);
     setReply(""); setReplyImages([]); setReplyFiles([]); setReplyOpen(false);
-    const { error } = await supabase.from("task_replies").insert({ post_id: post.id, author: userEmail, body, mentions, images, files });
+    const { error } = await supabase.from("task_replies").insert({ id, post_id: post.id, author: userEmail, body, mentions, images, files });
     if (error) {
-      setOptimisticReplies((prev) => prev.filter((r) => r.id !== tempId));
+      setOptimisticReplies((prev) => prev.filter((r) => r.id !== id));
       setReply(body); setReplyOpen(true);
-      toast.error("Couldn't post reply — " + error.message);
+      toast.update(toastId, "Couldn't post reply", { type: "error", duration: 5000 });
       setSubmitting(false);
       return;
     }
     notifyMentions({ mentions, task: taskTitle, project: projectName || "", mentionedBy: userEmail, body, taskId: post.task_id });
     notifyComment({ owners: owners || [], author: userEmail, task: taskTitle, project: projectName || "", body, mentions, taskId: post.task_id });
+    toast.update(toastId, "Posted", { type: "success", duration: 1800 });
     setSubmitting(false);
     onReply();
   }
