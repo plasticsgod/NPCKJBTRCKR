@@ -197,7 +197,18 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
     setConfirmState({ title: "Delete reply?", message: "Are you sure you want to delete this reply? This cannot be undone.", confirmLabel: "Delete", onConfirm: () => doDeleteReply(id, images, files) });
   }
   const [posts, setPosts] = useState([]);
+  const [postsLoaded, setPostsLoaded] = useState(false);
   const [reactions, setReactions] = useState({}); // { [target_id]: { [emoji]: [user_email, ...] } }
+  // If this drawer instance is reused for a different task, reset the feed state
+  // DURING render (before the first paint) so we never flash the previous task's
+  // posts or an empty thread — the skeleton shows until the new task's fetch lands.
+  const [trackedTaskId, setTrackedTaskId] = useState(task.id);
+  if (task.id !== trackedTaskId) {
+    setTrackedTaskId(task.id);
+    setPosts([]);
+    setPostsLoaded(false);
+    setReactions({});
+  }
   const [newPost, setNewPost] = useState("");
   const [newImages, setNewImages] = useState([]);
   const [newFiles, setNewFiles] = useState([]);
@@ -254,6 +265,7 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
       .from("task_posts").select("*, task_replies(*)").eq("task_id", task.id).order("created_at");
     const list = data ?? [];
     setPosts(list);
+    setPostsLoaded(true);
     // Collect every post + reply id, then pull their reactions in one query.
     const ids = [];
     list.forEach((p) => { ids.push(p.id); (p.task_replies ?? []).forEach((r) => ids.push(r.id)); });
@@ -269,6 +281,7 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
   }, [task.id]);
 
   useEffect(() => {
+    setPostsLoaded(false);
     loadPosts();
     const ch = supabase.channel("posts-" + task.id)
       .on("postgres_changes", { event: "*", schema: "public", table: "task_posts", filter: "task_id=eq." + task.id }, loadPosts)
@@ -418,14 +431,29 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
               {dragOver && <div className="compose-drophint">Drop files to attach</div>}
             </div>
 
-            {posts.length === 0 && <p className="muted small feed-empty">No updates yet. Be the first to post.</p>}
-
-            {[...posts].reverse().map((post) => (
-              <PostCard key={post.id} post={post} users={users} userEmail={userEmail}
-                taskTitle={task.title} projectName={projectName} owners={local.owners || []}
-                reactions={reactions} onToggleReaction={toggleReaction}
-                onDelete={deletePost} onReply={loadPosts} />
-            ))}
+            {!postsLoaded ? (
+              <div className="feed-loading" aria-hidden="true">
+                {[0, 1].map((i) => (
+                  <div className="feed-skel" key={i}>
+                    <div className="feed-skel-avatar" />
+                    <div className="feed-skel-lines">
+                      <div className="feed-skel-line short" />
+                      <div className="feed-skel-line" />
+                      <div className="feed-skel-line" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : posts.length === 0 ? (
+              <p className="muted small feed-empty">No updates yet. Be the first to post.</p>
+            ) : (
+              [...posts].reverse().map((post) => (
+                <PostCard key={post.id} post={post} users={users} userEmail={userEmail}
+                  taskTitle={task.title} projectName={projectName} owners={local.owners || []}
+                  reactions={reactions} onToggleReaction={toggleReaction}
+                  onDelete={deletePost} onReply={loadPosts} />
+              ))
+            )}
           </div>
         </div>
 
