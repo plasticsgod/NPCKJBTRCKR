@@ -2294,3 +2294,9 @@ a.file-chip:hover svg { color: var(--accent); }
   .post-in { animation: none; }
   .post-pending { opacity: .6; }
 }
+
+/* Loading toast (Posting…) — neutral with a spinning icon */
+.toast-loading .toast-icon { color: var(--accent); }
+.toast-spinner { animation: toast-spin 0.7s linear infinite; }
+@keyframes toast-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .toast-spinner { animation: none; } }
