@@ -39,14 +39,14 @@ export function notifyMentions({ mentions = [], task, project, mentionedBy, body
   }
 }
 
-// Call when someone posts a comment/reply on a task. Gives everyone ASSIGNED to
-// that task an in-app heads-up ("someone commented on a task you're on"),
-// skipping the author and anyone already @mentioned (they get a mention notice).
-// In-app only by design, so active discussions don't flood inboxes with email.
+// Call when someone posts a comment/reply on a task. Notifies everyone ASSIGNED
+// to that task (in-app bell + email), skipping the author and anyone already
+// @mentioned (they get a mention notice instead, so no double-notify).
 export function notifyComment({ owners = [], author, task, project, body, mentions = [], taskId }) {
   const skip = new Set([author, ...mentions]);
   for (const to of owners) {
     if (!to || skip.has(to)) continue;
+    notify({ type: "comment", to, task, project, commentedBy: author, body });
     recordInApp({ recipient: to, type: "comment", actor: author, task, project, body, task_id: taskId });
   }
 }
