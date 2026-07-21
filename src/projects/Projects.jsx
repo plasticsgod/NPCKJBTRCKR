@@ -375,7 +375,7 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
 
   const toolbar = (
     <div className="toolbar">
-      <input className="search-input" type="search" placeholder="Search tasks in this project…"
+      <input className="search-input" type="search" placeholder="Search tasks and files…"
         value={query} onChange={(e) => setQuery(e.target.value)} />
       <div className="filter-wrap" ref={filterRef}>
         <button className={"filter-trigger" + (activeFilterCount > 0 ? " active" : "") + (filterOpen ? " open" : "")}
@@ -481,6 +481,8 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
               key={activeProject.id}
               project={activeProject}
               tasks={activeVis}
+              allTasks={activeRaw}
+              fileQuery={q}
               users={users}
               userEmail={userEmail}
               canEdit={canEdit}
@@ -591,7 +593,7 @@ const fileIconSvg = {
   file: "M6 3h9l3 3v15H6z",
 };
 
-function ProjectFiles({ tasks }) {
+function ProjectFiles({ tasks, query }) {
   const [entries, setEntries] = useState(null);
   const bucket = supabase.storage.from("task-images");
   const url = (p) => bucket.getPublicUrl(p).data.publicUrl;
@@ -619,9 +621,20 @@ function ProjectFiles({ tasks }) {
   if (entries.length === 0)
     return <div className="proj-files-empty">No files yet. Files attached to any task's updates show up here.</div>;
 
+  const q = (query || "").trim().toLowerCase();
+  const shown = q
+    ? entries.filter((e) =>
+        (e.name || "").toLowerCase().includes(q) ||
+        (e.task || "").toLowerCase().includes(q) ||
+        displayName(e.author).toLowerCase().includes(q))
+    : entries;
+
+  if (shown.length === 0)
+    return <div className="proj-files-empty">No files match “{query}”.</div>;
+
   return (
     <div className="proj-files">
-      {entries.map((e, i) => {
+      {shown.map((e, i) => {
         const ic = e.image ? "photo" : fileIcon(e.name);
         return (
           <a className="pf-card" key={i} href={url(e.path)} target="_blank" rel="noreferrer" title={`Download ${e.name}`}>
@@ -646,7 +659,7 @@ function ProjectFiles({ tasks }) {
   );
 }
 
-function ProjectGroup({ project, tasks, users, userEmail, canEdit = true, solo = false, progress, selected, onToggleSelect, selectedTasks, onToggleTask, onUpdateName, onAddTask, onAddTaskInline, onOpenTask, onUpdateTask, activity, reads, draggingTaskId, onDragTaskStart, onDragTaskEnd, isDropTarget, onDragOverProject, onDropTask }) {
+function ProjectGroup({ project, tasks, allTasks, fileQuery, users, userEmail, canEdit = true, solo = false, progress, selected, onToggleSelect, selectedTasks, onToggleTask, onUpdateName, onAddTask, onAddTaskInline, onOpenTask, onUpdateTask, activity, reads, draggingTaskId, onDragTaskStart, onDragTaskEnd, isDropTarget, onDragOverProject, onDropTask }) {
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState(project.name);
   const [collapsed, setCollapsed] = useState(false);
@@ -730,7 +743,7 @@ function ProjectGroup({ project, tasks, users, userEmail, canEdit = true, solo =
         </div>
       )}
       {(solo || !collapsed) && tab === "files" && (
-        <ProjectFiles tasks={tasks} />
+        <ProjectFiles tasks={allTasks || tasks} query={fileQuery} />
       )}
       {(solo || !collapsed) && tab === "tasks" && (
         <div className="ptable-wrap">
