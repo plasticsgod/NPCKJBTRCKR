@@ -1,0 +1,33 @@
+name: CI
+
+# Run on every push and every pull request to main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Install dependencies. Uses the lockfile if present (npm ci), otherwise
+      # falls back to npm install so the job still runs.
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      # 1) Lint — catches undefined variables, bad imports, hook mistakes.
+      - name: Lint
+        run: npm run lint
+
+      # 2) Build — catches anything that breaks compilation.
+      - name: Build
+        run: npm run build
