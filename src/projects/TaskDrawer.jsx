@@ -193,9 +193,6 @@ export default function TaskDrawer({ task, projectName, userEmail, users, onClos
   function deletePost(id, images, files) {
     setConfirmState({ title: "Delete update?", message: "Are you sure you want to delete this update? This cannot be undone.", confirmLabel: "Delete", onConfirm: () => doDeletePost(id, images, files) });
   }
-  function deleteReply(id, images, files) {
-    setConfirmState({ title: "Delete reply?", message: "Are you sure you want to delete this reply? This cannot be undone.", confirmLabel: "Delete", onConfirm: () => doDeleteReply(id, images, files) });
-  }
   const [posts, setPosts] = useState([]);
   const [postsLoaded, setPostsLoaded] = useState(false);
   const [reactions, setReactions] = useState({}); // { [target_id]: { [emoji]: [user_email, ...] } }
@@ -525,6 +522,7 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, owners, reac
   const [reply, setReply] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [optimisticReplies, setOptimisticReplies] = useState([]);
+  const [replyConfirm, setReplyConfirm] = useState(null);
   // Clear optimistic replies once the real ones arrive from a reload.
   useEffect(() => { setOptimisticReplies([]); }, [post.task_replies]);
   const [editing, setEditing] = useState(false);
@@ -567,6 +565,9 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, owners, reac
     if (files?.length) await supabase.storage.from(IMG_BUCKET).remove(files.map((f) => f.path));
     await supabase.from("task_replies").delete().eq("id", id);
     onReply();
+  }
+  function deleteReply(id, images, files) {
+    setReplyConfirm({ title: "Delete reply?", message: "Are you sure you want to delete this reply? This cannot be undone.", confirmLabel: "Delete", onConfirm: () => doDeleteReply(id, images, files) });
   }
 
   function startEdit() { setDraft(post.body); setEditing(true); }
@@ -659,6 +660,7 @@ function PostCard({ post, users, userEmail, taskTitle, projectName, owners, reac
           )}
         </div>
       </div>
+      <ConfirmModal state={replyConfirm} onClose={() => setReplyConfirm(null)} />
     </div>
   );
 }
