@@ -7,11 +7,9 @@ import WorkOrders from "./components/WorkOrders";
 import PlasticWorkOrders from "./components/PlasticWorkOrders";
 import Dashboard from "./components/Dashboard";
 import PlasticsEstimator from "./components/PlasticsEstimator";
-import ClientQuotes from "./components/ClientQuotes";
 import ClientOrders from "./components/ClientOrders";
 import NotificationBell from "./components/NotificationBell";
 import ConfirmModal from "./components/ConfirmModal";
-import PlasticQuotes from "./components/PlasticQuotes";
 import Customers from "./components/Customers";
 import { DashboardSkeleton, WorkOrdersSkeleton } from "./components/Skeletons";
 import Projects from "./projects/Projects";
@@ -20,7 +18,7 @@ import PlasticJobModal from "./components/PlasticJobModal";
 import { Toaster, toast } from "./components/Toaster";
 import SearchOverlay from "./components/SearchOverlay";
 
-const PAGES = ["dashboard", "work_orders", "plastic_work_orders", "projects", "plastics", "plastic_quotes", "customers"];
+const PAGES = ["dashboard", "work_orders", "plastic_work_orders", "projects", "plastics", "customers"];
 
 // Instant client-side check for the core team (matches the SQL allowlist) so
 // they never see a flash; invited "members" are confirmed via RPC below.
@@ -64,8 +62,7 @@ export default function App() {
   const [navOpen, setNavOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [focusTaskId, setFocusTaskId] = useState(null);
-  const [focusQuoteId, setFocusQuoteId] = useState(null);        // member: open this quote in Plastic Quotes
-  const [clientFocusQuoteId, setClientFocusQuoteId] = useState(null); // client: open this quote in My Quotes
+  const [clientFocusQuoteId, setClientFocusQuoteId] = useState(null); // client: open this order in My Orders
 
   function setPage(p) {
     setPageState(p);
@@ -148,7 +145,6 @@ export default function App() {
       work_orders: "Label Work Orders",
       plastic_work_orders: "Plastics Work Orders",
       plastics: "Plastics Estimator",
-      plastic_quotes: "Plastic Quotes",
       customers: "Customers",
       projects: "Projects",
     };
@@ -364,7 +360,7 @@ export default function App() {
         onSignOut={() => supabase.auth.signOut()}
         onSearch={() => setSearchOpen(true)}
         onOpenTask={openTaskFromSearch}
-        onOpenQuote={(qid) => { setPage("plastic_work_orders"); setFocusQuoteId(qid); }}
+        onOpenQuote={() => { setPage("plastic_work_orders"); }}
         onHome={() => isInternal && setPage("dashboard")}
       />
 
@@ -391,8 +387,6 @@ export default function App() {
           <PlasticsEstimator userEmail={session.user.email} />
         ) : page === "customers" ? (
           <Customers />
-        ) : page === "plastic_quotes" ? (
-          <PlasticQuotes focusQuoteId={focusQuoteId} onFocused={() => setFocusQuoteId(null)} />
         ) : page === "plastic_work_orders" ? (
           <PlasticWorkOrders
             jobs={plasticJobs}
