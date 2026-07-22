@@ -2207,12 +2207,15 @@ a.file-chip:hover svg { color: var(--accent); }
 .post-reply-btn svg { color: var(--ink-3); }
 .post-reply-btn:hover svg { color: var(--accent); }
 
-/* Content entrance — clearly perceptible rise + fade when a view mounts */
+/* Content entrance — fade in. Containers use opacity only (a downward translate
+   would briefly grow the page and flash the vertical scrollbar on load). */
 @keyframes content-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
-.page-card, .stat-card, .panel, .proj-group, .quote-card { animation: content-in 360ms var(--ease) both; }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.page-card, .stat-card, .panel, .proj-group, .quote-card { animation: fade-in 320ms var(--ease) both; }
 
-/* Staggered cascade — table rows and dashboard cards ease in one after another */
-.ptable tbody tr, .table tbody tr, .cust-trow, .quote-card { animation: content-in 380ms var(--ease) both; }
+/* Staggered cascade — table rows ease in one after another. These live inside a
+   clipped (overflow:hidden) card, so their rise can't extend the page. */
+.ptable tbody tr, .table tbody tr, .cust-trow { animation: content-in 380ms var(--ease) both; }
 .table tbody tr:nth-child(1), .ptable tbody tr:nth-child(1), .cust-trow:nth-child(1) { animation-delay: 30ms; }
 .table tbody tr:nth-child(2), .ptable tbody tr:nth-child(2), .cust-trow:nth-child(2) { animation-delay: 70ms; }
 .table tbody tr:nth-child(3), .ptable tbody tr:nth-child(3), .cust-trow:nth-child(3) { animation-delay: 110ms; }
@@ -2300,3 +2303,14 @@ a.file-chip:hover svg { color: var(--accent); }
 .toast-spinner { animation: toast-spin 0.7s linear infinite; }
 @keyframes toast-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .toast-spinner { animation: none; } }
+
+/* Task updates: loading skeleton (prevents empty-then-fill flash on open) */
+.feed-loading { display: flex; flex-direction: column; gap: 18px; padding: 6px 0; }
+.feed-skel { display: flex; gap: 12px; }
+.feed-skel-avatar { width: 34px; height: 34px; border-radius: 50%; flex: 0 0 auto; background: var(--panel); }
+.feed-skel-lines { flex: 1; display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
+.feed-skel-line { height: 11px; border-radius: 6px; background: var(--panel); }
+.feed-skel-line.short { width: 30%; height: 10px; }
+.feed-skel-avatar, .feed-skel-line { animation: feed-shimmer 1.3s ease-in-out infinite; }
+@keyframes feed-shimmer { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+@media (prefers-reduced-motion: reduce) { .feed-skel-avatar, .feed-skel-line { animation: none; } }
