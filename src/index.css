@@ -2355,3 +2355,16 @@ a.file-chip:hover svg { color: var(--accent); }
 
 /* Section divider inside the plastic order modal (merged Details + Pricing) */
 .pm-section-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); padding-top: 16px; margin-top: 4px; border-top: 0.5px solid var(--hairline-soft); }
+
+/* Project — linked Work orders tab */
+.pwo-list { display: flex; flex-direction: column; }
+.pwo-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 12px 4px; border: none; border-bottom: 0.5px solid var(--hairline-soft); background: none; cursor: pointer; font: inherit; transition: background var(--dur-fast) var(--ease); }
+.pwo-row:hover { background: var(--panel); }
+.pwo-kind { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px; flex: 0 0 auto; }
+.pwo-plastic { background: rgba(88,86,214,.14); color: #4b45b8; }
+.pwo-label { background: rgba(10,132,255,.14); color: #0a6ad6; }
+.pwo-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.pwo-title { font-size: 14px; font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pwo-sub { font-size: 12px; color: var(--ink-3); }
+.pwo-status { font-size: 12px; color: var(--ink-2); flex: 0 0 auto; }
+.pwo-row svg { color: var(--ink-3); flex: 0 0 auto; }
