@@ -862,7 +862,7 @@ function TaskRow({ task, users, userEmail, canEdit = true, checked, onToggle, on
       onDragStart={(e) => {
         if (!canEdit || editingTitle) return;
         e.dataTransfer.effectAllowed = "move";
-        try { e.dataTransfer.setData("text/plain", task.id); } catch {}
+        try { e.dataTransfer.setData("text/plain", task.id); } catch { /* drag payload optional */ }
         onDragStart && onDragStart(task.id);
       }}
       onDragEnd={() => onDragEnd && onDragEnd()}
