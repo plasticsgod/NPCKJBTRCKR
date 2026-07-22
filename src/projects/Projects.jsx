@@ -593,12 +593,13 @@ const fileIconSvg = {
   file: "M6 3h9l3 3v15H6z",
 };
 
-function ProjectFiles({ tasks, query }) {
+function ProjectFiles({ tasks, query, invoicesOnly = false }) {
   const [entries, setEntries] = useState(null);
   const bucket = supabase.storage.from("task-images");
   const url = (p) => bucket.getPublicUrl(p).data.publicUrl;
   const titleOf = {};
   tasks.forEach((t) => { titleOf[t.id] = t.title; });
+  const isInvoice = (name) => /inv/i.test(name || ""); // matches "invoice" or "inv", any case
 
   useEffect(() => {
     const ids = tasks.map((t) => t.id);
@@ -617,20 +618,27 @@ function ProjectFiles({ tasks, query }) {
       });
   }, [tasks]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (entries === null) return <div className="muted proj-files-loading">Loading files…</div>;
-  if (entries.length === 0)
-    return <div className="proj-files-empty">No files yet. Files attached to any task's updates show up here.</div>;
+  const noun = invoicesOnly ? "invoices" : "files";
+  if (entries === null) return <div className="muted proj-files-loading">Loading {noun}…</div>;
+
+  // In the Invoices tab, keep only real files whose name contains "invoice"/"inv".
+  const base = invoicesOnly ? entries.filter((e) => !e.image && isInvoice(e.name)) : entries;
+
+  if (base.length === 0)
+    return <div className="proj-files-empty">{invoicesOnly
+      ? "No invoices yet. Any attached file with “invoice” or “inv” in its name shows up here."
+      : "No files yet. Files attached to any task's updates show up here."}</div>;
 
   const q = (query || "").trim().toLowerCase();
   const shown = q
-    ? entries.filter((e) =>
+    ? base.filter((e) =>
         (e.name || "").toLowerCase().includes(q) ||
         (e.task || "").toLowerCase().includes(q) ||
         displayName(e.author).toLowerCase().includes(q))
-    : entries;
+    : base;
 
   if (shown.length === 0)
-    return <div className="proj-files-empty">No files match “{query}”.</div>;
+    return <div className="proj-files-empty">No {noun} match “{query}”.</div>;
 
   return (
     <div className="proj-files">
@@ -740,10 +748,14 @@ function ProjectGroup({ project, tasks, allTasks, fileQuery, users, userEmail, c
         <div className="proj-tabs">
           <button type="button" className={"proj-tab" + (tab === "tasks" ? " on" : "")} onClick={() => setTab("tasks")}>Tasks</button>
           <button type="button" className={"proj-tab" + (tab === "files" ? " on" : "")} onClick={() => setTab("files")}>Files</button>
+          <button type="button" className={"proj-tab" + (tab === "invoices" ? " on" : "")} onClick={() => setTab("invoices")}>Invoices</button>
         </div>
       )}
       {(solo || !collapsed) && tab === "files" && (
         <ProjectFiles tasks={allTasks || tasks} query={fileQuery} />
+      )}
+      {(solo || !collapsed) && tab === "invoices" && (
+        <ProjectFiles tasks={allTasks || tasks} query={fileQuery} invoicesOnly />
       )}
       {(solo || !collapsed) && tab === "tasks" && (
         <div className="ptable-wrap">
