@@ -2311,3 +2311,18 @@ a.file-chip:hover svg { color: var(--accent); }
 .feed-skel-avatar, .feed-skel-line { animation: feed-shimmer 1.3s ease-in-out infinite; }
 @keyframes feed-shimmer { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 @media (prefers-reduced-motion: reduce) { .feed-skel-avatar, .feed-skel-line { animation: none; } }
+
+/* ==== Plastic Work Orders: pending approvals ============================== */
+.wo-approvals { margin-bottom: 22px; border: 0.5px solid var(--hairline); border-radius: var(--radius-card); overflow: hidden; background: var(--surface); box-shadow: var(--shadow-card); }
+.wo-approvals-head { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #9a6b00; background: rgba(240,180,41,.14); padding: 10px 18px; }
+.wo-approval { padding: 16px 18px; border-top: 0.5px solid var(--hairline-soft); display: grid; grid-template-columns: 1fr auto; gap: 12px 16px; align-items: start; }
+.wo-approval:first-of-type { border-top: none; }
+.wo-approval-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.wo-approval-title { font-size: 15px; font-weight: 600; color: var(--ink); }
+.wo-approval-sub { font-size: 12.5px; color: var(--ink-3); }
+.wo-approval-note { font-size: 13px; color: var(--ink-2); margin-top: 4px; font-style: italic; }
+.wo-approval-actions { display: flex; gap: 8px; align-items: center; }
+.wo-decide { grid-column: 1 / -1; background: var(--panel); border-radius: 12px; padding: 14px; margin-top: 4px; }
+.wo-decide .field { margin-bottom: 10px; }
+.wo-decide-actions { display: flex; gap: 10px; justify-content: flex-end; }
+@media (max-width: 640px) { .wo-approval { grid-template-columns: 1fr; } }
