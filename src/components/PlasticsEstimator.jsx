@@ -204,57 +204,66 @@ export default function PlasticsEstimator({ userEmail, clientMode = false, onSub
     return data.id;
   }
 
+  // Build a plastic_jobs (work order) row from the current estimate. Cost is
+  // recoverable per line: unit cost = unit charge × margin divisor.
+  function buildOrder({ id, customerName, customerId }) {
+    const divisor = (lab) => MARGINS.find((m) => m.lab === lab)?.d ?? 0.5;
+    const priced = savedLines.map((l) => {
+      const d = divisor(l.marginLab);
+      const unitCost = (Number(l.unit) || 0) * d;
+      const units = Number(l.units) || 0;
+      return {
+        name: l.name, units, margin: l.marginLab,
+        unit_charge: Number(l.unit) || 0, unit_cost: unitCost,
+        total_charge: Number(l.total) || 0, total_cost: unitCost * units,
+      };
+    });
+    const totalCost = priced.reduce((s, l) => s + l.total_cost, 0);
+    const totalCharge = total || priced.reduce((s, l) => s + l.total_charge, 0);
+    const qty = savedLines.reduce((s, l) => s + (Number(l.units) || 0), 0);
+    const description = savedLines.map((l) => `${(l.units || 0).toLocaleString()} × ${l.name}`).join("\n");
+    return {
+      id,
+      job_title: `Order${customerName ? " — " + customerName : ""}`,
+      brand: customerName || null,
+      description, qty, qty_unit: "tubs",
+      cost: Math.round(totalCost * 100) / 100,
+      revenue: Math.round(totalCharge * 100) / 100,
+      status: null,                 // enters production only once approved
+      approval: "pending",
+      client_note: clientNote.trim() || null,
+      created_by: userEmail,
+      customer_id: customerId ?? null,
+      pricing: { source: "estimator", lines: priced, total_cost: totalCost, total_charge: totalCharge },
+    };
+  }
+
   async function saveQuote() {
     if (savedLines.length === 0) {
       toast.error(asClient ? "Add a product and quantity first." : "Add at least one line with a margin first.");
       return;
     }
-    if (clientMode) {
-      if (savedLines.length === 0) {
-        toast.error("Add a product and enter a quantity before sending.");
-        return;
-      }
+    try {
+      const id = crypto.randomUUID();
+      const customerName = clientMode ? (myCustomer?.name || userEmail) : (customer.trim() || null);
+      const customerId = clientMode ? (myCustomer?.id ?? null) : await resolveCustomerId(customer);
+      const { error } = await supabase.from("plastic_jobs").insert(buildOrder({ id, customerName, customerId }));
+      if (error) { toast.error("Couldn't send order — " + error.message); return; }
+      // Notify the members who review orders (best-effort).
+      const REVIEWERS = ["taylor.knox@nutrapack.co", "jeff.weisser@nutrapack.co", "eduardonutramedia@gmail.com"];
       try {
-        const quoteId = crypto.randomUUID();
-        const { error } = await supabase.from("plastic_quotes").insert({
-          id: quoteId,
-          created_by: userEmail,
-          customer: myCustomer?.name || userEmail,   // company if linked, else the client's email
-          customer_id: myCustomer?.id ?? null,
-          quote_date: quoteDate || null, lines: savedLines, total,
-          status: "pending", client_note: clientNote.trim() || null,
-        });
-        if (error) { toast.error("Couldn't send quote — " + error.message); return; }
-        // Notify the members who review quotes (best-effort).
-        const REVIEWERS = ["taylor.knox@nutrapack.co", "jeff.weisser@nutrapack.co", "eduardonutramedia@gmail.com"];
-        try {
-          await supabase.from("notifications").insert(REVIEWERS.map((m) => ({
-            recipient: m, actor: userEmail, type: "quote_submitted",
-            task: myCustomer?.name || userEmail, body: clientNote.trim() || null, link: quoteId,
-          })));
-        } catch { /* non-blocking */ }
-        setClientNote("");
-        toast.success("Sent for approval — we'll review it shortly.");
-        onSubmitted && onSubmitted();
-      } catch (e) {
-        toast.error("Something went wrong sending the quote.");
-        console.error("[send-for-approval]", e);
-      }
-      return;
+        await supabase.from("notifications").insert(REVIEWERS.map((m) => ({
+          recipient: m, actor: userEmail, type: "order_submitted",
+          task: customerName, body: clientNote.trim() || null, link: id,
+        })));
+      } catch { /* non-blocking */ }
+      setClientNote("");
+      toast.success(clientMode ? "Sent for approval — we'll review it shortly." : "Work order created — pending approval.");
+      onSubmitted && onSubmitted();
+    } catch (e) {
+      toast.error("Something went wrong sending the order.");
+      console.error("[create-order]", e);
     }
-    const customer_id = await resolveCustomerId(customer);
-    const { error } = await supabase.from("plastic_quotes").insert({
-      created_by: userEmail,
-      customer: customer.trim() || null,
-      customer_id,
-      quote_date: quoteDate || null,
-      lines: savedLines,
-      total,
-      client_note: clientNote.trim() || null,
-    });
-    if (error) { toast.error("Couldn't save quote — " + error.message); return; }
-    setClientNote("");
-    toast.success(`Quote saved${customer.trim() ? " for " + customer.trim() : ""}`);
   }
   function exportPdf() {
     if (savedLines.length === 0) {
@@ -466,7 +475,7 @@ export default function PlasticsEstimator({ userEmail, clientMode = false, onSub
           <div className="quote-actions">
             {clientMode
               ? <button className="btn-accent" onClick={saveQuote}>Send for approval</button>
-              : <button className="btn-ghost" onClick={saveQuote}>Save quote</button>}
+              : <button className="btn-accent" onClick={saveQuote}>Send to work orders</button>}
             <button className={clientMode ? "btn-ghost" : "btn-accent"} onClick={exportPdf}>Export PDF</button>
           </div>
         </>
