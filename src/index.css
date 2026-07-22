@@ -2352,3 +2352,6 @@ a.file-chip:hover svg { color: var(--accent); }
 .link-proj { font-size: 12px; margin-left: 4px; }
 .link-row .link.danger { margin-left: auto; }
 .link.danger { color: #c0392b; }
+
+/* Section divider inside the plastic order modal (merged Details + Pricing) */
+.pm-section-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); padding-top: 16px; margin-top: 4px; border-top: 0.5px solid var(--hairline-soft); }
