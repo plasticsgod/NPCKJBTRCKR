@@ -245,7 +245,7 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
             <button type="button" className={tab === "pricing" ? "mtab on" : "mtab"} onClick={() => setTab("pricing")}>Pricing</button>
             <button type="button" className={tab === "shipping" ? "mtab on" : "mtab"} onClick={() => setTab("shipping")}>Shipping</button>
             <button type="button" className={tab === "files" ? "mtab on" : "mtab"} onClick={() => setTab("files")}>Attachments{form.files?.length ? ` (${form.files.length})` : ""}</button>
-            <button type="button" className={tab === "links" ? "mtab on" : "mtab"} onClick={() => setTab("links")}>Links{links.length ? ` (${links.length})` : ""}</button>
+            <button type="button" className={tab === "project" ? "mtab on" : "mtab"} onClick={() => setTab("project")}>Project{links.length ? ` (${links.length})` : ""}</button>
           </div>
           <button type="button" className="link" onClick={onClose}>Close</button>
         </div>
@@ -459,7 +459,7 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
           </div>
         )}
 
-        {tab === "links" && (
+        {tab === "project" && (
           <div className="modal-body">
             {isNew ? (
               <p className="muted files-note">Create the order first, then reopen it to link tasks.</p>
