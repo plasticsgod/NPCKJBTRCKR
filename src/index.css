@@ -2326,3 +2326,11 @@ a.file-chip:hover svg { color: var(--accent); }
 .wo-decide .field { margin-bottom: 10px; }
 .wo-decide-actions { display: flex; gap: 10px; justify-content: flex-end; }
 @media (max-width: 640px) { .wo-approval { grid-template-columns: 1fr; } }
+
+/* Plastic work order — PDF attachments */
+.pfile-drop { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.files-note { padding: 8px 0; }
+.pfile-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.pfile-row { display: flex; align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 0.5px solid var(--hairline-soft); font-size: 14px; }
+.pfile-row svg { color: var(--ink-3); flex: 0 0 auto; }
+.pfile-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
