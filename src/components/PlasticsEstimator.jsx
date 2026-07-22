@@ -229,7 +229,7 @@ export default function PlasticsEstimator({ userEmail, clientMode = false, onSub
       description, qty, qty_unit: "tubs",
       cost: Math.round(totalCost * 100) / 100,
       revenue: Math.round(totalCharge * 100) / 100,
-      status: null,                 // enters production only once approved
+      status: "Submitted",          // NOT NULL column; the board hides it until approval clears
       approval: "pending",
       client_note: clientNote.trim() || null,
       created_by: userEmail,
