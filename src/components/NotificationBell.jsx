@@ -60,9 +60,9 @@ export default function NotificationBell({ userEmail, onOpenTask, onOpenQuote })
   function openNotification(n) {
     if (!n.read) markRead(n.id);
     setOpen(false);
-    if (n.type && n.type.startsWith("quote_")) {
+    if (n.type && (n.type.startsWith("quote_") || n.type.startsWith("order_"))) {
       if (onOpenQuote) onOpenQuote(n.link || null);
-      else if (n.type === "quote_submitted") window.location.hash = "plastic_quotes";
+      else if (n.type === "order_submitted" || n.type === "quote_submitted") window.location.hash = "plastic_work_orders";
       return;
     }
     // Open the exact task the notification is about; fall back to the Projects
@@ -76,6 +76,9 @@ export default function NotificationBell({ userEmail, onOpenTask, onOpenQuote })
     if (n.type === "quote_submitted") return `New quote from ${n.task || who} — awaiting approval`;
     if (n.type === "quote_approved") return `Your quote${n.task ? " for " + n.task : ""} was approved`;
     if (n.type === "quote_rejected") return `Your quote${n.task ? " for " + n.task : ""} was rejected`;
+    if (n.type === "order_submitted") return `New order from ${n.task || who} — awaiting approval`;
+    if (n.type === "order_approved") return `Your order${n.task ? " for " + n.task : ""} was approved`;
+    if (n.type === "order_rejected") return `Your order${n.task ? " for " + n.task : ""} was rejected`;
     return `${who} mentioned you in "${n.task}"`;
   }
 
