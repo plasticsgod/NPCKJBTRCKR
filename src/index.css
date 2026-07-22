@@ -2335,17 +2335,32 @@ a.file-chip:hover svg { color: var(--accent); }
 .pfile-row svg { color: var(--ink-3); flex: 0 0 auto; }
 .pfile-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
 
-/* Plastic order — Links tab */
-.link-project { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--panel); border-radius: 10px; margin-bottom: 12px; }
+/* Plastic order — Project (link) tab */
+.link-project { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--panel); border-radius: 10px; }
 .link-project-label { font-size: 12px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; }
 .link-project-name { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; color: var(--ink); }
 .link-project-name .ti-folder, .link-project-name .ti { color: var(--ink-3); }
 .link-badge { font-size: 11px; font-weight: 500; background: rgba(52,199,89,.14); color: #1c7c3c; padding: 2px 8px; border-radius: 999px; letter-spacing: 0; text-transform: none; }
 .link-project .link { margin-left: auto; }
-.link-project-picker { margin-bottom: 12px; }
-.link-add { margin-bottom: 14px; }
-.link-add select { width: 100%; }
-.link-list { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.link-project-picker { margin: 0; }
+.link-add { margin: 0; }
+/* Both selects styled to match the app — no native OS chevron */
+.link-project-picker select, .link-add select {
+  width: 100%; appearance: none; -webkit-appearance: none;
+  font-family: var(--ui); font-size: 14px; color: var(--ink);
+  padding: 11px 38px 11px 14px;
+  border: 0.5px solid #e3e3e8; border-radius: var(--radius-ctl);
+  background-color: #f5f5f7; cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a8a90' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat: no-repeat; background-position: right 12px center;
+  transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+.link-project-picker select:focus, .link-add select:focus {
+  outline: none; background-color: #fff; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint);
+}
+.link-add select:disabled { color: var(--ink-3); cursor: default; opacity: .8; }
+.files-note { padding: 2px 0; margin: 0; }
+.link-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .link-row { display: flex; align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 0.5px solid var(--hairline-soft); font-size: 14px; }
 .link-row .ti { color: var(--ink-3); flex: 0 0 auto; }
 .link-name { color: var(--ink); }
