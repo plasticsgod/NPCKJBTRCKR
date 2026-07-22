@@ -8,6 +8,7 @@ import PlasticWorkOrders from "./components/PlasticWorkOrders";
 import Dashboard from "./components/Dashboard";
 import PlasticsEstimator from "./components/PlasticsEstimator";
 import ClientQuotes from "./components/ClientQuotes";
+import ClientOrders from "./components/ClientOrders";
 import NotificationBell from "./components/NotificationBell";
 import ConfirmModal from "./components/ConfirmModal";
 import PlasticQuotes from "./components/PlasticQuotes";
@@ -336,7 +337,7 @@ export default function App() {
             <button className={"client-tab" + (clientTab === "estimator" ? " on" : "")}
               onClick={() => setClientTab("estimator")}>Estimator</button>
             <button className={"client-tab" + (clientTab === "quotes" ? " on" : "")}
-              onClick={() => setClientTab("quotes")}>My Quotes</button>
+              onClick={() => setClientTab("quotes")}>My Orders</button>
           </nav>
           <NotificationBell userEmail={session.user.email}
             onOpenQuote={(qid) => { setClientTab("quotes"); setClientFocusQuoteId(qid); }} />
@@ -345,7 +346,7 @@ export default function App() {
         <main className="main">
           {clientTab === "estimator"
             ? <PlasticsEstimator userEmail={session.user.email} clientMode onSubmitted={() => setClientTab("quotes")} />
-            : <ClientQuotes userEmail={session.user.email} focusQuoteId={clientFocusQuoteId} onFocused={() => setClientFocusQuoteId(null)} />}
+            : <ClientOrders userEmail={session.user.email} focusOrderId={clientFocusQuoteId} onFocused={() => setClientFocusQuoteId(null)} />}
         </main>
         <Toaster />
       </div>
@@ -363,7 +364,7 @@ export default function App() {
         onSignOut={() => supabase.auth.signOut()}
         onSearch={() => setSearchOpen(true)}
         onOpenTask={openTaskFromSearch}
-        onOpenQuote={(qid) => { setPage("plastic_quotes"); setFocusQuoteId(qid); }}
+        onOpenQuote={(qid) => { setPage("plastic_work_orders"); setFocusQuoteId(qid); }}
         onHome={() => isInternal && setPage("dashboard")}
       />
 
