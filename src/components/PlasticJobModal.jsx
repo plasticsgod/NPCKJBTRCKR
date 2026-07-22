@@ -37,6 +37,52 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
   const [tab, setTab] = useState("details");
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const isNew = !job.id;
+  const [uploading, setUploading] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
+  useEffect(() => { supabase.auth.getUser().then(({ data }) => setUserEmail(data.user?.email || "")); }, []);
+
+  const filesBucket = supabase.storage.from("job-files");
+
+  // Persist the current files array onto the order row.
+  async function persistFiles(files) {
+    setForm((f) => ({ ...f, files }));
+    await supabase.from("plastic_jobs").update({ files }).eq("id", job.id);
+  }
+
+  async function uploadFiles(fileList) {
+    const picked = Array.from(fileList || []).filter((f) => f.type === "application/pdf" || /\.pdf$/i.test(f.name));
+    if (picked.length === 0) { toast.error("Please choose a PDF."); return; }
+    setUploading(true);
+    try {
+      const added = [];
+      for (const file of picked) {
+        const path = `plastic/${job.id}/${Date.now()}-${file.name.replace(/[^\w.\-]+/g, "_")}`;
+        const { error } = await filesBucket.upload(path, file, { contentType: "application/pdf" });
+        if (error) { toast.error("Upload failed — " + error.message); continue; }
+        added.push({ name: file.name, path, uploaded_by: userEmail, uploaded_at: new Date().toISOString() });
+      }
+      if (added.length) {
+        const next = [...(form.files || []), ...added];
+        await persistFiles(next);
+        toast.success(added.length === 1 ? "PDF attached" : `${added.length} PDFs attached`);
+      }
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function removeFile(f) {
+    await filesBucket.remove([f.path]);
+    await persistFiles((form.files || []).filter((x) => x.path !== f.path));
+    toast.success("Attachment removed");
+  }
+
+  async function openFile(f) {
+    const { data, error } = await filesBucket.createSignedUrl(f.path, 3600);
+    if (error) { toast.error("Couldn't open file."); return; }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  }
+
 
   // Pricing versions (newest first) — drives the product picker.
   const [versions, setVersions] = useState([]);
@@ -143,6 +189,7 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
             <button type="button" className={tab === "details" ? "mtab on" : "mtab"} onClick={() => setTab("details")}>Details</button>
             <button type="button" className={tab === "pricing" ? "mtab on" : "mtab"} onClick={() => setTab("pricing")}>Pricing</button>
             <button type="button" className={tab === "shipping" ? "mtab on" : "mtab"} onClick={() => setTab("shipping")}>Shipping</button>
+            <button type="button" className={tab === "files" ? "mtab on" : "mtab"} onClick={() => setTab("files")}>Attachments{form.files?.length ? ` (${form.files.length})` : ""}</button>
           </div>
           <button type="button" className="link" onClick={onClose}>Close</button>
         </div>
@@ -322,6 +369,37 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
               <span>Shipping Address</span>
               <textarea rows={3} value={form.shipping_address} onChange={(e) => set("shipping_address", e.target.value)} />
             </label>
+          </div>
+        )}
+
+        {tab === "files" && (
+          <div className="modal-body">
+            {isNew ? (
+              <p className="muted files-note">Create the order first, then reopen it to attach PDFs.</p>
+            ) : (
+              <>
+                <div className="pfile-drop">
+                  <input id="pfile-input" type="file" accept="application/pdf,.pdf" multiple
+                    onChange={(e) => uploadFiles(e.target.files)} disabled={uploading} style={{ display: "none" }} />
+                  <label htmlFor="pfile-input" className="btn-ghost">{uploading ? "Uploading…" : "+ Attach PDF"}</label>
+                  <span className="muted small">PDFs attached to this work order.</span>
+                </div>
+                {(form.files || []).length === 0 ? (
+                  <p className="muted files-note">No attachments yet.</p>
+                ) : (
+                  <ul className="pfile-list">
+                    {(form.files || []).map((f, i) => (
+                      <li className="pfile-row" key={f.path || i}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+                        <span className="pfile-name" title={f.name}>{f.name}</span>
+                        <button type="button" className="link" onClick={() => openFile(f)}>Open</button>
+                        <button type="button" className="link danger" onClick={() => removeFile(f)}>Remove</button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
           </div>
         )}
 
