@@ -38,6 +38,8 @@ export default [
       // --- The important ones (these catch real bugs) ---
       "no-undef": "error",                 // using an undefined variable → crash (caught deleteReply)
       "react/jsx-no-undef": "error",       // using an undefined component in JSX
+      "react/jsx-uses-vars": "error",      // mark components used in JSX as "used" (kills false unused-var noise)
+      "react/jsx-uses-react": "off",       // not needed with the automatic JSX runtime
       "react-hooks/rules-of-hooks": "error",   // hooks called conditionally → runtime error
       "no-const-assign": "error",
       "no-dupe-keys": "error",
