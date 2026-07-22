@@ -86,14 +86,17 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
 
   async function addTaskLink(taskId) {
     if (!taskId) return;
-    await supabase.from("work_order_links").insert({
+    const { error } = await supabase.from("work_order_links").insert({
       order_id: job.id, order_kind: "plastic", task_id: taskId, created_by: userEmail,
     });
+    if (error) { toast.error("Couldn't link task — " + error.message); return; }
     setChangingProject(false);
+    toast.success("Task linked");
     loadLinks();
   }
   async function removeTaskLink(linkId) {
-    await supabase.from("work_order_links").delete().eq("id", linkId);
+    const { error } = await supabase.from("work_order_links").delete().eq("id", linkId);
+    if (error) { toast.error("Couldn't remove — " + error.message); return; }
     loadLinks();
   }
 
