@@ -242,7 +242,6 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
           <h2>{isNew ? "New Plastics Order" : "Edit Plastics Order"}</h2>
           <div className="modal-tab-bar">
             <button type="button" className={tab === "details" ? "mtab on" : "mtab"} onClick={() => setTab("details")}>Details</button>
-            <button type="button" className={tab === "pricing" ? "mtab on" : "mtab"} onClick={() => setTab("pricing")}>Pricing</button>
             <button type="button" className={tab === "shipping" ? "mtab on" : "mtab"} onClick={() => setTab("shipping")}>Shipping</button>
             <button type="button" className={tab === "files" ? "mtab on" : "mtab"} onClick={() => setTab("files")}>Attachments{form.files?.length ? ` (${form.files.length})` : ""}</button>
             <button type="button" className={tab === "project" ? "mtab on" : "mtab"} onClick={() => setTab("project")}>Project{links.length ? ` (${links.length})` : ""}</button>
@@ -313,11 +312,8 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
               <span>Description</span>
               <textarea rows={3} value={form.description} onChange={(e) => set("description", e.target.value)} />
             </label>
-          </div>
-        )}
 
-        {tab === "pricing" && (
-          <div className="modal-body">
+            <div className="pm-section-label">Pricing</div>
             {!data ? (
               <p className="muted">Loading pricing…</p>
             ) : (
