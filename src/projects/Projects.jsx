@@ -667,11 +667,60 @@ function ProjectFiles({ tasks, query, invoicesOnly = false }) {
   );
 }
 
+// Lists the work orders (plastic + label) linked to any task in this project,
+// via the work_order_links join table. Read-only; click a row to open its page.
+function ProjectWorkOrders({ tasks }) {
+  const [rows, setRows] = useState(null);
+
+  useEffect(() => {
+    const ids = tasks.map((t) => t.id);
+    if (ids.length === 0) { setRows([]); return; }
+    (async () => {
+      const { data: links } = await supabase.from("work_order_links")
+        .select("order_id,order_kind").in("task_id", ids);
+      if (!links || links.length === 0) { setRows([]); return; }
+      const plasticIds = [...new Set(links.filter((l) => l.order_kind === "plastic").map((l) => l.order_id))];
+      const labelIds = [...new Set(links.filter((l) => l.order_kind === "label").map((l) => l.order_id))];
+      const [pj, lj] = await Promise.all([
+        plasticIds.length ? supabase.from("plastic_jobs").select("id,job_title,brand,revenue,status").in("id", plasticIds) : Promise.resolve({ data: [] }),
+        labelIds.length ? supabase.from("jobs").select("id,job_title,brand,revenue,status").in("id", labelIds) : Promise.resolve({ data: [] }),
+      ]);
+      const out = [];
+      (pj.data || []).forEach((o) => out.push({ ...o, kind: "plastic" }));
+      (lj.data || []).forEach((o) => out.push({ ...o, kind: "label" }));
+      setRows(out);
+    })();
+  }, [tasks]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const money = (n) => "$" + Number(n || 0).toLocaleString("en-US", { maximumFractionDigits: 0 });
+  const openPage = (kind) => { window.location.hash = kind === "plastic" ? "plastic_work_orders" : "work_orders"; };
+
+  if (rows === null) return <div className="muted proj-files-loading">Loading work orders…</div>;
+  if (rows.length === 0)
+    return <div className="proj-files-empty">No work orders linked yet. Link tasks from a plastic or label order's Project tab.</div>;
+
+  return (
+    <div className="pwo-list">
+      {rows.map((o) => (
+        <button type="button" className="pwo-row" key={o.kind + o.id} onClick={() => openPage(o.kind)}>
+          <span className={"pwo-kind pwo-" + o.kind}>{o.kind === "plastic" ? "Plastic" : "Label"}</span>
+          <span className="pwo-main">
+            <span className="pwo-title">{o.brand || o.job_title || "Order"}</span>
+            <span className="pwo-sub">{o.job_title && o.brand ? o.job_title + " · " : ""}{money(o.revenue)}</span>
+          </span>
+          <span className="pwo-status">{o.status || "—"}</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><path d="M15 3h6v6" /><path d="M10 14L21 3" /></svg>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function ProjectGroup({ project, tasks, allTasks, fileQuery, users, userEmail, canEdit = true, solo = false, progress, selected, onToggleSelect, selectedTasks, onToggleTask, onUpdateName, onAddTask, onAddTaskInline, onOpenTask, onUpdateTask, activity, reads, draggingTaskId, onDragTaskStart, onDragTaskEnd, isDropTarget, onDragOverProject, onDropTask }) {
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState(project.name);
   const [collapsed, setCollapsed] = useState(false);
-  const [tab, setTab] = useState("tasks"); // "tasks" | "files"
+  const [tab, setTab] = useState("tasks"); // "tasks" | "files" | "invoices" | "orders"
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState("");
 
@@ -749,6 +798,7 @@ function ProjectGroup({ project, tasks, allTasks, fileQuery, users, userEmail, c
           <button type="button" className={"proj-tab" + (tab === "tasks" ? " on" : "")} onClick={() => setTab("tasks")}>Tasks</button>
           <button type="button" className={"proj-tab" + (tab === "files" ? " on" : "")} onClick={() => setTab("files")}>Files</button>
           <button type="button" className={"proj-tab" + (tab === "invoices" ? " on" : "")} onClick={() => setTab("invoices")}>Invoices</button>
+          <button type="button" className={"proj-tab" + (tab === "orders" ? " on" : "")} onClick={() => setTab("orders")}>Work orders</button>
         </div>
       )}
       {(solo || !collapsed) && tab === "files" && (
@@ -756,6 +806,9 @@ function ProjectGroup({ project, tasks, allTasks, fileQuery, users, userEmail, c
       )}
       {(solo || !collapsed) && tab === "invoices" && (
         <ProjectFiles tasks={allTasks || tasks} query={fileQuery} invoicesOnly />
+      )}
+      {(solo || !collapsed) && tab === "orders" && (
+        <ProjectWorkOrders tasks={allTasks || tasks} />
       )}
       {(solo || !collapsed) && tab === "tasks" && (
         <div className="ptable-wrap">
