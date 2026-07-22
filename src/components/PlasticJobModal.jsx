@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { supabase } from "../supabaseClient";
 import {
   MARGINS, PORTS, findItem, unitEconomics, setEconomics, unitsFromQty, money2,
@@ -42,6 +42,61 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
   useEffect(() => { supabase.auth.getUser().then(({ data }) => setUserEmail(data.user?.email || "")); }, []);
 
   const filesBucket = supabase.storage.from("job-files");
+
+  // --- Links tab: projects, tasks, and this order's task links ---------------
+  const [projects, setProjects] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [links, setLinks] = useState([]);
+  const [pickProjectId, setPickProjectId] = useState(null); // which project's tasks the picker shows
+  const [changingProject, setChangingProject] = useState(false);
+
+  useEffect(() => {
+    supabase.from("projects").select("id,name").order("name").then(({ data }) => setProjects(data || []));
+    supabase.from("tasks").select("id,project_id,title").then(({ data }) => setTasks(data || []));
+  }, []);
+
+  const loadLinks = useCallback(async () => {
+    if (!job.id) { setLinks([]); return; }
+    const { data } = await supabase.from("work_order_links")
+      .select("id,task_id").eq("order_id", job.id).eq("order_kind", "plastic");
+    setLinks(data || []);
+  }, [job.id]);
+  useEffect(() => { loadLinks(); }, [loadLinks]);
+
+  // Auto-match the project by name (order brand == project name, case-insensitive).
+  const matchedProject = useMemo(() => {
+    const b = (form.brand || "").trim().toLowerCase();
+    if (!b) return null;
+    return projects.find((p) => (p.name || "").trim().toLowerCase() === b) || null;
+  }, [form.brand, projects]);
+
+  const linkedTaskIds = new Set(links.map((l) => l.task_id));
+  const linkedProjectIds = new Set(tasks.filter((t) => linkedTaskIds.has(t.id)).map((t) => t.project_id));
+  // Project whose tasks the picker shows: manual pick > a linked task's project > name match.
+  const activeProjectId = pickProjectId
+    || (linkedProjectIds.size ? [...linkedProjectIds][0] : null)
+    || matchedProject?.id || null;
+  const activeProject = projects.find((p) => p.id === activeProjectId) || null;
+  const projectTasks = tasks.filter((t) => t.project_id === activeProjectId && !linkedTaskIds.has(t.id));
+  const titleOf = (id) => tasks.find((t) => t.id === id)?.title || "Task";
+  const projectOf = (taskId) => {
+    const t = tasks.find((x) => x.id === taskId);
+    return t ? (projects.find((p) => p.id === t.project_id)?.name || "") : "";
+  };
+
+  async function addTaskLink(taskId) {
+    if (!taskId) return;
+    await supabase.from("work_order_links").insert({
+      order_id: job.id, order_kind: "plastic", task_id: taskId, created_by: userEmail,
+    });
+    setChangingProject(false);
+    loadLinks();
+  }
+  async function removeTaskLink(linkId) {
+    await supabase.from("work_order_links").delete().eq("id", linkId);
+    loadLinks();
+  }
+
 
   // Persist the current files array onto the order row.
   async function persistFiles(files) {
@@ -190,6 +245,7 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
             <button type="button" className={tab === "pricing" ? "mtab on" : "mtab"} onClick={() => setTab("pricing")}>Pricing</button>
             <button type="button" className={tab === "shipping" ? "mtab on" : "mtab"} onClick={() => setTab("shipping")}>Shipping</button>
             <button type="button" className={tab === "files" ? "mtab on" : "mtab"} onClick={() => setTab("files")}>Attachments{form.files?.length ? ` (${form.files.length})` : ""}</button>
+            <button type="button" className={tab === "links" ? "mtab on" : "mtab"} onClick={() => setTab("links")}>Links{links.length ? ` (${links.length})` : ""}</button>
           </div>
           <button type="button" className="link" onClick={onClose}>Close</button>
         </div>
@@ -398,6 +454,70 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
                     ))}
                   </ul>
                 )}
+              </>
+            )}
+          </div>
+        )}
+
+        {tab === "links" && (
+          <div className="modal-body">
+            {isNew ? (
+              <p className="muted files-note">Create the order first, then reopen it to link tasks.</p>
+            ) : (
+              <>
+                <div className="link-project">
+                  <span className="link-project-label">Project</span>
+                  {activeProject ? (
+                    <span className="link-project-name">
+                      <i className="ti" aria-hidden="true"></i>{activeProject.name}
+                      {matchedProject && activeProject.id === matchedProject.id && !linkedProjectIds.size && (
+                        <span className="link-badge">matched by name</span>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="muted">No project matched “{form.brand || "—"}”. Choose one below.</span>
+                  )}
+                  <button type="button" className="link" onClick={() => setChangingProject((v) => !v)}>
+                    {changingProject ? "Done" : "Change"}
+                  </button>
+                </div>
+
+                {(changingProject || !activeProject) && (
+                  <label className="field link-project-picker">
+                    <span>Pick a project to browse its tasks</span>
+                    <select value={activeProjectId || ""} onChange={(e) => setPickProjectId(e.target.value || null)}>
+                      <option value="">— Select a project —</option>
+                      {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </label>
+                )}
+
+                <div className="link-add">
+                  <select value="" onChange={(e) => addTaskLink(e.target.value)} disabled={!activeProjectId || projectTasks.length === 0}>
+                    <option value="">
+                      {!activeProjectId ? "Choose a project first"
+                        : projectTasks.length === 0 ? "No more tasks in this project"
+                        : "+ Add a task…"}
+                    </option>
+                    {projectTasks.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
+                  </select>
+                </div>
+
+                {links.length === 0 ? (
+                  <p className="muted files-note">No tasks linked yet.</p>
+                ) : (
+                  <ul className="link-list">
+                    {links.map((l) => (
+                      <li className="link-row" key={l.id}>
+                        <i className="ti ti-checkbox" style={{ fontSize: 16 }} aria-hidden="true"></i>
+                        <span className="link-name">{titleOf(l.task_id)}</span>
+                        <span className="link-proj muted">{projectOf(l.task_id)}</span>
+                        <button type="button" className="link danger" onClick={() => removeTaskLink(l.id)}>Remove</button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="muted files-note">Linked tasks show this order on the project’s Work orders tab.</div>
               </>
             )}
           </div>
