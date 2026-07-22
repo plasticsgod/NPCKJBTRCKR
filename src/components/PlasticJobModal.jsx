@@ -56,7 +56,7 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
     try {
       const added = [];
       for (const file of picked) {
-        const path = `plastic/${job.id}/${Date.now()}-${file.name.replace(/[^\w.\-]+/g, "_")}`;
+        const path = `plastic/${job.id}/${Date.now()}-${file.name.replace(/[^\w.-]+/g, "_")}`;
         const { error } = await filesBucket.upload(path, file, { contentType: "application/pdf" });
         if (error) { toast.error("Upload failed — " + error.message); continue; }
         added.push({ name: file.name, path, uploaded_by: userEmail, uploaded_at: new Date().toISOString() });
