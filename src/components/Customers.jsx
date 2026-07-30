@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../supabaseClient";
 import { toast } from "./Toaster";
+import ConfirmModal from "./ConfirmModal";
 
 const money = (n) =>
   "$" + (Number(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -23,6 +24,7 @@ export default function Customers() {
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState(null);
   const [editing, setEditing] = useState(null); // customer object or {} for new
+  const [confirmState, setConfirmState] = useState(null);
 
   const load = useCallback(async () => {
     const [c, j, p, q, cl] = await Promise.all([
@@ -75,6 +77,32 @@ export default function Customers() {
     load();
   }
 
+  async function doDeleteCustomer(cust) {
+    // Unlink any client logins first so the delete isn't blocked by that reference.
+    await supabase.from("client_users").update({ customer_id: null }).eq("customer_id", cust.id);
+    const { error } = await supabase.from("customers").delete().eq("id", cust.id);
+    if (error) {
+      toast.error("Couldn't delete — this customer still has linked orders. Reassign or remove them first.");
+      return;
+    }
+    toast.success("Customer deleted");
+    setOpenId(null);
+    load();
+  }
+  function deleteCustomer(cust) {
+    const s = statsFor(cust.id);
+    const linkedCount = s.jobs.length + s.plastics.length;
+    const warn = linkedCount > 0
+      ? ` This customer has ${linkedCount} linked order${linkedCount === 1 ? "" : "s"} — those orders stay, but lose their customer link.`
+      : "";
+    setConfirmState({
+      title: "Delete customer?",
+      message: `Delete "${cust.name}"? This cannot be undone.${warn}`,
+      confirmLabel: "Delete customer",
+      onConfirm: () => doDeleteCustomer(cust),
+    });
+  }
+
   async function linkClient(clientId, customerId) {
     const { error } = await supabase.from("client_users")
       .update({ customer_id: customerId }).eq("id", clientId);
@@ -108,7 +136,10 @@ export default function Customers() {
               {open.address && <p className="cust-meta">{open.address}</p>}
             </div>
           </div>
-          <button className="btn-ghost" onClick={() => setEditing(open)}>Edit</button>
+          <div className="cust-head-actions">
+            <button className="btn-ghost" onClick={() => setEditing(open)}>Edit</button>
+            <button className="btn-ghost cust-delete" onClick={() => deleteCustomer(open)}>Delete</button>
+          </div>
         </div>
 
         <div className="cust-stats">
@@ -200,6 +231,7 @@ export default function Customers() {
         )}
 
         {editing && <CustomerModal customer={editing} onSave={saveCustomer} onClose={() => setEditing(null)} />}
+        <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
       </div>
     );
   }
