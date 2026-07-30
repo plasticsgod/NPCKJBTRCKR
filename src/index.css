@@ -2383,3 +2383,8 @@ a.file-chip:hover svg { color: var(--accent); }
 .pwo-sub { font-size: 12px; color: var(--ink-3); }
 .pwo-status { font-size: 12px; color: var(--ink-2); flex: 0 0 auto; }
 .pwo-row svg { color: var(--ink-3); flex: 0 0 auto; }
+
+/* Customer profile — header actions + delete */
+.cust-head-actions { display: flex; gap: 8px; align-items: center; }
+.cust-delete { color: #c0392b; }
+.cust-delete:hover { background: rgba(192,57,43,.08); }
