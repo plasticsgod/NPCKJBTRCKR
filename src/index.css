@@ -2388,3 +2388,8 @@ a.file-chip:hover svg { color: var(--accent); }
 .cust-head-actions { display: flex; gap: 8px; align-items: center; }
 .cust-delete { color: #c0392b; }
 .cust-delete:hover { background: rgba(192,57,43,.08); }
+
+/* Task drawer — linked work orders section */
+.drawer-wo { padding: 14px 20px; border-bottom: 0.5px solid var(--hairline-soft); }
+.drawer-wo .feed-label { margin: 0 0 8px; }
+.drawer-wo .pwo-row:last-child { border-bottom: none; }
