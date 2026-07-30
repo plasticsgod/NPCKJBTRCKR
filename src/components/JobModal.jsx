@@ -3,6 +3,7 @@ import { supabase } from "../supabaseClient";
 import { STATUSES, FACILITIES } from "../supabaseClient";
 import DatePicker from "./DatePicker";
 import ConfirmModal from "./ConfirmModal";
+import { toast } from "./Toaster";
 
 const EMPTY = {
   job_title: "",
@@ -30,6 +31,60 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
   const [tab, setTab] = useState("details");
   const [form, setForm] = useState({ ...EMPTY, ...job });
   const [stagedArtwork, setStagedArtwork] = useState([]); // links added before the job exists
+
+  // --- Project (task link) tab: mirrors the plastic order modal, kind="label" ---
+  const [linkProjects, setLinkProjects] = useState([]);
+  const [linkTasks, setLinkTasks] = useState([]);
+  const [links, setLinks] = useState([]);
+  const [pickProjectId, setPickProjectId] = useState(null);
+  const [changingProject, setChangingProject] = useState(false);
+  const [linkUser, setLinkUser] = useState("");
+
+  useEffect(() => {
+    supabase.from("projects").select("id,name").order("name").then(({ data }) => setLinkProjects(data || []));
+    supabase.from("tasks").select("id,project_id,title").then(({ data }) => setLinkTasks(data || []));
+    supabase.auth.getUser().then(({ data }) => setLinkUser(data.user?.email || ""));
+  }, []);
+
+  const loadLinks = useCallback(async () => {
+    if (!job.id) { setLinks([]); return; }
+    const { data } = await supabase.from("work_order_links")
+      .select("id,task_id").eq("order_id", job.id).eq("order_kind", "label");
+    setLinks(data || []);
+  }, [job.id]);
+  useEffect(() => { loadLinks(); }, [loadLinks]);
+
+  const linkBrand = (form.brand || "").trim().toLowerCase();
+  const matchedProject = linkBrand
+    ? linkProjects.find((p) => (p.name || "").trim().toLowerCase() === linkBrand) || null
+    : null;
+  const linkedTaskIds = new Set(links.map((l) => l.task_id));
+  const linkedProjectIds = new Set(linkTasks.filter((t) => linkedTaskIds.has(t.id)).map((t) => t.project_id));
+  const activeProjectId = pickProjectId
+    || (linkedProjectIds.size ? [...linkedProjectIds][0] : null)
+    || matchedProject?.id || null;
+  const activeLinkProject = linkProjects.find((p) => p.id === activeProjectId) || null;
+  const projectTasks = linkTasks.filter((t) => t.project_id === activeProjectId && !linkedTaskIds.has(t.id));
+  const linkTitleOf = (id) => linkTasks.find((t) => t.id === id)?.title || "Task";
+  const linkProjectOf = (taskId) => {
+    const t = linkTasks.find((x) => x.id === taskId);
+    return t ? (linkProjects.find((p) => p.id === t.project_id)?.name || "") : "";
+  };
+  async function addTaskLink(taskId) {
+    if (!taskId) return;
+    const { error } = await supabase.from("work_order_links").insert({
+      order_id: job.id, order_kind: "label", task_id: taskId, created_by: linkUser,
+    });
+    if (error) { toast.error("Couldn't link task — " + error.message); return; }
+    setChangingProject(false);
+    toast.success("Task linked");
+    loadLinks();
+  }
+  async function removeTaskLink(linkId) {
+    const { error } = await supabase.from("work_order_links").delete().eq("id", linkId);
+    if (error) { toast.error("Couldn't remove — " + error.message); return; }
+    loadLinks();
+  }
 
   function set(key, value) {
     if (key === "status") {
@@ -81,6 +136,7 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
             <button type="button" className={tab === "details" ? "mtab on" : "mtab"} onClick={() => setTab("details")}>Details</button>
             {!isNew && <button type="button" className={tab === "proofs" ? "mtab on" : "mtab"} onClick={() => setTab("proofs")}>Proofs</button>}
             <button type="button" className={tab === "artwork" ? "mtab on" : "mtab"} onClick={() => setTab("artwork")}>Artwork</button>
+            {!isNew && <button type="button" className={tab === "project" ? "mtab on" : "mtab"} onClick={() => setTab("project")}>Project{links.length ? ` (${links.length})` : ""}</button>}
           </div>
           <button type="button" className="link" onClick={onClose}>Close</button>
         </div>
@@ -183,6 +239,63 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
 
         {tab === "proofs" && <ProofsPanel jobId={job.id} jobTitle={form.job_title} customer={form.brand} />}
         {tab === "artwork" && <ArtworkPanel jobId={job.id} staged={stagedArtwork} setStaged={setStagedArtwork} />}
+
+        {tab === "project" && (
+          <div className="modal-body">
+            <div className="link-project">
+              <span className="link-project-label">Project</span>
+              {activeLinkProject ? (
+                <span className="link-project-name">
+                  {activeLinkProject.name}
+                  {matchedProject && activeLinkProject.id === matchedProject.id && !linkedProjectIds.size && (
+                    <span className="link-badge">matched by name</span>
+                  )}
+                </span>
+              ) : (
+                <span className="muted">No project matched “{form.brand || "—"}”. Choose one below.</span>
+              )}
+              <button type="button" className="link" onClick={() => setChangingProject((v) => !v)}>
+                {changingProject ? "Done" : "Change"}
+              </button>
+            </div>
+
+            {(changingProject || !activeLinkProject) && (
+              <label className="field link-project-picker">
+                <span>Pick a project to browse its tasks</span>
+                <select value={activeProjectId || ""} onChange={(e) => setPickProjectId(e.target.value || null)}>
+                  <option value="">— Select a project —</option>
+                  {linkProjects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </label>
+            )}
+
+            <div className="link-add">
+              <select value="" onChange={(e) => addTaskLink(e.target.value)} disabled={!activeProjectId || projectTasks.length === 0}>
+                <option value="">
+                  {!activeProjectId ? "Choose a project first"
+                    : projectTasks.length === 0 ? "No more tasks in this project"
+                    : "+ Add a task…"}
+                </option>
+                {projectTasks.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
+              </select>
+            </div>
+
+            {links.length === 0 ? (
+              <p className="muted files-note">No tasks linked yet.</p>
+            ) : (
+              <ul className="link-list">
+                {links.map((l) => (
+                  <li className="link-row" key={l.id}>
+                    <span className="link-name">{linkTitleOf(l.task_id)}</span>
+                    <span className="link-proj muted">{linkProjectOf(l.task_id)}</span>
+                    <button type="button" className="link danger" onClick={() => removeTaskLink(l.id)}>Remove</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="muted files-note">Linked tasks show this order on the project’s Work orders tab.</div>
+          </div>
+        )}
 
         <div className="modal-foot">
           <button type="button" className="btn-ghost" onClick={onClose}>Cancel</button>
