@@ -2393,3 +2393,7 @@ a.file-chip:hover svg { color: var(--accent); }
 .drawer-wo { padding: 14px 20px; border-bottom: 0.5px solid var(--hairline-soft); }
 .drawer-wo .feed-label { margin: 0 0 8px; }
 .drawer-wo .pwo-row:last-child { border-bottom: none; }
+
+/* Merge modal — target picker */
+.merge-select { width: 100%; appearance: none; -webkit-appearance: none; font-family: var(--ui); font-size: 14px; color: var(--ink); padding: 11px 38px 11px 14px; border: 0.5px solid #e3e3e8; border-radius: var(--radius-ctl); background-color: #f5f5f7; cursor: pointer; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a8a90' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>"); background-repeat: no-repeat; background-position: right 12px center; }
+.merge-select:focus { outline: none; background-color: #fff; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
