@@ -44,6 +44,8 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
   const [selProjects, setSelProjects] = useState(() => new Set());
   const [selTasks, setSelTasks] = useState(() => new Set());
   const [pendingDelete, setPendingDelete] = useState(null);
+  const [mergeState, setMergeState] = useState(null); // { sourceId } while choosing a target
+  const [mergeTarget, setMergeTarget] = useState("");
   const [confirmState, setConfirmState] = useState(null);
   // Activity-feed indicator: per-task update counts + this user's read state.
   const [activity, setActivity] = useState({}); // { [taskId]: { count, latest, latestAuthor } }
@@ -284,7 +286,36 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
     load();
   }
 
-  // Close the filter dropdown on outside-click / Esc. Declared before any early
+  // Merge one project into another: move its tasks + members to the target, then
+  // delete the (now empty) source. Task posts/replies/links follow their tasks.
+  async function doMerge(sourceId, targetId) {
+    if (!sourceId || !targetId || sourceId === targetId) return;
+    // Move tasks over (append after the target's existing tasks).
+    const targetCount = tasks.filter((t) => t.project_id === targetId).length;
+    const moving = tasks.filter((t) => t.project_id === sourceId);
+    for (let i = 0; i < moving.length; i++) {
+      await supabase.from("tasks").update({ project_id: targetId, sort_order: targetCount + i }).eq("id", moving[i].id);
+    }
+    // Move members the target doesn't already have.
+    const [{ data: srcM }, { data: tgtM }] = await Promise.all([
+      supabase.from("project_members").select("member_email").eq("project_id", sourceId),
+      supabase.from("project_members").select("member_email").eq("project_id", targetId),
+    ]);
+    const have = new Set((tgtM || []).map((m) => m.member_email));
+    const toAdd = (srcM || []).filter((m) => !have.has(m.member_email))
+      .map((m) => ({ project_id: targetId, member_email: m.member_email }));
+    if (toAdd.length) { try { await supabase.from("project_members").insert(toAdd); } catch { /* best effort */ } }
+    // Delete the source (cascades its own members rows).
+    const { error } = await supabase.from("projects").delete().eq("id", sourceId);
+    if (error) { toast.error("Merge failed — " + error.message); return; }
+    toast.success("Projects merged");
+    setMergeState(null); setMergeTarget("");
+    clearSelection();
+    setActiveProjectId(targetId);
+    load();
+  }
+
+
   // return so the hook order stays stable across renders.
   const filterRef = useRef(null);
   useEffect(() => {
@@ -527,6 +558,15 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
           <span className="sel-count">{selectionCount}</span>
           <span className="sel-label">{selectionCount === 1 ? "selected" : "selected"}</span>
           <span className="sel-divider" />
+          {selProjects.size === 1 && selTasks.size === 0 && (
+            <button className="sel-action" onClick={() => { setMergeState({ sourceId: [...selProjects][0] }); setMergeTarget(""); }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M7 3v6a5 5 0 0 0 5 5 5 5 0 0 0 5-5V3" /><path d="M12 14v7" /><path d="M8 21h8" />
+              </svg>
+              <span>Merge</span>
+            </button>
+          )}
           <button className="sel-action" onClick={duplicateSelected}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -572,6 +612,45 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
           </div>
         </div>
       )}
+
+      {mergeState && (() => {
+        const source = projects.find((p) => p.id === mergeState.sourceId);
+        const target = projects.find((p) => p.id === mergeTarget);
+        const taskCount = tasks.filter((t) => t.project_id === mergeState.sourceId).length;
+        const others = sortedProjects.filter((p) => p.id !== mergeState.sourceId);
+        return (
+          <div className="overlay" onClick={() => { setMergeState(null); setMergeTarget(""); }}>
+            <div className="modal confirm-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-head">
+                <h2>Merge “{source?.name}” into…</h2>
+              </div>
+              <div className="modal-body">
+                <label className="field" style={{ marginBottom: 12 }}>
+                  <span>Destination project (this one survives)</span>
+                  <select className="merge-select" value={mergeTarget} onChange={(e) => setMergeTarget(e.target.value)}>
+                    <option value="">— Choose a project —</option>
+                    {others.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </label>
+                {target && (
+                  <p className="muted">
+                    This moves {taskCount} task{taskCount === 1 ? "" : "s"} and any members from
+                    {" "}<b>{source?.name}</b> into <b>{target.name}</b>, then deletes <b>{source?.name}</b>.
+                    Same-named tasks are both kept. <b>This can’t be undone.</b>
+                  </p>
+                )}
+              </div>
+              <div className="modal-foot">
+                <button className="btn-ghost" onClick={() => { setMergeState(null); setMergeTarget(""); }}>Cancel</button>
+                <button className="btn-danger" disabled={!mergeTarget}
+                  onClick={() => doMerge(mergeState.sourceId, mergeTarget)}>
+                  Merge &amp; delete “{source?.name}”
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
     </div>
   );
