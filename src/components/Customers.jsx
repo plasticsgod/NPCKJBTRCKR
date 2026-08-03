@@ -190,7 +190,7 @@ export default function Customers() {
         {open.notes && <div className="cust-notes"><span className="cust-sec">Notes</span><p>{open.notes}</p></div>}
 
         <div className="cust-sec">Label work orders</div>
-        {s.jobs.length === 0 ? <p className="muted cust-none">None yet.</p> : (
+        {s.jobs.length === 0 ? <p className="muted cust-none">No label orders yet.</p> : (
           <div className="cust-rows">
             {s.jobs.map((j) => (
               <div className="cust-row" key={j.id}>
@@ -204,7 +204,7 @@ export default function Customers() {
         )}
 
         <div className="cust-sec">Plastics orders</div>
-        {s.plastics.length === 0 ? <p className="muted cust-none">None yet.</p> : (
+        {s.plastics.length === 0 ? <p className="muted cust-none">No plastics orders yet.</p> : (
           <div className="cust-rows">
             {s.plastics.map((p) => (
               <div className="cust-row" key={p.id}>
@@ -218,7 +218,7 @@ export default function Customers() {
         )}
 
         <div className="cust-sec">Quotes</div>
-        {s.quotes.length === 0 ? <p className="muted cust-none">None yet.</p> : (
+        {s.quotes.length === 0 ? <p className="muted cust-none">No quotes yet.</p> : (
           <div className="cust-rows">
             {s.quotes.map((q) => (
               <div className="cust-row" key={q.id}>

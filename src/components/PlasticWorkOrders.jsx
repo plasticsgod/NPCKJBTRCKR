@@ -42,8 +42,9 @@ export default function PlasticWorkOrders({
       decided_at: new Date().toISOString(),
     };
     if (action === "approved") patch.status = "Submitted"; // enters the production board
+    const toastId = toast.loading(action === "approved" ? "Approving…" : "Rejecting…");
     const { error } = await supabase.from("plastic_jobs").update(patch).eq("id", id);
-    if (error) { toast.error("Couldn't update. Please try again."); return; }
+    if (error) { toast.update(toastId, "Couldn't update. Please try again.", { type: "error", duration: 5000 }); return; }
     // Notify the client who submitted it — in-app bell + email (best-effort).
     if (order?.created_by) {
       try {
@@ -60,7 +61,7 @@ export default function PlasticWorkOrders({
       } catch { /* email best-effort */ }
     }
     setDecide(null); setDecisionNote("");
-    toast.success(action === "approved" ? "Order approved — client emailed" : "Order rejected — client emailed");
+    toast.update(toastId, action === "approved" ? "Order approved — client emailed" : "Order rejected — client emailed", { type: "success", duration: 3000 });
   }
 
 
