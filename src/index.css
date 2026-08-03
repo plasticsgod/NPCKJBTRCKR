@@ -2397,3 +2397,13 @@ a.file-chip:hover svg { color: var(--accent); }
 /* Merge modal — target picker */
 .merge-select { width: 100%; appearance: none; -webkit-appearance: none; font-family: var(--ui); font-size: 14px; color: var(--ink); padding: 11px 38px 11px 14px; border: 0.5px solid #e3e3e8; border-radius: var(--radius-ctl); background-color: #f5f5f7; cursor: pointer; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a8a90' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>"); background-repeat: no-repeat; background-position: right 12px center; }
 .merge-select:focus { outline: none; background-color: #fff; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+
+/* Customer combobox (replaces the native datalist popup) */
+.cust-combo { position: relative; }
+.cust-combo-input { width: 100%; }
+.cust-combo-caret { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-3); pointer-events: none; display: flex; }
+.cust-combo-menu { max-height: 260px; overflow-y: auto; background: #fff; border: 0.5px solid var(--hairline); border-radius: 12px; box-shadow: 0 16px 40px rgba(20,22,40,.18); padding: 6px; animation: kebabIn var(--dur-fast) var(--ease); }
+.cust-combo-option { display: block; width: 100%; text-align: left; padding: 9px 12px; border: none; background: none; font: inherit; font-size: 14px; color: var(--ink); border-radius: 8px; cursor: pointer; }
+.cust-combo-option:hover { background: var(--panel); }
+.cust-combo-option.is-current { background: var(--accent-tint); color: var(--accent); font-weight: 500; }
+.cust-combo-empty { padding: 10px 12px; font-size: 13px; color: var(--ink-3); }
