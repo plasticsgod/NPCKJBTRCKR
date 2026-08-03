@@ -2407,3 +2407,24 @@ a.file-chip:hover svg { color: var(--accent); }
 .cust-combo-option:hover { background: var(--panel); }
 .cust-combo-option.is-current { background: var(--accent-tint); color: var(--accent); font-weight: 500; }
 .cust-combo-empty { padding: 10px 12px; font-size: 13px; color: var(--ink-3); }
+
+/* ==== Global select polish — custom chevron, no native OS arrow ============ */
+.field select,
+.filter-select,
+.filter-field-select,
+.ss-fld select,
+.ver-select,
+.qty-input select,
+.cust-client-link select,
+.merge-select,
+.link-project-picker select,
+.link-add select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a8a90' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+  padding-right: 34px;
+}
+/* Keep the chevron crisp on the smaller inline selects */
+.ss-fld select, .ver-select { background-position: right 8px center; padding-right: 28px; }
