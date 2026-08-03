@@ -43,7 +43,6 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
   // project and individual tasks can both be selected at once.
   const [selProjects, setSelProjects] = useState(() => new Set());
   const [selTasks, setSelTasks] = useState(() => new Set());
-  const [pendingDelete, setPendingDelete] = useState(null);
   const [mergeState, setMergeState] = useState(null); // { sourceId } while choosing a target
   const [mergeTarget, setMergeTarget] = useState("");
   const [confirmState, setConfirmState] = useState(null);
@@ -234,16 +233,18 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
     });
     const total = projIds.length + taskIds.length;
     if (total === 0) return;
-    setPendingDelete({ projIds, taskIds, total });
+    setConfirmState({
+      title: `Delete ${total} item${total === 1 ? "" : "s"}?`,
+      message: `Are you sure you want to delete ${total === 1 ? "this item" : "these items"}? This cannot be undone.`,
+      confirmLabel: total === 1 ? "Delete item" : "Delete items",
+      onConfirm: () => doBulkDelete(projIds, taskIds),
+    });
   }
 
-  async function confirmDeleteNow() {
-    if (!pendingDelete) return;
-    const { projIds, taskIds } = pendingDelete;
+  async function doBulkDelete(projIds, taskIds) {
     let err = null;
     if (projIds.length) { const r = await supabase.from("projects").delete().in("id", projIds); err = err || r.error; }
     if (taskIds.length) { const r = await supabase.from("tasks").delete().in("id", taskIds); err = err || r.error; }
-    setPendingDelete(null);
     clearSelection();
     setOpenTaskId(null);
     if (err) { toast.error("Delete failed. Please try again."); load(); return; }
@@ -593,23 +594,6 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
-        </div>
-      )}
-
-      {pendingDelete && (
-        <div className="overlay" onClick={() => setPendingDelete(null)}>
-          <div className="modal confirm-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-head">
-              <h2>Delete {pendingDelete.total} item{pendingDelete.total === 1 ? "" : "s"}?</h2>
-            </div>
-            <div className="modal-body">
-              <p>Are you sure you want to delete {pendingDelete.total === 1 ? "this item" : "these items"}? This cannot be undone.</p>
-            </div>
-            <div className="modal-foot">
-              <button className="btn-ghost" onClick={() => setPendingDelete(null)}>Cancel</button>
-              <button className="btn-danger" onClick={confirmDeleteNow}>Delete {pendingDelete.total === 1 ? "item" : "items"}</button>
-            </div>
-          </div>
         </div>
       )}
 
