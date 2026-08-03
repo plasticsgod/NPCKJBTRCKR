@@ -146,7 +146,7 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
     // Reflect the change instantly; realtime reconciles, revert on error.
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...fields } : t)));
     const { error } = await supabase.from("tasks").update(fields).eq("id", id);
-    if (error) { toast.error("Could not save change: " + error.message); load(); }
+    if (error) { toast.error("Could not save change. Please try again."); load(); }
   }
 
   // Drag-and-drop: move a task into a different project. Appends to the end of
@@ -162,7 +162,7 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
     const { error } = await supabase.from("tasks")
       .update({ project_id: targetProjectId, sort_order: newOrder }).eq("id", taskId);
     if (error) {
-      toast.error("Couldn't move task — " + error.message);
+      toast.error("Couldn't move task. Please try again.");
       load(); // reload to undo the optimistic move
       return;
     }
@@ -200,7 +200,7 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
 
   async function doDeleteTask(id) {
     const { error } = await supabase.from("tasks").delete().eq("id", id);
-    if (error) { toast.error("Couldn't delete task — " + error.message); return; }
+    if (error) { toast.error("Couldn't delete task. Please try again."); return; }
     setOpenTaskId(null);
     toast.success("Task deleted");
     load();
@@ -246,7 +246,7 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
     setPendingDelete(null);
     clearSelection();
     setOpenTaskId(null);
-    if (err) { toast.error("Delete failed — " + err.message); load(); return; }
+    if (err) { toast.error("Delete failed. Please try again."); load(); return; }
     const parts = [];
     if (projIds.length) parts.push(`${projIds.length} project${projIds.length === 1 ? "" : "s"}`);
     if (taskIds.length) parts.push(`${taskIds.length} task${taskIds.length === 1 ? "" : "s"}`);
@@ -307,7 +307,7 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
     if (toAdd.length) { try { await supabase.from("project_members").insert(toAdd); } catch { /* best effort */ } }
     // Delete the source (cascades its own members rows).
     const { error } = await supabase.from("projects").delete().eq("id", sourceId);
-    if (error) { toast.error("Merge failed — " + error.message); return; }
+    if (error) { toast.error("Merge failed. Please try again."); return; }
     toast.success("Projects merged");
     setMergeState(null); setMergeTarget("");
     clearSelection();
@@ -1271,7 +1271,7 @@ function ProjectMembers({ project }) {
   async function doRemoveMember(memberEmail) {
     const { error } = await supabase.from("project_members").delete()
       .eq("project_id", project.id).eq("member_email", memberEmail);
-    if (error) { toast.error("Could not remove: " + error.message); return; }
+    if (error) { toast.error("Could not remove. Please try again."); return; }
     toast.success("Access removed");
     load();
   }
