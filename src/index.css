@@ -2428,3 +2428,9 @@ a.file-chip:hover svg { color: var(--accent); }
 }
 /* Keep the chevron crisp on the smaller inline selects */
 .ss-fld select, .ver-select { background-position: right 8px center; padding-right: 28px; }
+
+/* Consistent loading indicator (spinner + label) */
+.loading-row { display: flex; align-items: center; gap: 9px; color: var(--ink-3); font-size: 14px; }
+.loading-pad { padding: 32px 24px; }
+.loading-spin { animation: toast-spin 0.7s linear infinite; color: var(--ink-3); }
+@media (prefers-reduced-motion: reduce) { .loading-spin { animation: none; } }

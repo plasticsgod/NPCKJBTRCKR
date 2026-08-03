@@ -229,12 +229,12 @@ export default function App() {
     if (withCust.id) {
       const { id, created_at, ...fields } = withCust;
       const { error } = await supabase.from("jobs").update(fields).eq("id", id);
-      if (error) return toast.error("Could not save changes: " + error.message);
+      if (error) return toast.error("Could not save changes. Please try again.");
       setEditing(null);
       toast.success("Work order saved");
     } else {
       const { data, error } = await supabase.from("jobs").insert(withCust).select().single();
-      if (error) return toast.error("Could not create the job: " + error.message);
+      if (error) return toast.error("Could not create the job. Please try again.");
       if (__stagedArtwork.length) {
         const rows = __stagedArtwork.map((a) => ({
           job_id: data.id, label: a.label, url: a.url, added_by: session.user.email,
@@ -250,7 +250,7 @@ export default function App() {
 
   async function doDeleteJob(id) {
     const { error } = await supabase.from("jobs").delete().eq("id", id);
-    if (error) return toast.error("Could not delete: " + error.message);
+    if (error) return toast.error("Could not delete. Please try again.");
     loadJobs();
   }
   function deleteJob(id) {
@@ -260,7 +260,7 @@ export default function App() {
   // Bulk delete (the Work Orders page shows its own confirm popup first)
   async function deleteJobs(ids) {
     const { error } = await supabase.from("jobs").delete().in("id", ids);
-    if (error) return toast.error("Could not delete: " + error.message);
+    if (error) return toast.error("Could not delete. Please try again.");
     toast.success(ids.length > 1 ? `${ids.length} work orders deleted` : "Work order deleted");
     loadJobs();
   }
@@ -268,13 +268,13 @@ export default function App() {
   async function changeStatus(id, status) {
     setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, status } : j)));
     const { error } = await supabase.from("jobs").update({ status }).eq("id", id);
-    if (error) { toast.error("Could not update status: " + error.message); loadJobs(); }
+    if (error) { toast.error("Could not update status. Please try again."); loadJobs(); }
   }
 
   async function changeFacility(id, printing_facility) {
     setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, printing_facility } : j)));
     const { error } = await supabase.from("jobs").update({ printing_facility }).eq("id", id);
-    if (error) { toast.error("Could not update facility: " + error.message); loadJobs(); }
+    if (error) { toast.error("Could not update facility. Please try again."); loadJobs(); }
   }
 
   // List of existing customers (for the combobox dropdown)
@@ -286,11 +286,11 @@ export default function App() {
     if (job.id) {
       const { id, created_at, ...fields } = job;
       const { error } = await supabase.from("plastic_jobs").update(fields).eq("id", id);
-      if (error) return toast.error("Could not save changes: " + error.message);
+      if (error) return toast.error("Could not save changes. Please try again.");
       toast.success("Plastics order saved");
     } else {
       const { error } = await supabase.from("plastic_jobs").insert({ ...job, created_by: session.user.email });
-      if (error) return toast.error("Could not create the order: " + error.message);
+      if (error) return toast.error("Could not create the order. Please try again.");
       toast.success("Plastics order created");
     }
     setEditingPlastic(null);
@@ -299,7 +299,7 @@ export default function App() {
 
   async function deletePlasticJobs(ids) {
     const { error } = await supabase.from("plastic_jobs").delete().in("id", ids);
-    if (error) return toast.error("Could not delete: " + error.message);
+    if (error) return toast.error("Could not delete. Please try again.");
     toast.success(ids.length > 1 ? `${ids.length} orders deleted` : "Order deleted");
     loadPlasticJobs();
   }
