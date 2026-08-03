@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../supabaseClient";
 import { toast } from "./Toaster";
 import ConfirmModal from "./ConfirmModal";
+import Loading from "./Loading";
 
 const money = (n) =>
   "$" + (Number(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -71,7 +72,7 @@ export default function Customers() {
     const res = form.id
       ? await supabase.from("customers").update(payload).eq("id", form.id)
       : await supabase.from("customers").insert(payload);
-    if (res.error) { toast.error("Could not save: " + res.error.message); return; }
+    if (res.error) { toast.error("Could not save. Please try again."); return; }
     toast.success(form.id ? "Customer saved" : "Customer added");
     setEditing(null);
     load();
@@ -106,12 +107,12 @@ export default function Customers() {
   async function linkClient(clientId, customerId) {
     const { error } = await supabase.from("client_users")
       .update({ customer_id: customerId }).eq("id", clientId);
-    if (error) { toast.error("Could not link: " + error.message); return; }
+    if (error) { toast.error("Could not link. Please try again."); return; }
     toast.success(customerId ? "Client linked" : "Client unlinked");
     load();
   }
 
-  if (loading) return <div className="muted pad">Loading customers…</div>;
+  if (loading) return <Loading label="Loading customers" />;
 
   const shown = customers.filter((c) =>
     [c.name, c.contact_name, c.email].filter(Boolean).join(" ").toLowerCase().includes(query.trim().toLowerCase())

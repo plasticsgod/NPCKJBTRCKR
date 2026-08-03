@@ -90,14 +90,14 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
     const { error } = await supabase.from("work_order_links").insert({
       order_id: job.id, order_kind: "plastic", task_id: taskId, created_by: userEmail,
     });
-    if (error) { toast.error("Couldn't link task — " + error.message); return; }
+    if (error) { toast.error("Couldn't link task. Please try again."); return; }
     setChangingProject(false);
     toast.success("Task linked");
     loadLinks();
   }
   async function removeTaskLink(linkId) {
     const { error } = await supabase.from("work_order_links").delete().eq("id", linkId);
-    if (error) { toast.error("Couldn't remove — " + error.message); return; }
+    if (error) { toast.error("Couldn't remove. Please try again."); return; }
     loadLinks();
   }
 
@@ -117,7 +117,7 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
       for (const file of picked) {
         const path = `plastic/${job.id}/${Date.now()}-${file.name.replace(/[^\w.-]+/g, "_")}`;
         const { error } = await filesBucket.upload(path, file, { contentType: "application/pdf" });
-        if (error) { toast.error("Upload failed — " + error.message); continue; }
+        if (error) { toast.error("Upload failed. Please try again."); continue; }
         added.push({ name: file.name, path, uploaded_by: userEmail, uploaded_at: new Date().toISOString() });
       }
       if (added.length) {

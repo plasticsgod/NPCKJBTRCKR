@@ -8,6 +8,7 @@ import PricingEditor from "./PricingEditor";
 import { buildQuotePDF, buildClientQuotePDF } from "../lib/quotePdf";
 import { toast } from "./Toaster";
 import CustomerCombo from "./CustomerCombo";
+import Loading from "./Loading";
 
 let _lineSeq = 0;
 const nextLineId = () => ++_lineSeq;
@@ -95,7 +96,7 @@ export default function PlasticsEstimator({ userEmail, clientMode = false, onSub
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
 
-  if (loading) return <div className="muted pad">Loading pricing…</div>;
+  if (loading) return <Loading label="Loading pricing" />;
   if (!clientMode && versions.length === 0)
     return (
       <div className="empty">
@@ -249,7 +250,7 @@ export default function PlasticsEstimator({ userEmail, clientMode = false, onSub
       const customerName = clientMode ? (myCustomer?.name || userEmail) : (customer.trim() || null);
       const customerId = clientMode ? (myCustomer?.id ?? null) : await resolveCustomerId(customer);
       const { error } = await supabase.from("plastic_jobs").insert(buildOrder({ id, customerName, customerId }));
-      if (error) { toast.error("Couldn't send order — " + error.message); return; }
+      if (error) { toast.error("Couldn't send order. Please try again."); return; }
       // Notify the members who review orders (best-effort).
       const REVIEWERS = ["taylor.knox@nutrapack.co", "jeff.weisser@nutrapack.co", "eduardonutramedia@gmail.com"];
       try {

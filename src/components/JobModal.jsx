@@ -76,14 +76,14 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
     const { error } = await supabase.from("work_order_links").insert({
       order_id: job.id, order_kind: "label", task_id: taskId, created_by: linkUser,
     });
-    if (error) { toast.error("Couldn't link task — " + error.message); return; }
+    if (error) { toast.error("Couldn't link task. Please try again."); return; }
     setChangingProject(false);
     toast.success("Task linked");
     loadLinks();
   }
   async function removeTaskLink(linkId) {
     const { error } = await supabase.from("work_order_links").delete().eq("id", linkId);
-    if (error) { toast.error("Couldn't remove — " + error.message); return; }
+    if (error) { toast.error("Couldn't remove. Please try again."); return; }
     loadLinks();
   }
 
@@ -390,7 +390,7 @@ function ProofsPanel({ jobId, jobTitle, customer }) {
 
   async function download(file) {
     const { data, error } = await supabase.storage.from("job-files").download(file.storage_path);
-    if (error) { alert("Download failed: " + error.message); return; }
+    if (error) { alert("Download failed. Please try again."); return; }
     const url = URL.createObjectURL(data);
     const a = document.createElement("a"); a.href = url; a.download = file.name; a.click();
     URL.revokeObjectURL(url);

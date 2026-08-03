@@ -68,10 +68,7 @@ export default function WorkOrders({
           </div>
           <input className="search-input page-search" type="search"
             placeholder="Search job, customer, PO…"
-            value={query} onChange={(e) => setQuery(e.target.value)} list="customers" />
-          <datalist id="customers">
-            {customers.map((c) => <option key={c} value={c} />)}
-          </datalist>
+            value={query} onChange={(e) => setQuery(e.target.value)} />
           <div className="page-head-right">
             {deleteMode && <button className="btn-ghost" onClick={exitDeleteMode}>Cancel</button>}
             <button className="btn-ghost del-btn" disabled={deleteMode && count === 0} onClick={onDeleteClick}>

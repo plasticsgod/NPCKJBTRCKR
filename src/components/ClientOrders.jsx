@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "../supabaseClient";
+import Loading from "./Loading";
 
 const STATUS_LABEL = { pending: "Pending", approved: "Approved", rejected: "Rejected" };
 
@@ -43,7 +44,7 @@ export default function ClientOrders({ focusOrderId, onFocused }) {
     setOpenId((cur) => (cur === id ? null : id));
   }, []);
 
-  if (orders === null) return <div className="muted pad">Loading your orders…</div>;
+  if (orders === null) return <Loading label="Loading your orders" />;
 
   return (
     <div className="quotes-page">

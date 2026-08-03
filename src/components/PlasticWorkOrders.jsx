@@ -43,7 +43,7 @@ export default function PlasticWorkOrders({
     };
     if (action === "approved") patch.status = "Submitted"; // enters the production board
     const { error } = await supabase.from("plastic_jobs").update(patch).eq("id", id);
-    if (error) { toast.error("Couldn't update — " + error.message); return; }
+    if (error) { toast.error("Couldn't update. Please try again."); return; }
     // Notify the client who submitted it — in-app bell + email (best-effort).
     if (order?.created_by) {
       try {
@@ -90,10 +90,7 @@ export default function PlasticWorkOrders({
           </div>
           <input className="search-input page-search" type="search"
             placeholder="Search job, customer, origin…"
-            value={query} onChange={(e) => setQuery(e.target.value)} list="plastic-customers" />
-          <datalist id="plastic-customers">
-            {customers.map((c) => <option key={c} value={c} />)}
-          </datalist>
+            value={query} onChange={(e) => setQuery(e.target.value)} />
           <div className="page-head-right">
             {deleteMode && <button className="btn-ghost" onClick={exitDeleteMode}>Cancel</button>}
             <button className="btn-ghost del-btn" disabled={deleteMode && count === 0} onClick={onDeleteClick}>
