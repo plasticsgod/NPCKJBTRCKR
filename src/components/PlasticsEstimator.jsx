@@ -7,6 +7,7 @@ import {
 import PricingEditor from "./PricingEditor";
 import { buildQuotePDF, buildClientQuotePDF } from "../lib/quotePdf";
 import { toast } from "./Toaster";
+import CustomerCombo from "./CustomerCombo";
 
 let _lineSeq = 0;
 const nextLineId = () => ++_lineSeq;
@@ -411,11 +412,7 @@ export default function PlasticsEstimator({ userEmail, clientMode = false, onSub
               </label>
             ) : (
             <label className="ss-fld qm-customer"><span>Customer / project</span>
-              <input type="text" list="quote-customer-list" placeholder="Type or pick a customer" value={customer}
-                onChange={(e) => setCustomer(e.target.value)} />
-              <datalist id="quote-customer-list">
-                {customerRows.map((c) => <option key={c.id} value={c.name} />)}
-              </datalist>
+              <CustomerCombo value={customer} onChange={setCustomer} customers={customerRows.map((c) => c.name)} />
             </label>
             )}
             <label className="ss-fld"><span>Quote date</span>

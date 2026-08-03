@@ -4,6 +4,7 @@ import {
   MARGINS, PORTS, findItem, unitEconomics, setEconomics, unitsFromQty, money2,
 } from "../lib/pricing";
 import { toast } from "./Toaster";
+import CustomerCombo from "./CustomerCombo";
 
 const STATUSES = ["Submitted", "In Production", "Shipped", "Delivered"];
 const UNITS = ["pallets", "containers", "tubs"];
@@ -262,11 +263,7 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
             <div className="field-row">
               <label className="field">
                 <span>Customer</span>
-                <input list="plastic-customer-list" placeholder="Type or pick a customer"
-                  value={form.brand} onChange={(e) => set("brand", e.target.value)} />
-                <datalist id="plastic-customer-list">
-                  {customers.map((c) => <option key={c} value={c} />)}
-                </datalist>
+                <CustomerCombo value={form.brand} onChange={(v) => set("brand", v)} customers={customers} />
               </label>
               <label className="field">
                 <span>Quantity</span>

@@ -4,6 +4,7 @@ import { STATUSES, FACILITIES } from "../supabaseClient";
 import DatePicker from "./DatePicker";
 import ConfirmModal from "./ConfirmModal";
 import { toast } from "./Toaster";
+import CustomerCombo from "./CustomerCombo";
 
 const EMPTY = {
   job_title: "",
@@ -151,11 +152,7 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
             <div className="field-row">
               <label className="field">
                 <span>Customer</span>
-                <input list="customer-list" placeholder="Type or pick a customer"
-                  value={form.brand} onChange={(e) => set("brand", e.target.value)} />
-                <datalist id="customer-list">
-                  {customers.map((c) => <option key={c} value={c} />)}
-                </datalist>
+                <CustomerCombo value={form.brand} onChange={(v) => set("brand", v)} customers={customers} />
               </label>
               <label className="field">
                 <span>Print Qty</span>
