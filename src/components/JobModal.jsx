@@ -307,6 +307,7 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
 function ProofsPanel({ jobId, jobTitle, customer }) {
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [confirmState, setConfirmState] = useState(null);
   function remove(file) {
@@ -325,8 +326,8 @@ function ProofsPanel({ jobId, jobTitle, customer }) {
 
   useEffect(() => { load(); }, [load]);
 
-  async function upload(e) {
-    const picked = Array.from(e.target.files || []);
+  async function handleFiles(fileList) {
+    const picked = Array.from(fileList || []);
     if (!picked.length) return;
     setUploading(true);
 
@@ -383,9 +384,16 @@ function ProofsPanel({ jobId, jobTitle, customer }) {
         });
       }
     }
-    e.target.value = "";
     setUploading(false);
     load();
+  }
+
+  function upload(e) { const fl = e.target.files; handleFiles(fl); e.target.value = ""; }
+  function onDrop(e) {
+    e.preventDefault();
+    setDragOver(false);
+    if (uploading) return;
+    handleFiles(e.dataTransfer.files);
   }
 
   async function download(file) {
@@ -405,11 +413,14 @@ function ProofsPanel({ jobId, jobTitle, customer }) {
   return (
     <div className="modal-body files-panel">
       <p className="panel-note">Upload proof files for this job. Proofs are automatically deleted 30 days after the job is marked Delivered.</p>
-      <label className="upload-zone">
+      <label className={"upload-zone" + (dragOver ? " dragover" : "")}
+        onDragOver={(e) => { e.preventDefault(); if (!uploading) setDragOver(true); }}
+        onDragLeave={(e) => { e.preventDefault(); setDragOver(false); }}
+        onDrop={onDrop}>
         <input type="file" multiple onChange={upload} disabled={uploading} style={{ display: "none" }} />
         <div className="upload-inner">
           <span className="upload-icon">↑</span>
-          <span>{uploading ? "Uploading…" : "Click to upload proof files"}</span>
+          <span>{uploading ? "Uploading…" : dragOver ? "Drop files to upload" : "Click or drag files to upload"}</span>
           <span className="muted small">PDF, AI, images — any format</span>
         </div>
       </label>
