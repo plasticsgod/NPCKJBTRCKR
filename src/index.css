@@ -2436,3 +2436,7 @@ a.file-chip:hover svg { color: var(--accent); }
 .loading-pad { padding: 32px 24px; }
 .loading-spin { animation: toast-spin 0.7s linear infinite; color: var(--ink-3); }
 @media (prefers-reduced-motion: reduce) { .loading-spin { animation: none; } }
+
+/* Clickable links inside task updates/replies */
+.feed-link { color: var(--accent); text-decoration: none; word-break: break-word; }
+.feed-link:hover { text-decoration: underline; }
