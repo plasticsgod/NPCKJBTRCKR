@@ -107,20 +107,43 @@ function parseMentions(text, users) {
 }
 
 // Render text with @mentions highlighted. Recognizes both @Name and @email.
+const URL_RE = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
+
 function RichText({ body, users }) {
-  if (!users?.length) return <span>{body}</span>;
   const byName = {};
-  users.forEach((u) => { const n = displayName(u); if (n) byName[n] = u; });
-  const parts = body.split(/(@\S+)/g);
+  (users || []).forEach((u) => { const n = displayName(u); if (n) byName[n] = u; });
+  // Split on URLs first so an "@" inside a link can't break the URL apart.
+  const segments = (body || "").split(URL_RE);
   return (
     <span>
-      {parts.map((p, i) => {
-        if (p.startsWith("@")) {
-          const tok = p.slice(1);
-          const email = users.includes(tok) ? tok : byName[tok];
-          if (email) return <strong key={i} className="mention">@{displayName(email)}</strong>;
+      {segments.map((seg, i) => {
+        if (!seg) return null;
+        if (/^(https?:\/\/|www\.)/i.test(seg)) {
+          // Peel trailing punctuation off the URL (so "see x.com." doesn't link the dot).
+          const m = seg.match(/^(.*?)([.,;:!?)\]}"']*)$/);
+          const url = m ? m[1] : seg;
+          const trail = m ? m[2] : "";
+          const href = url.startsWith("http") ? url : "https://" + url;
+          return (
+            <span key={i}>
+              <a href={href} target="_blank" rel="noreferrer" className="feed-link">{url}</a>{trail}
+            </span>
+          );
         }
-        return <span key={i}>{p}</span>;
+        // Non-URL text: render @mentions.
+        const parts = seg.split(/(@\S+)/g);
+        return (
+          <span key={i}>
+            {parts.map((p, j) => {
+              if (p.startsWith("@") && users?.length) {
+                const tok = p.slice(1);
+                const email = users.includes(tok) ? tok : byName[tok];
+                if (email) return <strong key={j} className="mention">@{displayName(email)}</strong>;
+              }
+              return <span key={j}>{p}</span>;
+            })}
+          </span>
+        );
       })}
     </span>
   );
