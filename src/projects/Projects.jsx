@@ -53,7 +53,9 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
   const [dragOverProject, setDragOverProject] = useState(null); // project being hovered
   const users = useUsers();
   const newProjRef = useRef(null);
-  const [activeProjectId, setActiveProjectId] = useState(null);
+  const [activeProjectId, setActiveProjectId] = useState(() => {
+    try { return localStorage.getItem("np_active_project") || null; } catch { return null; }
+  });
   const [mobilePickerOpen, setMobilePickerOpen] = useState(false);
   const [railSearch, setRailSearch] = useState("");
 
@@ -101,6 +103,12 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
   useEffect(() => {
     if (addingProject) newProjRef.current?.focus();
   }, [addingProject]);
+
+  // Remember the selected project across refreshes (restored on mount).
+  useEffect(() => {
+    if (!activeProjectId) return;
+    try { localStorage.setItem("np_active_project", activeProjectId); } catch { /* private mode */ }
+  }, [activeProjectId]);
 
   async function saveProject(e) {
     e.preventDefault();
