@@ -2373,6 +2373,29 @@ a.file-chip:hover svg { color: var(--accent); }
 /* Section divider inside the plastic order modal (merged Details + Pricing) */
 .pm-section-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); padding-top: 16px; margin-top: 4px; border-top: 0.5px solid var(--hairline-soft); }
 
+/* Multi-product line editor in the plastics order modal. Mirrors the
+   estimator's .qline styling so the two match. */
+.pli-search { position: relative; }
+.pm-lines { display: flex; flex-direction: column; gap: 8px; }
+.pm-line { background: #fff; border: 1px solid var(--hairline); border-radius: 12px; padding: 12px 14px; box-shadow: var(--shadow-card); }
+.pm-line-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.pm-line-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; color: var(--ink); }
+.pm-line-name-fixed { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+input.pm-line-name { font-weight: 500; padding: 8px 10px; border: 1px solid var(--hairline); border-radius: 8px; background: #fff; }
+.pm-line-total { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.pm-line-total.none { color: var(--ink-3); font-weight: 500; }
+.pm-line-rm { border: none; background: transparent; color: var(--ink-3); font-size: 18px; line-height: 1; cursor: pointer; padding: 0 4px; border-radius: 6px; transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease); }
+.pm-line-rm:hover { color: #d64545; background: var(--hairline-soft); }
+.pm-line-ctrls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pm-line-qty { width: 96px; font-family: var(--ui); font-size: 13px; padding: 8px 10px; border: 1px solid var(--hairline); border-radius: 8px; background: #fff; color: var(--ink); }
+.pm-line-margin { font-family: var(--ui); font-size: 13px; padding: 8px 10px; border: 1px solid var(--hairline); border-radius: 8px; background: #fff; color: var(--ink); cursor: pointer; }
+.pm-line-margin.empty { color: var(--accent); border-color: var(--accent); border-style: dashed; }
+.pm-line-units { font-size: 12px; color: var(--ink-3); }
+.pm-line-flag { font-size: 12px; color: var(--ink-3); font-style: italic; }
+.pm-lines-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
+.pm-grouped { font-size: 13px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.pm-rollup { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: var(--panel); border-radius: 10px; padding: 8px 12px; }
+
 /* Project — linked Work orders tab */
 .pwo-list { display: flex; flex-direction: column; }
 .pwo-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 12px 4px; border: none; border-bottom: 0.5px solid var(--hairline-soft); background: none; cursor: pointer; font: inherit; transition: background var(--dur-fast) var(--ease); }
