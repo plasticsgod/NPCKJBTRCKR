@@ -177,6 +177,55 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
     load();
   }
 
+  // Drag-and-drop: reorder a task relative to another task (drop before/after a
+  // specific row). Works within a project and across projects (the target row's
+  // project wins). Rewrites sort_order for the target project's list; persists
+  // only the rows that actually changed. Optimistic, then reconcile on error.
+  async function reorderTask(draggedId, targetId, position) {
+    if (!draggedId || draggedId === targetId) return;
+    const dragged = tasks.find((x) => x.id === draggedId);
+    const target = tasks.find((x) => x.id === targetId);
+    if (!dragged || !target) return;
+    const projectId = target.project_id;
+
+    // Full ordered list of the destination project, minus the dragged task.
+    const list = tasks
+      .filter((x) => x.project_id === projectId && x.id !== draggedId)
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+    const idx = list.findIndex((x) => x.id === targetId);
+    if (idx === -1) return;
+    const insertAt = position === "after" ? idx + 1 : idx;
+    list.splice(insertAt, 0, dragged);
+
+    // New sequential sort_order for the destination project.
+    const next = list.map((x, i) => ({ id: x.id, sort_order: i }));
+    const changed = next.filter((u) => {
+      const orig = tasks.find((x) => x.id === u.id);
+      return !orig || orig.sort_order !== u.sort_order || u.id === draggedId;
+    });
+    if (changed.length === 0) return;
+
+    // Optimistic: apply new order (+ project move for the dragged task).
+    setTasks((prev) => prev.map((x) => {
+      const u = next.find((n) => n.id === x.id);
+      if (!u) return x;
+      return { ...x, sort_order: u.sort_order, project_id: projectId };
+    }));
+    // A manual arrangement only shows under manual sort.
+    if (sortBy !== "manual") setSortBy("manual");
+
+    try {
+      for (const u of changed) {
+        const patch = u.id === draggedId ? { sort_order: u.sort_order, project_id: projectId } : { sort_order: u.sort_order };
+        const { error } = await supabase.from("tasks").update(patch).eq("id", u.id);
+        if (error) throw error;
+      }
+    } catch {
+      toast.error("Couldn't save the new order. Reloading.");
+      load();
+    }
+  }
+
   // Marks a task's updates as read for the current user (optimistic + persisted).
   async function markRead(taskId) {
     if (!taskId) return;
@@ -544,6 +593,7 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
               isDropTarget={false}
               onDragOverProject={setDragOverProject}
               onDropTask={moveTaskToProject}
+              onReorderTask={reorderTask}
             />
           )}
         </div>
@@ -787,7 +837,7 @@ function ProjectWorkOrders({ tasks }) {
   );
 }
 
-function ProjectGroup({ project, tasks, allTasks, fileQuery, users, userEmail, canEdit = true, solo = false, progress, selected, onToggleSelect, selectedTasks, onToggleTask, onUpdateName, onAddTask, onAddTaskInline, onOpenTask, onUpdateTask, activity, reads, draggingTaskId, onDragTaskStart, onDragTaskEnd, isDropTarget, onDragOverProject, onDropTask }) {
+function ProjectGroup({ project, tasks, allTasks, fileQuery, users, userEmail, canEdit = true, solo = false, progress, selected, onToggleSelect, selectedTasks, onToggleTask, onUpdateName, onAddTask, onAddTaskInline, onOpenTask, onUpdateTask, activity, reads, draggingTaskId, onDragTaskStart, onDragTaskEnd, isDropTarget, onDragOverProject, onDropTask, onReorderTask }) {
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState(project.name);
   const [collapsed, setCollapsed] = useState(false);
@@ -918,6 +968,8 @@ function ProjectGroup({ project, tasks, allTasks, fileQuery, users, userEmail, c
                     updates={count}
                     unread={unread}
                     dragging={draggingTaskId === t.id}
+                    draggingTaskId={draggingTaskId}
+                    onReorder={onReorderTask}
                     onDragStart={onDragTaskStart}
                     onDragEnd={onDragTaskEnd} />
                 );
@@ -954,12 +1006,33 @@ function ProjectGroup({ project, tasks, allTasks, fileQuery, users, userEmail, c
   );
 }
 
-function TaskRow({ task, users, userEmail, canEdit = true, checked, onToggle, onOpen, onUpdate, updates = 0, unread = false, dragging = false, onDragStart, onDragEnd }) {
+function TaskRow({ task, users, userEmail, canEdit = true, checked, onToggle, onOpen, onUpdate, updates = 0, unread = false, dragging = false, draggingTaskId = null, onReorder, onDragStart, onDragEnd }) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [title, setTitle] = useState(task.title);
+  const [dropPos, setDropPos] = useState(null); // null | "before" | "after"
   const owners = task.owners || (task.owner ? [task.owner] : []);
 
   useEffect(() => { setTitle(task.title); }, [task.title]);
+
+  // Is another task being dragged over this row? (Not this row dragging itself.)
+  const dragActive = canEdit && draggingTaskId != null && draggingTaskId !== task.id;
+
+  function onRowDragOver(e) {
+    if (!dragActive) return;
+    e.preventDefault();                       // allow drop
+    e.dataTransfer.dropEffect = "move";
+    const r = e.currentTarget.getBoundingClientRect();
+    setDropPos((e.clientY - r.top) > r.height / 2 ? "after" : "before");
+  }
+  function onRowDragLeave() { setDropPos(null); }
+  function onRowDrop(e) {
+    if (!dragActive) return;
+    e.preventDefault();
+    e.stopPropagation();                      // don't also trigger the group's append-to-end drop
+    const pos = dropPos || "before";
+    setDropPos(null);
+    onReorder && onReorder(draggingTaskId, task.id, pos);
+  }
 
   function saveTitle() {
     setEditingTitle(false);
@@ -980,7 +1053,7 @@ function TaskRow({ task, users, userEmail, canEdit = true, checked, onToggle, on
 
   return (
     <tr
-      className={"ptask-row" + (checked ? " selected" : "") + (dragging ? " dragging" : "")}
+      className={"ptask-row" + (checked ? " selected" : "") + (dragging ? " dragging" : "") + (dropPos ? " drop-" + dropPos : "")}
       onClick={!editingTitle ? onOpen : undefined}
       draggable={canEdit && !editingTitle}
       onDragStart={(e) => {
@@ -989,7 +1062,10 @@ function TaskRow({ task, users, userEmail, canEdit = true, checked, onToggle, on
         try { e.dataTransfer.setData("text/plain", task.id); } catch { /* drag payload optional */ }
         onDragStart && onDragStart(task.id);
       }}
-      onDragEnd={() => onDragEnd && onDragEnd()}
+      onDragEnd={() => { setDropPos(null); onDragEnd && onDragEnd(); }}
+      onDragOver={onRowDragOver}
+      onDragLeave={onRowDragLeave}
+      onDrop={onRowDrop}
     >
       <td className="col-check" onClick={(e) => e.stopPropagation()}>
         {canEdit && (
