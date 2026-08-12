@@ -1274,6 +1274,16 @@ button {
 /* Drag a task onto another project */
 .ptask-row.dragging { opacity: 0.4; }
 .ptask-row.dragging td { background: var(--accent-tint); }
+/* Lift feel while dragging: the grabbed row scales up slightly with a shadow,
+   and a cursor grab affordance appears on hover for editable rows. */
+.ptask-row[draggable="true"]:hover { cursor: grab; }
+.ptask-row.dragging { cursor: grabbing; }
+.ptask-row.dragging td { box-shadow: 0 10px 24px rgba(20,22,40,.18); transform: scale(1.012); transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+/* Insertion indicator: a colored line on the edge the task will drop against. */
+.ptask-row.drop-before td { box-shadow: inset 0 2px 0 0 var(--accent); }
+.ptask-row.drop-after td { box-shadow: inset 0 -2px 0 0 var(--accent); }
+.ptask-row.drop-before td:first-child,
+.ptask-row.drop-after td:first-child { position: relative; }
 .proj-group.drop-target { outline: 2px dashed var(--accent); outline-offset: -2px; }
 .proj-group.drop-target .proj-head { background: var(--accent-tint); }
 
