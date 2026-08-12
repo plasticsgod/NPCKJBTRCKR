@@ -53,6 +53,7 @@ function makeLine(src, data) {
     qty: src.qty ?? src.units ?? "",
     marginIdx: mi >= 0 ? mi : null,
     freeText: !prod,
+    charge: src.unit_charge != null && src.unit_charge !== "" ? Number(src.unit_charge) : "",
     _margin: marginLab,
     _units: num(src.units),
     _unitCharge: num(src.unit_charge),
@@ -236,6 +237,9 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
   // from a prior estimator/import save and can't be recomputed live.
   const [items, setItems] = useState([]);
   const [seeded, setSeeded] = useState(false);
+  // Order-level override: when on, the typed Total Cost / Client Charge are the
+  // order total and the per-product roll-up is ignored. Persisted in pricing jsonb.
+  const [override, setOverride] = useState(!!job.pricing?.manual_total);
 
   // Product catalog search (adds priced lines).
   const [search, setSearch] = useState("");
@@ -252,7 +256,7 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
     setSearch(""); setSearchOpen(false);
   };
   const addFreeLine = () =>
-    setItems((ls) => [...ls, { id: nextLiId(), prod: null, name: "", mode: "units", qty: "", marginIdx: null, freeText: true }]);
+    setItems((ls) => [...ls, { id: nextLiId(), prod: null, name: "", mode: "units", qty: "", marginIdx: null, charge: "", freeText: true }]);
   const updateItem = (id, patch) => setItems((ls) => ls.map((l) => (l.id === id ? { ...l, ...patch } : l)));
   const removeItem = (id) => setItems((ls) => ls.filter((l) => l.id !== id));
 
@@ -309,14 +313,22 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
         }
       }
     }
-    // Free-text (or unresolved catalog): only "units" mode has a known piece
-    // count; preserve any frozen pricing so totals/roll-up stay intact.
-    const units = l.mode === "units" ? qn : (l._units ?? null);
-    const unitCharge = l._unitCharge ?? null;
-    const unitCost = l._unitCost ?? null;
-    const lineCharge = l._lineCharge ?? (unitCharge != null && units != null ? unitCharge * units : null);
-    const lineCost = l._lineCost ?? (unitCost != null && units != null ? unitCost * units : null);
-    return { units, unitCharge, unitCost, lineCharge, lineCost, priceable: false, missingMargin: false };
+    // Free-text / unresolved catalog line: priced MANUALLY. The user types a
+    // per-unit charge and (optionally) a margin; cost is derived the same way
+    // catalog lines do (landed = charge × divisor). The multiplier is the raw
+    // qty in the chosen unit (no ppp/pcs conversion is possible here), so
+    // "12 pallets × $X" = 12·X. Pieces are only known in "units" mode.
+    const mult = qn;
+    const piecesKnown = l.mode === "units" ? qn : null;
+    const hasMargin = l.marginIdx != null;
+    const typed = l.charge !== "" && l.charge != null;
+    const unitCharge = typed ? num(l.charge) : (l._unitCharge ?? null);
+    const unitCost = unitCharge != null && hasMargin
+      ? unitCharge * MARGINS[l.marginIdx].d
+      : (typed ? null : (l._unitCost ?? null));
+    const lineCharge = unitCharge != null && mult ? unitCharge * mult : (typed ? null : (l._lineCharge ?? null));
+    const lineCost = unitCost != null && mult ? unitCost * mult : (typed ? null : (l._lineCost ?? null));
+    return { units: piecesKnown, unitCharge, unitCost, lineCharge, lineCost, priceable: false, missingMargin: false, manual: true };
   }
 
   const priced = items.map((l) => ({ l, ...priceItem(l) }));
@@ -378,6 +390,7 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
       line_items,
       qty: derivedQty,
       qty_unit: "units",
+      pricing: { ...(form.pricing || {}), manual_total: override },
       cost: form.cost === "" || form.cost == null ? null : round2(num(form.cost)),
       revenue: form.revenue === "" || form.revenue == null ? null : round2(num(form.revenue)),
     });
@@ -498,7 +511,19 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
                           {MARGINS.map((m, i) => <option key={m.lab} value={i}>{m.lab}</option>)}
                         </select>
                       ) : (
-                        <span className="pm-line-flag" title="Not in the pricing version — priced manually below">custom · no auto-price</span>
+                        <>
+                          <div className="pm-line-charge">
+                            <span className="pm-line-charge-pre">$</span>
+                            <input type="number" min="0" step="0.0001" placeholder="charge / unit"
+                              value={l.charge ?? ""} onChange={(e) => updateItem(l.id, { charge: e.target.value })} />
+                          </div>
+                          <select className="pm-line-margin"
+                            value={l.marginIdx ?? ""}
+                            onChange={(e) => updateItem(l.id, { marginIdx: e.target.value === "" ? null : +e.target.value })}>
+                            <option value="">Margin (opt)</option>
+                            {MARGINS.map((m, i) => <option key={m.lab} value={i}>{m.lab}</option>)}
+                          </select>
+                        </>
                       )}
                       {units != null && l.mode !== "units" && (
                         <span className="pm-line-units">{units.toLocaleString()} units</span>
@@ -527,6 +552,10 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
             )}
 
             {/* Cost / charge -------------------------------------------------- */}
+            <label className="pm-override">
+              <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} />
+              <span>Set order total manually <span className="field-hint">— ignore per-product pricing</span></span>
+            </label>
             <div className="field-row">
               <label className="field">
                 <span>Total Cost <span className="field-hint">— what we paid</span></span>
@@ -539,7 +568,7 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
                   value={form.revenue} onChange={(e) => set("revenue", e.target.value)} />
               </label>
             </div>
-            {anyPriced && (
+            {!override && anyPriced && (
               <div className="pm-rollup">
                 <span className="muted small">
                   Products roll up to <b>{money2(rollCost)}</b> cost / <b>{money2(rollCharge)}</b> charge
