@@ -42,8 +42,13 @@ async function extractLines(file) {
 // A product header is a standalone line: optional "LCL shipment for", a size
 // (Noz / Nmm), "tubs"/"caps", optional "(...)". Quantity is the following
 // "Total quantity shipped N". Products repeated across sections are summed.
-const HDR = /^(?:LCL shipment for\s+)?(\d+\s*(?:oz|mm))\s+(tubs?|caps?)\s*(?:\(.*\))?$/i;
-const QTY = /Total quantity shipped\s+([\d,]+)/i;
+//
+// pdf.js can insert synthetic spaces INSIDE a number or between a number and
+// its unit (e.g. "20oz" extracts as "2 0 oz", "12,474" as "1 2,474"). Both
+// patterns tolerate arbitrary internal whitespace; spaces are stripped after
+// capture. See parseInto / the size normalization below.
+const HDR = /^(?:LCL shipment for\s+)?(\d[\d\s]*(?:oz|mm))\s+(tubs?|caps?)\s*(?:\(.*\))?$/i;
+const QTY = /Total quantity shipped\s+([\d\s,]+)/i;
 
 function parseInto(lines, acc) {
   let cur = null;
@@ -57,7 +62,7 @@ function parseInto(lines, acc) {
     }
     const q = l.match(QTY);
     if (q && cur) {
-      acc.set(cur, (acc.get(cur) || 0) + parseInt(q[1].replace(/,/g, ""), 10));
+      acc.set(cur, (acc.get(cur) || 0) + parseInt(q[1].replace(/[\s,]/g, ""), 10));
       cur = null;
     }
   }
