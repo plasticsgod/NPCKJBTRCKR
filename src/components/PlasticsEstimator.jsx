@@ -9,6 +9,7 @@ import { buildQuotePDF, buildClientQuotePDF } from "../lib/quotePdf";
 import { toast } from "./Toaster";
 import CustomerCombo from "./CustomerCombo";
 import Loading from "./Loading";
+import PackingListImport from "./PackingListImport";
 
 let _lineSeq = 0;
 const nextLineId = () => ++_lineSeq;
@@ -291,6 +292,7 @@ export default function PlasticsEstimator({ userEmail, clientMode = false, onSub
         </div>
         {!clientMode && (
           <div className="estv2-actions">
+            <PackingListImport userEmail={userEmail} />
             <button className={"btn-ghost" + (previewClient ? " on" : "")}
               onClick={() => setPreviewClient((v) => !v)}>
               {previewClient ? "Exit client view" : "Client view"}
