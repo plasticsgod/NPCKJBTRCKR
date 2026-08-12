@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { supabase } from "../supabaseClient";
 import {
   MARGINS, PORTS, findItem, unitEconomics, setEconomics, unitsFromQty, money2,
@@ -7,9 +7,81 @@ import { toast } from "./Toaster";
 import CustomerCombo from "./CustomerCombo";
 
 const STATUSES = ["Submitted", "In Production", "Shipped", "Delivered"];
-const UNITS = ["pallets", "containers", "tubs"];
+const MODES = ["units", "pallets", "containers"]; // per-line quantity units
 const ORIGINS = ["India", "China"];
 const ORIGIN_ID = { India: "india", China: "china" };
+
+let _liSeq = 0;
+const nextLiId = () => ++_liSeq;
+const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+
+// Resolve a stored product NAME back to a catalog key ("tub:id" / "lid:id" /
+// "set:id") so the line can be re-priced live. Case-insensitive; also matches
+// the estimator's set naming (tub name with "Tub"->"Set"). Returns null when
+// the product isn't in the current pricing version (e.g. imported cap sizes) —
+// those become free-text lines that carry qty/unit without auto-pricing.
+function resolveProd(name, data) {
+  if (!name || !data) return null;
+  const n = String(name).trim().toLowerCase();
+  const tub = (data.tubs || []).find((t) => (t.name || "").trim().toLowerCase() === n);
+  if (tub) return "tub:" + tub.id;
+  const lid = (data.lids || []).find((l) => (l.name || "").trim().toLowerCase() === n);
+  if (lid) return "lid:" + lid.id;
+  const set = (data.tubs || []).find(
+    (t) => (t.name || "").replace(/Tub/i, "Set").trim().toLowerCase() === n
+  );
+  if (set) return "set:" + set.id;
+  return null;
+}
+
+// Build one editor line from a stored source object (line_items entry OR a
+// legacy pricing.lines entry). Resolves the catalog key so catalog products
+// re-price; everything else is a free-text line that keeps its frozen pricing.
+function makeLine(src, data) {
+  const name = (src.product ?? src.name ?? "").toString();
+  const modeRaw = (src.unit ?? src.mode ?? "units").toString();
+  const mode = MODES.includes(modeRaw) ? modeRaw : "units";
+  const marginLab = src.margin ?? null;
+  const prod = resolveProd(name, data);
+  const mi = marginLab ? MARGINS.findIndex((m) => m.lab === marginLab) : -1;
+  const num = (x) => (x == null || x === "" ? null : Number(x));
+  return {
+    id: nextLiId(),
+    prod,
+    name,
+    mode,
+    qty: src.qty ?? src.units ?? "",
+    marginIdx: mi >= 0 ? mi : null,
+    freeText: !prod,
+    _margin: marginLab,
+    _units: num(src.units),
+    _unitCharge: num(src.unit_charge),
+    _unitCost: num(src.unit_cost),
+    _lineCharge: num(src.line_charge ?? src.total_charge),
+    _lineCost: num(src.line_cost ?? src.total_cost),
+  };
+}
+
+// Reconstruct the editor's line list from whatever the order already carries.
+function seedRows(job, data) {
+  if (Array.isArray(job.line_items) && job.line_items.length) {
+    return job.line_items.map((s) => makeLine(s, data));
+  }
+  const pl = job.pricing?.lines;
+  if (Array.isArray(pl) && pl.length) {
+    return pl.map((s) => makeLine(s, data));
+  }
+  // Fall back to parsing the flattened description ("12,960 × 8oz tub").
+  if (job.description) {
+    const rows = String(job.description)
+      .split("\n")
+      .map((ln) => ln.match(/^\s*([\d,]+)\s*[×x]\s*(.+?)\s*$/))
+      .filter(Boolean)
+      .map((m) => makeLine({ product: m[2], qty: Number(m[1].replace(/,/g, "")) || 0, unit: "units" }, data));
+    if (rows.length) return rows;
+  }
+  return [];
+}
 
 const EMPTY = {
   job_title: "",
@@ -152,15 +224,37 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
   const version = versions[0] || null;
   const data = version?.data || null;
 
-  // Picker state — seeded from a saved snapshot if this order already has one.
+  // Shared shipping costs (apply to every line's per-piece add-on for tubs).
   const snap = job.pricing || null;
-  const [prod, setProd] = useState(snap?.product || "");
-  const [marginIdx, setMarginIdx] = useState(() => {
-    const i = snap ? MARGINS.findIndex((m) => m.lab === snap.margin) : 0;
-    return i >= 0 ? i : 0;
-  });
   const [portc, setPortc] = useState(snap?.portc ?? "");
   const [truck, setTruck] = useState(snap?.truck ?? "");
+
+  // --- Multi-product line items ---------------------------------------------
+  // UI line: { id, prod|null, name, mode, qty, marginIdx|null, freeText,
+  //            _unitCharge?, _unitCost?, _lineCharge?, _lineCost?, _units? }
+  // Stored values (prefixed _) preserve pricing for free-text lines that came
+  // from a prior estimator/import save and can't be recomputed live.
+  const [items, setItems] = useState([]);
+  const [seeded, setSeeded] = useState(false);
+
+  // Product catalog search (adds priced lines).
+  const [search, setSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchRef = useRef(null);
+  useEffect(() => {
+    function onDown(e) { if (searchRef.current && !searchRef.current.contains(e.target)) setSearchOpen(false); }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, []);
+
+  const addCatalogLine = (prod, name) => {
+    setItems((ls) => [...ls, { id: nextLiId(), prod, name, mode: "units", qty: "", marginIdx: null, freeText: false }]);
+    setSearch(""); setSearchOpen(false);
+  };
+  const addFreeLine = () =>
+    setItems((ls) => [...ls, { id: nextLiId(), prod: null, name: "", mode: "units", qty: "", marginIdx: null, freeText: true }]);
+  const updateItem = (id, patch) => setItems((ls) => ls.map((l) => (l.id === id ? { ...l, ...patch } : l)));
+  const removeItem = (id) => setItems((ls) => ls.filter((l) => l.id !== id));
 
   useEffect(() => {
     function onKey(e) { if (e.key === "Escape") onClose(); }
@@ -168,76 +262,136 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Live pricing computation from the current version.
-  const calc = useMemo(() => {
-    if (!data || !prod) return null;
-    const [kind, id] = prod.split(":");
-    const item = kind === "set" ? data.tubs.find((t) => t.id === id) : findItem(data, id);
-    if (!item) return null;
+  // Seed line items once, from (in order): existing line_items, the legacy
+  // pricing.lines snapshot, or the flattened description. Waits for pricing
+  // `data` so catalog names can resolve to priceable products; if there's no
+  // pricing version at all, still seeds (lines become free-text).
+  useEffect(() => {
+    if (seeded) return;
+    if (!version && versions.length === 0) {
+      // no pricing table loaded yet — wait unless we truly have none
+    }
+    // Only seed after the versions query has resolved (version may be null if
+    // there genuinely are none). `data` may be null in that case.
+    const rows = seedRows(job, data);
+    setItems(rows);
+    setSeeded(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, seeded, versions.length]);
+
+  // Shared freight/ship context for every line (order-level shipping).
+  const ship = useMemo(() => {
     const oid = ORIGIN_ID[form.origin];
     const pid = portIdByName(form.port);
-    const freight = (oid && pid && data.freight?.[oid]?.[pid]) || 0;
-    const ship = { freight, portc: num(portc), truck: num(truck) };
-    let unitCost, unitCharge;
-    if (kind === "set") {
-      const e = setEconomics(data, item, ship, {});
-      unitCost = e.landed; unitCharge = e.sells[marginIdx];
-    } else {
-      const e = unitEconomics(item, kind, ship, {});
-      unitCost = e.landed; unitCharge = e.sells[marginIdx];
-    }
-    const mode = form.qty_unit === "tubs" ? "units" : form.qty_unit === "pallets" ? "pallets" : "containers";
-    const units = unitsFromQty(item, mode, num(form.qty));
-    const totalCost = units != null ? unitCost * units : null;
-    const totalCharge = units != null ? unitCharge * units : null;
-    return { kind, id, item, freight, lane: !!(oid && pid), unitCost, unitCharge, units, totalCost, totalCharge };
-  }, [data, prod, marginIdx, portc, truck, form.origin, form.port, form.qty, form.qty_unit]);
+    const freight = (data && oid && pid && data.freight?.[oid]?.[pid]) || 0;
+    return { freight, portc: num(portc), truck: num(truck) };
+  }, [data, form.origin, form.port, portc, truck]);
+  const laneReady = !!(ORIGIN_ID[form.origin] && portIdByName(form.port));
 
-  function applyPricing() {
-    if (!calc || !version || calc.totalCost == null) {
-      toast.error("Pick a product, lane, and quantity first.");
-      return;
+  // Price one line. Catalog line → live economics; free-text → carry qty/unit
+  // and any stored (frozen) pricing it arrived with.
+  function priceItem(l) {
+    const qn = num(l.qty);
+    if (l.prod && data) {
+      const [kind, id] = l.prod.split(":");
+      const item = kind === "set" ? data.tubs.find((t) => t.id === id) : findItem(data, id);
+      if (item) {
+        const econ = kind === "set" ? setEconomics(data, item, ship, {}) : unitEconomics(item, kind, ship, {});
+        if (econ) {
+          const units = unitsFromQty(item, l.mode, qn);
+          const hasMargin = l.marginIdx != null;
+          const d = hasMargin ? MARGINS[l.marginIdx].d : null;
+          const unitCharge = hasMargin ? econ.sells[l.marginIdx] : null;
+          const unitCost = hasMargin ? econ.landed : null; // landed = charge * d
+          const lineCharge = unitCharge != null && units != null ? unitCharge * units : null;
+          const lineCost = unitCost != null && units != null ? unitCost * units : null;
+          return { units, unitCharge, unitCost, lineCharge, lineCost, priceable: true, missingMargin: !hasMargin };
+        }
+      }
     }
-    const snapshot = {
-      version_id: version.id,
-      version_label: version.label,
-      version_date: version.version_date,
-      product: prod,
-      product_name: calc.item.name,
-      kind: calc.kind,
-      margin: MARGINS[marginIdx].lab,
-      origin: form.origin,
-      port: form.port,
-      freight: calc.freight,
-      portc: num(portc), truck: num(truck),
-      units: calc.units,
-      unit_cost: calc.unitCost,
-      unit_charge: calc.unitCharge,
-      total_cost: calc.totalCost,
-      total_charge: calc.totalCharge,
-    };
-    setForm((f) => ({
-      ...f,
-      cost: round2(calc.totalCost),
-      revenue: round2(calc.totalCharge),
-      pricing: snapshot,
-      pricing_version_id: version.id,
-    }));
-    toast.success("Pricing applied — cost & charge filled (still editable)");
+    // Free-text (or unresolved catalog): only "units" mode has a known piece
+    // count; preserve any frozen pricing so totals/roll-up stay intact.
+    const units = l.mode === "units" ? qn : (l._units ?? null);
+    const unitCharge = l._unitCharge ?? null;
+    const unitCost = l._unitCost ?? null;
+    const lineCharge = l._lineCharge ?? (unitCharge != null && units != null ? unitCharge * units : null);
+    const lineCost = l._lineCost ?? (unitCost != null && units != null ? unitCost * units : null);
+    return { units, unitCharge, unitCost, lineCharge, lineCost, priceable: false, missingMargin: false };
+  }
+
+  const priced = items.map((l) => ({ l, ...priceItem(l) }));
+
+  // Grouped-by-unit totals (units/pallets/containers don't sum together).
+  const grouped = useMemo(() => {
+    const g = {};
+    for (const { l } of priced) {
+      const qn = num(l.qty);
+      if (!qn) continue;
+      g[l.mode] = (g[l.mode] || 0) + qn;
+    }
+    return g;
+  }, [priced]);
+  const groupedLabel = MODES
+    .filter((m) => grouped[m])
+    .map((m) => `${grouped[m].toLocaleString()} ${m}`)
+    .join(" · ");
+  const totalPieces = priced.reduce((s, p) => s + (p.units || 0), 0);
+
+  // Roll-up of line cost/charge (only lines that have a value contribute).
+  const rollCost = priced.reduce((s, p) => s + (p.lineCost || 0), 0);
+  const rollCharge = priced.reduce((s, p) => s + (p.lineCharge || 0), 0);
+  const anyPriced = priced.some((p) => p.lineCharge != null || p.lineCost != null);
+  const needMargin = priced.filter((p) => p.l.prod && p.missingMargin && num(p.l.qty)).length;
+
+  function applyRollup() {
+    if (!anyPriced) { toast.error("Add priced products (pick a margin) first."); return; }
+    setForm((f) => ({ ...f, cost: round2(rollCost), revenue: round2(rollCharge) }));
+    toast.success("Products rolled up — cost & charge filled (still editable)");
+  }
+
+  // Persisted line-items shape (source of truth for products).
+  function buildLineItems() {
+    return priced.map(({ l, units, unitCharge, unitCost, lineCharge, lineCost }) => ({
+      product: (l.name || "").trim(),
+      qty: num(l.qty),
+      unit: l.mode,
+      margin: l.marginIdx != null ? MARGINS[l.marginIdx].lab : (l._margin ?? null),
+      units: units ?? null,
+      unit_cost: unitCost ?? null,
+      unit_charge: unitCharge ?? null,
+      line_cost: lineCost ?? null,
+      line_charge: lineCharge ?? null,
+    })).filter((li) => li.product || li.qty);
   }
 
   function submit(e) {
     e.preventDefault();
     if (!form.job_title.trim()) { setTab("details"); return; }
+    const line_items = buildLineItems();
+    // Derived order qty (NOT NULL safe): total pieces when known, else the sum
+    // of raw line quantities. qty_unit stays "units" (pieces).
+    const derivedQty = totalPieces > 0
+      ? totalPieces
+      : line_items.reduce((s, li) => s + (Number(li.qty) || 0), 0);
     onSave({
       ...form,
-      qty: num(form.qty),
+      line_items,
+      qty: derivedQty,
+      qty_unit: "units",
       cost: form.cost === "" || form.cost == null ? null : round2(num(form.cost)),
       revenue: form.revenue === "" || form.revenue == null ? null : round2(num(form.revenue)),
     });
   }
 
   const profit = (num(form.revenue)) - (num(form.cost));
+
+  // Catalog search results (internal editor always has the full catalog).
+  const sq = search.trim().toLowerCase();
+  const matchArr = (arr) => (arr || []).filter((x) => (x.name || "").toLowerCase().includes(sq));
+  const resTubs = data ? matchArr(data.tubs) : [];
+  const resLids = data ? matchArr(data.lids) : [];
+  const resSets = data ? matchArr((data.tubs || []).filter((t) => findItem(data, data.sets?.[t.id]))) : [];
+  const hasResults = resTubs.length || resLids.length || resSets.length;
 
   return (
     <div className="overlay">
@@ -260,22 +414,119 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
               <input value={form.job_title} onChange={(e) => set("job_title", e.target.value)} required autoFocus />
             </label>
 
-            <div className="field-row">
-              <label className="field">
-                <span>Customer</span>
-                <CustomerCombo value={form.brand} onChange={(v) => set("brand", v)} customers={customers} />
-              </label>
-              <label className="field">
-                <span>Quantity</span>
-                <div className="qty-input">
-                  <input type="number" min="0" value={form.qty} onChange={(e) => set("qty", e.target.value)} />
-                  <select value={form.qty_unit} onChange={(e) => set("qty_unit", e.target.value)}>
-                    {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
-                  </select>
+            <label className="field">
+              <span>Customer</span>
+              <CustomerCombo value={form.brand} onChange={(v) => set("brand", v)} customers={customers} />
+            </label>
+
+            {/* Products ------------------------------------------------------ */}
+            <div className="pm-section-label">Products</div>
+
+            <div className="pli-search" ref={searchRef}>
+              <input
+                className="pm-input"
+                type="text"
+                placeholder={data ? "Search products to add…" : "Pricing version still loading…"}
+                value={search}
+                disabled={!data}
+                onChange={(e) => { setSearch(e.target.value); setSearchOpen(true); }}
+                onFocus={() => setSearchOpen(true)}
+              />
+              {searchOpen && data && (
+                <div className="search-dd">
+                  {!hasResults && <div className="search-dd-empty">No products match “{search}”. Use “Add custom product”.</div>}
+                  {resTubs.length > 0 && <div className="search-dd-cat">Tubs</div>}
+                  {resTubs.map((t) => (
+                    <button type="button" key={"tub:" + t.id} className="search-dd-item" onClick={() => addCatalogLine("tub:" + t.id, t.name)}>
+                      {t.name}<span>+ add</span>
+                    </button>
+                  ))}
+                  {resLids.length > 0 && <div className="search-dd-cat">Lids</div>}
+                  {resLids.map((l) => (
+                    <button type="button" key={"lid:" + l.id} className="search-dd-item" onClick={() => addCatalogLine("lid:" + l.id, l.name)}>
+                      {l.name}<span>+ add</span>
+                    </button>
+                  ))}
+                  {resSets.length > 0 && <div className="search-dd-cat">Sets (tub + lid)</div>}
+                  {resSets.map((t) => (
+                    <button type="button" key={"set:" + t.id} className="search-dd-item"
+                      onClick={() => addCatalogLine("set:" + t.id, t.name.replace(/Tub/i, "Set"))}>
+                      {t.name.replace(/Tub/i, "Set")} + lid<span>+ add</span>
+                    </button>
+                  ))}
                 </div>
-              </label>
+              )}
             </div>
 
+            {items.length === 0 ? (
+              <p className="muted files-note">No products yet. Search above, or add a custom line.</p>
+            ) : (
+              <div className="pm-lines">
+                {priced.map(({ l, units, unitCharge, lineCharge, priceable, missingMargin }) => (
+                  <div className="pm-line" key={l.id}>
+                    <div className="pm-line-top">
+                      {l.freeText ? (
+                        <input
+                          className="pm-input pm-line-name"
+                          type="text"
+                          placeholder="Product name"
+                          value={l.name}
+                          onChange={(e) => updateItem(l.id, { name: e.target.value })}
+                        />
+                      ) : (
+                        <span className="pm-line-name pm-line-name-fixed">{l.name}</span>
+                      )}
+                      <span className={"pm-line-total" + (lineCharge == null ? " none" : "")}>
+                        {lineCharge == null ? "—" : money2(lineCharge)}
+                      </span>
+                      <button type="button" className="pm-line-rm" onClick={() => removeItem(l.id)} aria-label={`Remove ${l.name || "line"}`}>×</button>
+                    </div>
+                    <div className="pm-line-ctrls">
+                      <div className="seg">
+                        {MODES.map((m) => (
+                          <button type="button" key={m} className={l.mode === m ? "on" : ""}
+                            onClick={() => updateItem(l.id, { mode: m })}>{cap(m)}</button>
+                        ))}
+                      </div>
+                      <input className="pm-line-qty" type="number" min="0" placeholder="Qty"
+                        value={l.qty} onChange={(e) => updateItem(l.id, { qty: e.target.value })} />
+                      {priceable ? (
+                        <select className={"pm-line-margin" + (missingMargin ? " empty" : "")}
+                          value={l.marginIdx ?? ""}
+                          onChange={(e) => updateItem(l.id, { marginIdx: e.target.value === "" ? null : +e.target.value })}>
+                          <option value="">Margin</option>
+                          {MARGINS.map((m, i) => <option key={m.lab} value={i}>{m.lab}</option>)}
+                        </select>
+                      ) : (
+                        <span className="pm-line-flag" title="Not in the pricing version — priced manually below">custom · no auto-price</span>
+                      )}
+                      {units != null && l.mode !== "units" && (
+                        <span className="pm-line-units">{units.toLocaleString()} units</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="pm-lines-foot">
+              <button type="button" className="btn-ghost" onClick={addFreeLine}>+ Add custom product</button>
+              {groupedLabel && (
+                <span className="pm-grouped">
+                  {groupedLabel}
+                  {totalPieces > 0 && <span className="field-hint"> · {totalPieces.toLocaleString()} pieces</span>}
+                </span>
+              )}
+            </div>
+
+            {!data && (
+              <p className="field-hint">Freight/margin pricing needs a pricing version. Products still save; set cost &amp; charge manually.</p>
+            )}
+            {data && !laneReady && items.some((l) => l.prod) && (
+              <p className="field-hint">Set Shipping From + Port in the Shipping tab to pull freight into per-unit pricing.</p>
+            )}
+
+            {/* Cost / charge -------------------------------------------------- */}
             <div className="field-row">
               <label className="field">
                 <span>Total Cost <span className="field-hint">— what we paid</span></span>
@@ -288,10 +539,18 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
                   value={form.revenue} onChange={(e) => set("revenue", e.target.value)} />
               </label>
             </div>
+            {anyPriced && (
+              <div className="pm-rollup">
+                <span className="muted small">
+                  Products roll up to <b>{money2(rollCost)}</b> cost / <b>{money2(rollCharge)}</b> charge
+                  {needMargin ? ` · ${needMargin} line${needMargin > 1 ? "s" : ""} need a margin` : ""}
+                </span>
+                <button type="button" className="btn-ghost" onClick={applyRollup}>Apply to Cost &amp; Charge</button>
+              </div>
+            )}
             {(form.cost !== "" || form.revenue !== "") && (
               <p className="profit-hint">
                 Profit: <b>${profit.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b>
-                {form.pricing && <span className="field-hint"> · auto-priced from {form.pricing.version_label || "a pricing version"} (editable)</span>}
               </p>
             )}
 
@@ -309,87 +568,9 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
             </div>
 
             <label className="field">
-              <span>Description</span>
-              <textarea rows={3} value={form.description} onChange={(e) => set("description", e.target.value)} />
+              <span>Notes <span className="field-hint">— optional</span></span>
+              <textarea rows={2} value={form.description} onChange={(e) => set("description", e.target.value)} />
             </label>
-
-            <div className="pm-section-label">Pricing</div>
-            {!data ? (
-              <p className="muted">Loading pricing…</p>
-            ) : (
-              <>
-                <p className="field-hint" style={{ marginBottom: 4 }}>
-                  Using <b>{version.label}</b>{version.version_date ? ` · ${version.version_date}` : ""}. Applying fills Cost &amp; Charge from this version and freezes them on the order.
-                </p>
-
-                <label className="field">
-                  <span>Product</span>
-                  <select value={prod} onChange={(e) => setProd(e.target.value)}>
-                    <option value="">— Select a product —</option>
-                    <optgroup label="Tubs">
-                      {data.tubs.map((t) => <option key={"tub:" + t.id} value={"tub:" + t.id}>{t.name}</option>)}
-                    </optgroup>
-                    <optgroup label="Lids">
-                      {data.lids.map((l) => <option key={"lid:" + l.id} value={"lid:" + l.id}>{l.name}</option>)}
-                    </optgroup>
-                    <optgroup label="Sets (tub + lid)">
-                      {data.tubs.map((t) => <option key={"set:" + t.id} value={"set:" + t.id}>{t.name.replace("Tub", "Set")} + lid</option>)}
-                    </optgroup>
-                  </select>
-                </label>
-
-                <div className="field-row">
-                  <label className="field">
-                    <span>Margin</span>
-                    <select value={marginIdx} onChange={(e) => setMarginIdx(Number(e.target.value))}>
-                      {MARGINS.map((m, i) => <option key={m.lab} value={i}>{m.lab}</option>)}
-                    </select>
-                  </label>
-                  <label className="field">
-                    <span>Lane <span className="field-hint">— set in Shipping</span></span>
-                    <input value={form.origin && form.port ? `${form.origin} → ${form.port}` : "—"} readOnly />
-                  </label>
-                </div>
-
-                <div className="field-row">
-                  <label className="field">
-                    <span>Port / Customs</span>
-                    <input type="number" min="0" placeholder="0" value={portc} onChange={(e) => setPortc(e.target.value)} />
-                  </label>
-                  <label className="field">
-                    <span>Trucking</span>
-                    <input type="number" min="0" placeholder="0" value={truck} onChange={(e) => setTruck(e.target.value)} />
-                  </label>
-                </div>
-
-                <div className="pricing-calc">
-                  {!prod ? (
-                    <p className="muted">Pick a product to see pricing.</p>
-                  ) : !calc?.lane ? (
-                    <p className="muted">Set Shipping From + Port in the Shipping tab to pull freight.</p>
-                  ) : calc.units == null ? (
-                    <p className="muted">This product has no per-pallet/container count — switch quantity to tubs, or enter cost manually.</p>
-                  ) : (
-                    <>
-                      <div className="pc-row"><span>Freight (lane)</span><b>{money2(calc.freight)}</b></div>
-                      <div className="pc-row"><span>Per unit · cost / charge</span><b>{money2(calc.unitCost)} / {money2(calc.unitCharge)}</b></div>
-                      <div className="pc-row"><span>Units ({form.qty || 0} {form.qty_unit})</span><b>{calc.units.toLocaleString()}</b></div>
-                      <div className="pc-row total"><span>Total cost / charge</span><b>{money2(calc.totalCost)} / {money2(calc.totalCharge)}</b></div>
-                    </>
-                  )}
-                </div>
-
-                <button type="button" className="btn-accent" onClick={applyPricing}
-                  disabled={!calc || calc.totalCost == null}>
-                  Apply to Cost &amp; Charge
-                </button>
-                {form.pricing && (
-                  <p className="field-hint" style={{ marginTop: 8 }}>
-                    Applied: {form.pricing.product_name} · {form.pricing.margin} margin · snapshot saved with this order.
-                  </p>
-                )}
-              </>
-            )}
           </div>
         )}
 
@@ -409,6 +590,17 @@ export default function PlasticJobModal({ job, customers = [], onSave, onClose }
                   <option value="">— Select port —</option>
                   {PORTS.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
                 </select>
+              </label>
+            </div>
+
+            <div className="field-row">
+              <label className="field">
+                <span>Port / Customs <span className="field-hint">— feeds per-unit cost</span></span>
+                <input type="number" min="0" placeholder="0" value={portc} onChange={(e) => setPortc(e.target.value)} />
+              </label>
+              <label className="field">
+                <span>Trucking <span className="field-hint">— feeds per-unit cost</span></span>
+                <input type="number" min="0" placeholder="0" value={truck} onChange={(e) => setTruck(e.target.value)} />
               </label>
             </div>
 
