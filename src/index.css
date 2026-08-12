@@ -2446,9 +2446,12 @@ a.file-chip:hover svg { color: var(--accent); }
 .pli-open svg { color: var(--ink-3); }
 
 /* Importer modal: fixed head/foot, body scrolls. Adding files must never
-   change the modal's footprint. Uses the shared .overlay/.modal system. */
-.pli-modal { max-width: 520px; }
-.pli-body { gap: 14px; }
+   change the modal's footprint. Uses the shared .overlay/.modal system.
+   The body is made an explicit bounded flex scroller (rather than relying on
+   the base .modal-body's implicit shrink) so long imports always scroll to
+   the footer; dvh keeps the footer reachable on mobile Safari. */
+.pli-modal { max-width: 520px; max-height: calc(100vh - 80px); max-height: calc(100dvh - 80px); }
+.pli-body { gap: 14px; flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
 .pli-drop { display: flex; flex-direction: column; gap: 4px; align-items: center; text-align: center; border: 2px dashed var(--hairline); border-radius: 10px; padding: 22px 16px; cursor: pointer; transition: border-color .15s, background .15s, padding .15s; }
 .pli-drop:hover { border-color: var(--accent); }
