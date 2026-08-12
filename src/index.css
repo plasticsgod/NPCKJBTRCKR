@@ -2392,6 +2392,11 @@ input.pm-line-name { font-weight: 500; padding: 8px 10px; border: 1px solid var(
 .pm-line-margin.empty { color: var(--accent); border-color: var(--accent); border-style: dashed; }
 .pm-line-units { font-size: 12px; color: var(--ink-3); }
 .pm-line-flag { font-size: 12px; color: var(--ink-3); font-style: italic; }
+.pm-line-charge { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--hairline); border-radius: 8px; background: #fff; padding: 0 8px; }
+.pm-line-charge-pre { color: var(--ink-3); font-size: 13px; }
+.pm-line-charge input { width: 92px; border: none; background: transparent; font-family: var(--ui); font-size: 13px; padding: 8px 2px; color: var(--ink); outline: none; }
+.pm-override { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); cursor: pointer; margin-top: 4px; }
+.pm-override input { width: 15px; height: 15px; accent-color: var(--primary); cursor: pointer; }
 .pm-lines-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
 .pm-grouped { font-size: 13px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
 .pm-rollup { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: var(--panel); border-radius: 10px; padding: 8px 12px; }
