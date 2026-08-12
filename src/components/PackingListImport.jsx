@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "../supabaseClient";
 import { toast } from "./Toaster";
 
@@ -75,25 +76,60 @@ export default function PackingListImport({ userEmail, onCreated }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [items, setItems] = useState([]);   // [ [product, qty], ... ]
-  const [fileNames, setFileNames] = useState([]);
+  // Parsed results are kept PER FILE so one file can be removed without
+  // redoing the whole import. [{ key, name, items: [[product, qty], ...] }]
+  const [files, setFiles] = useState([]);
+
+  // Merged totals across every file. Products repeated across files are summed.
+  const items = useMemo(() => {
+    const acc = new Map();
+    for (const f of files) {
+      for (const [p, q] of f.items) acc.set(p, (acc.get(p) || 0) + q);
+    }
+    return sortItems(acc.entries());
+  }, [files]);
+
+  const total = items.reduce((s, [, q]) => s + q, 0);
+
+  // Esc closes the modal (but never mid-create).
+  useEffect(() => {
+    if (!open) return undefined;
+    function onKey(e) {
+      if (e.key === "Escape" && !creating) { setFiles([]); setOpen(false); }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, creating]);
+
+  function reset() { setFiles([]); }
+
+  function closeModal() { setFiles([]); setOpen(false); }
+
+  function removeFile(key) {
+    setFiles((prev) => prev.filter((f) => f.key !== key));
+  }
 
   async function onFiles(fileList) {
-    const files = Array.from(fileList || []).filter((f) => /\.pdf$/i.test(f.name));
-    if (!files.length) return;
+    const picked = Array.from(fileList || []).filter((f) => /\.pdf$/i.test(f.name));
+    if (!picked.length) return;
     setBusy(true);
     try {
-      const acc = new Map();
-      // Merge existing parsed items so repeated uploads add on.
-      items.forEach(([p, q]) => acc.set(p, q));
-      for (const f of files) {
+      const added = [];
+      let dupes = 0;
+      let empty = 0;
+      for (const f of picked) {
+        const key = `${f.name}:${f.size}`;
+        if (files.some((x) => x.key === key) || added.some((x) => x.key === key)) { dupes++; continue; }
+        const acc = new Map();
         const lines = await extractLines(f);
         parseInto(lines, acc);
+        const parsed = sortItems(acc.entries());
+        if (parsed.length === 0) empty++;
+        added.push({ key, name: f.name, items: parsed });
       }
-      const sorted = sortItems(acc.entries());
-      setItems(sorted);
-      setFileNames((prev) => [...prev, ...files.map((f) => f.name)]);
-      if (sorted.length === 0) toast.error("No tub/cap quantities found in those PDFs.");
+      if (added.length) setFiles((prev) => [...prev, ...added]);
+      if (dupes) toast.error(`Skipped ${dupes} file${dupes === 1 ? "" : "s"} already added.`);
+      if (empty) toast.error(`No tub/cap quantities found in ${empty} file${empty === 1 ? "" : "s"}.`);
     } catch (e) {
       console.error("[packing-list]", e);
       toast.error("Couldn't read those PDFs. Make sure they're the packing-list format.");
@@ -102,13 +138,11 @@ export default function PackingListImport({ userEmail, onCreated }) {
     }
   }
 
-  function reset() { setItems([]); setFileNames([]); }
-
   async function createOrder() {
     if (items.length === 0) return;
     setCreating(true);
-    const total = items.reduce((s, [, q]) => s + q, 0);
     const description = items.map(([p, q]) => `${q.toLocaleString()} × ${p}`).join("\n");
+    const fileNames = files.map((f) => f.name);
     const id = (crypto.randomUUID && crypto.randomUUID()) ||
       ("pli-" + Date.now() + "-" + Math.random().toString(16).slice(2));
     const { error } = await supabase.from("plastic_jobs").insert({
@@ -133,10 +167,12 @@ export default function PackingListImport({ userEmail, onCreated }) {
     onCreated && onCreated();
   }
 
-  const total = items.reduce((s, [, q]) => s + q, 0);
+  const hasFiles = files.length > 0;
 
-  if (!open) {
-    return (
+  // The trigger stays mounted at all times so opening the importer never
+  // reflows the estimator toolbar.
+  return (
+    <>
       <button className="btn-ghost pli-open" onClick={() => setOpen(true)}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -145,50 +181,92 @@ export default function PackingListImport({ userEmail, onCreated }) {
         </svg>
         Import packing list
       </button>
-    );
-  }
 
-  return (
-    <div className="pli-panel">
-      <div className="pli-head">
-        <span className="pli-title">Import from packing lists</span>
-        <button className="link" onClick={() => { reset(); setOpen(false); }}>Close</button>
-      </div>
+      {open && createPortal(
+        <div
+          className="overlay"
+          onMouseDown={(e) => { if (e.target === e.currentTarget && !creating) closeModal(); }}
+        >
+          <div className="modal pli-modal" role="dialog" aria-modal="true" aria-label="Import from packing lists">
+            <div className="modal-head">
+              <h2>Import from packing lists</h2>
+              <button className="link" onClick={closeModal} disabled={creating}>Close</button>
+            </div>
 
-      <label className={"pli-drop" + (busy ? " busy" : "")}>
-        <input type="file" accept="application/pdf" multiple style={{ display: "none" }}
-          onChange={(e) => { onFiles(e.target.files); e.target.value = ""; }} disabled={busy} />
-        <span>{busy ? "Reading PDFs…" : "Click to add packing-list PDFs"}</span>
-        <span className="muted small">Tub type + quantity are read automatically. Add several — they combine into one order.</span>
-      </label>
+            <div className="modal-body pli-body">
+              <label className={"pli-drop" + (busy ? " busy" : "") + (hasFiles ? " compact" : "")}>
+                <input type="file" accept="application/pdf" multiple style={{ display: "none" }}
+                  onChange={(e) => { onFiles(e.target.files); e.target.value = ""; }} disabled={busy} />
+                <span className="pli-drop-main">
+                  {busy ? "Reading PDFs…" : hasFiles ? "Add more PDFs" : "Click to add packing-list PDFs"}
+                </span>
+                {!hasFiles && (
+                  <span className="muted small">
+                    Tub type + quantity are read automatically. Add several — they combine into one order.
+                  </span>
+                )}
+              </label>
 
-      {fileNames.length > 0 && (
-        <div className="pli-files muted small">{fileNames.length} file{fileNames.length === 1 ? "" : "s"}: {fileNames.join(", ")}</div>
-      )}
+              {hasFiles && (
+                <div className="pli-files">
+                  {files.map((f) => (
+                    <div className="pli-file" key={f.key}>
+                      <span className="pli-file-name" title={f.name}>{f.name}</span>
+                      <span className="pli-file-meta muted small">
+                        {f.items.length === 0
+                          ? "nothing found"
+                          : `${f.items.reduce((s, [, q]) => s + q, 0).toLocaleString()} units`}
+                      </span>
+                      <button
+                        className="pli-file-x"
+                        onClick={() => removeFile(f.key)}
+                        disabled={creating}
+                        aria-label={`Remove ${f.name}`}
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-      {items.length > 0 && (
-        <>
-          <div className="pli-preview">
-            {items.map(([p, q]) => (
-              <div className="pli-row" key={p}>
-                <span className="pli-prod">{p}</span>
-                <span className="pli-qty">{q.toLocaleString()}</span>
-              </div>
-            ))}
-            <div className="pli-row pli-total">
-              <span className="pli-prod">Total units</span>
-              <span className="pli-qty">{total.toLocaleString()}</span>
+              {items.length > 0 ? (
+                <>
+                  <div className="pli-preview">
+                    {items.map(([p, q]) => (
+                      <div className="pli-row" key={p}>
+                        <span className="pli-prod">{p}</span>
+                        <span className="pli-qty">{q.toLocaleString()}</span>
+                      </div>
+                    ))}
+                    <div className="pli-row pli-total">
+                      <span className="pli-prod">Total units</span>
+                      <span className="pli-qty">{total.toLocaleString()}</span>
+                    </div>
+                  </div>
+                  <p className="muted small pli-note">
+                    Creates one order on Plastics Work Orders (customer blank) for you to finish editing.
+                  </p>
+                </>
+              ) : (
+                <p className="muted small pli-empty">
+                  {hasFiles
+                    ? "No tub or cap quantities were found. Check that these are the packing-list format."
+                    : "Parsed products will appear here before anything is created."}
+                </p>
+              )}
+            </div>
+
+            <div className="modal-foot">
+              <button className="btn-ghost" onClick={reset} disabled={creating || !hasFiles}>Clear</button>
+              <button className="btn-accent" onClick={createOrder} disabled={creating || busy || items.length === 0}>
+                {creating ? "Creating…" : "Create work order"}
+              </button>
             </div>
           </div>
-          <div className="pli-actions">
-            <button className="btn-ghost" onClick={reset} disabled={creating}>Clear</button>
-            <button className="btn-accent" onClick={createOrder} disabled={creating}>
-              {creating ? "Creating…" : "Create work order"}
-            </button>
-          </div>
-          <p className="muted small pli-note">Creates one order on Plastics Work Orders (customer blank) for you to finish editing.</p>
-        </>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 }
