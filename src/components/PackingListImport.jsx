@@ -76,6 +76,7 @@ export default function PackingListImport({ userEmail, onCreated }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   // Parsed results are kept PER FILE so one file can be removed without
   // redoing the whole import. [{ key, name, items: [[product, qty], ...] }]
   const [files, setFiles] = useState([]);
@@ -107,6 +108,13 @@ export default function PackingListImport({ userEmail, onCreated }) {
 
   function removeFile(key) {
     setFiles((prev) => prev.filter((f) => f.key !== key));
+  }
+
+  function onDrop(e) {
+    e.preventDefault();
+    setDragOver(false);
+    if (busy) return;
+    onFiles(e.dataTransfer.files);
   }
 
   async function onFiles(fileList) {
@@ -194,11 +202,22 @@ export default function PackingListImport({ userEmail, onCreated }) {
             </div>
 
             <div className="modal-body pli-body">
-              <label className={"pli-drop" + (busy ? " busy" : "") + (hasFiles ? " compact" : "")}>
+              <label
+                className={"pli-drop" + (busy ? " busy" : "") + (hasFiles ? " compact" : "") + (dragOver ? " dragover" : "")}
+                onDragOver={(e) => { e.preventDefault(); if (!busy) setDragOver(true); }}
+                onDragLeave={(e) => { e.preventDefault(); setDragOver(false); }}
+                onDrop={onDrop}
+              >
                 <input type="file" accept="application/pdf" multiple style={{ display: "none" }}
                   onChange={(e) => { onFiles(e.target.files); e.target.value = ""; }} disabled={busy} />
                 <span className="pli-drop-main">
-                  {busy ? "Reading PDFs…" : hasFiles ? "Add more PDFs" : "Click to add packing-list PDFs"}
+                  {busy
+                    ? "Reading PDFs…"
+                    : dragOver
+                    ? "Drop packing-list PDFs"
+                    : hasFiles
+                    ? "Click or drag more PDFs"
+                    : "Click or drag packing-list PDFs"}
                 </span>
                 {!hasFiles && (
                   <span className="muted small">
