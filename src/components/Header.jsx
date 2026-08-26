@@ -6,7 +6,7 @@ import { displayName, nameInitials, avatarStyle } from "../projects/userMap";
 
 const TITLES = { work_orders: "Work Orders", dashboard: "Dashboard", plastics: "Plastics Estimator", projects: "Projects" };
 
-export default function Header({ page, email, onMenu, onSignOut, onSearch, canInvite = true, onOpenTask, onOpenQuote, onHome }) {
+export default function Header({ page, email, onMenu, onSignOut, onSearch, canInvite = true, isAdmin = false, onOpenConsole, onOpenTask, onOpenQuote, onHome }) {
   return (
     <header className="header">
       <button className="burger" onClick={onMenu} aria-label="Open menu">
@@ -29,14 +29,14 @@ export default function Header({ page, email, onMenu, onSignOut, onSearch, canIn
           </svg>
         </button>
         <NotificationBell userEmail={email} onOpenTask={onOpenTask} onOpenQuote={onOpenQuote} />
-        <ProfileMenu email={email} onSignOut={onSignOut} canInvite={canInvite} />
+        <ProfileMenu email={email} onSignOut={onSignOut} canInvite={canInvite} isAdmin={isAdmin} onOpenConsole={onOpenConsole} />
       </div>
     </header>
   );
 }
 
 // Avatar button in the top-right that opens an account menu.
-function ProfileMenu({ email, onSignOut, canInvite = true }) {
+function ProfileMenu({ email, onSignOut, canInvite = true, isAdmin = false, onOpenConsole }) {
   const [open, setOpen] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
@@ -87,6 +87,17 @@ function ProfileMenu({ email, onSignOut, canInvite = true }) {
             </svg>
             Change email
           </button>
+          {isAdmin && (
+            <button className="profile-item" role="menuitem"
+              onClick={() => { setOpen(false); onOpenConsole && onOpenConsole(); }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+              Console
+            </button>
+          )}
           <button className="profile-item danger" role="menuitem"
             onClick={() => { setOpen(false); onSignOut(); }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
