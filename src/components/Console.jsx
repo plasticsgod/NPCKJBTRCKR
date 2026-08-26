@@ -255,6 +255,19 @@ function MembersSection() {
 
   const withAccess = rows.filter((r) => r.access !== "none");
   const noAccess = rows.filter((r) => r.access === "none");
+  const ordered = [...withAccess, ...noAccess];
+
+  const [filter, setFilter] = useState("all");
+  const counts = rows.reduce((a, r) => { a[r.access] = (a[r.access] || 0) + 1; return a; }, {});
+  const FILTERS = [
+    ["all", "All", ordered.length],
+    ["internal", "Internal", counts.internal || 0],
+    ["member", "Members", counts.member || 0],
+    ["guest", "Guests", counts.guest || 0],
+    ["client", "Clients", counts.client || 0],
+    ["none", "No access", counts.none || 0],
+  ];
+  const shown = filter === "all" ? ordered : ordered.filter((r) => r.access === filter);
 
   return (
     <section className="console-section">
@@ -302,9 +315,25 @@ function MembersSection() {
       {loading ? (
         <p className="muted">Loading…</p>
       ) : (
-        <div className="console-card">
-          <ul className="console-list">
-            {[...withAccess, ...noAccess].map((r) => {
+        <>
+          <div className="console-filters">
+            {FILTERS.map(([key, label, n]) => (
+              <button
+                key={key}
+                type="button"
+                className={"console-filter" + (filter === key ? " on" : "")}
+                onClick={() => setFilter(key)}
+              >
+                {label}<span className="console-filter-count">{n}</span>
+              </button>
+            ))}
+          </div>
+          {shown.length === 0 ? (
+            <div className="console-card"><p className="console-empty">No {filter === "all" ? "people" : FILTERS.find((f) => f[0] === filter)[1].toLowerCase()} yet.</p></div>
+          ) : (
+          <div className="console-card scrolls">
+            <ul className="console-list">
+              {shown.map((r) => {
               const locked = r.email === ADMIN_EMAIL;
               const detail = r.access === "client"
                 ? (r.customer_name ? `Client · ${r.customer_name}` : "Client · no customer")
@@ -359,8 +388,10 @@ function MembersSection() {
                 </li>
               );
             })}
-          </ul>
-        </div>
+            </ul>
+          </div>
+          )}
+        </>
       )}
     </section>
   );
