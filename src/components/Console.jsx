@@ -70,7 +70,12 @@ export default function Console() {
       </div>
 
       <section className="console-section">
-        <h2 className="console-h2">Printing facilities</h2>
+        <div className="console-section-head">
+          <h2 className="console-h2">Printing facilities</h2>
+          {!loading && facilities.length > 0 && (
+            <span className="console-count">{facilities.filter((f) => f.active).length} active</span>
+          )}
+        </div>
         <p className="muted small console-note">
           These appear in the label work-order facility dropdown. Deactivate one to hide it from the dropdown without losing it from past orders.
         </p>
@@ -90,38 +95,40 @@ export default function Console() {
         {loading ? (
           <p className="muted">Loading…</p>
         ) : facilities.length === 0 ? (
-          <p className="muted">No facilities yet. Add the first one above.</p>
+          <div className="console-card"><p className="console-empty">No facilities yet. Add the first one above.</p></div>
         ) : (
-          <ul className="console-list">
-            {facilities.map((f) => (
-              <li key={f.id} className={"console-row" + (f.active ? "" : " inactive")}>
-                {editingId === f.id ? (
-                  <input
-                    className="pm-input console-edit"
-                    value={editName}
-                    autoFocus
-                    onChange={(e) => setEditName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") { e.preventDefault(); saveRename(f); }
-                      if (e.key === "Escape") setEditingId(null);
-                    }}
-                    onBlur={() => saveRename(f)}
-                  />
-                ) : (
-                  <span className="console-name">
-                    {f.name}
-                    {!f.active && <span className="console-badge">inactive</span>}
-                  </span>
-                )}
-                <div className="console-row-actions">
-                  <button type="button" className="link" onClick={() => startRename(f)}>Rename</button>
-                  <button type="button" className="link" onClick={() => toggleActive(f)}>
-                    {f.active ? "Deactivate" : "Activate"}
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="console-card">
+            <ul className="console-list">
+              {facilities.map((f) => (
+                <li key={f.id} className={"console-row" + (f.active ? "" : " inactive")}>
+                  {editingId === f.id ? (
+                    <input
+                      className="pm-input console-edit"
+                      value={editName}
+                      autoFocus
+                      onChange={(e) => setEditName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") { e.preventDefault(); saveRename(f); }
+                        if (e.key === "Escape") setEditingId(null);
+                      }}
+                      onBlur={() => saveRename(f)}
+                    />
+                  ) : (
+                    <span className="console-name">
+                      <span className="console-name-text">{f.name}</span>
+                      {!f.active && <span className="console-badge">inactive</span>}
+                    </span>
+                  )}
+                  <div className="console-row-actions">
+                    <button type="button" className="console-action" onClick={() => startRename(f)}>Rename</button>
+                    <button type="button" className={"console-action" + (f.active ? " danger" : "")} onClick={() => toggleActive(f)}>
+                      {f.active ? "Deactivate" : "Activate"}
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </section>
     </div>
