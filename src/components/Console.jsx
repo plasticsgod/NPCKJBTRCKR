@@ -170,13 +170,23 @@ function MembersSection() {
   useEffect(() => { supabase.auth.getUser().then(({ data }) => setMyEmail((data.user?.email || "").toLowerCase())); }, []);
 
   async function load() {
-    const [{ data: mem, error }, { data: proj }, { data: cust }] = await Promise.all([
+    const [{ data: mem, error }, { data: proj }, { data: cust }, { data: stat }] = await Promise.all([
       supabase.from("member_access").select("*").order("access").order("email"),
       supabase.from("projects").select("id,name").order("name"),
       supabase.from("customers").select("id,name").order("name"),
+      supabase.rpc("member_status"),
     ]);
     if (error) { toast.error("Couldn't load members."); setLoading(false); return; }
-    setRows(mem || []);
+    // Merge acceptance status (confirmed / last sign-in) by email.
+    const byEmail = {};
+    for (const s of stat || []) byEmail[(s.email || "").toLowerCase()] = s;
+    const merged = (mem || []).map((r) => {
+      const s = byEmail[(r.email || "").toLowerCase()];
+      // Pending = we have a status row that isn't confirmed. If there's no
+      // status row at all (rare), treat as unknown/active rather than pending.
+      return { ...r, pending: s ? !s.confirmed : false, last_sign_in_at: s?.last_sign_in_at || null };
+    });
+    setRows(merged);
     setProjects(proj || []);
     setCustomers(cust || []);
     if (proj && proj.length && !addProject) setAddProject(proj[0].id);
@@ -259,15 +269,19 @@ function MembersSection() {
 
   const [filter, setFilter] = useState("all");
   const counts = rows.reduce((a, r) => { a[r.access] = (a[r.access] || 0) + 1; return a; }, {});
+  const pendingCount = rows.filter((r) => r.pending).length;
   const FILTERS = [
     ["all", "All", ordered.length],
+    ["pending", "Pending", pendingCount],
     ["internal", "Internal", counts.internal || 0],
     ["member", "Members", counts.member || 0],
     ["guest", "Guests", counts.guest || 0],
     ["client", "Clients", counts.client || 0],
     ["none", "No access", counts.none || 0],
   ];
-  const shown = filter === "all" ? ordered : ordered.filter((r) => r.access === filter);
+  const shown = filter === "all" ? ordered
+    : filter === "pending" ? ordered.filter((r) => r.pending)
+    : ordered.filter((r) => r.access === filter);
 
   return (
     <section className="console-section">
@@ -373,6 +387,7 @@ function MembersSection() {
                       <span className="console-name">
                         <span className="console-name-text">{r.email}</span>
                         <span className={"macc-badge macc-" + r.access}>{detail}</span>
+                        {r.pending && <span className="macc-badge macc-pending">Pending invite</span>}
                         {locked && <span className="console-badge">you</span>}
                       </span>
                       {!locked && (
