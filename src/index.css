@@ -2580,3 +2580,12 @@ input.pm-line-name { font-weight: 500; padding: 8px 10px; border: 1px solid var(
 .console-editrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; flex-wrap: wrap; }
 .console-editrow-ctrls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .console-editrow-ctrls .pm-input { padding: 6px 9px; font-size: 13px; }
+
+/* Members filter pills + bounded scrolling list */
+.console-filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.console-filter { border: 0.5px solid var(--hairline); background: #fff; color: var(--ink-2); font-family: var(--ui); font-size: 12.5px; font-weight: 600; padding: 5px 12px; border-radius: 999px; cursor: pointer; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
+.console-filter:hover { background: var(--panel); }
+.console-filter.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+.console-filter-count { opacity: .55; margin-left: 5px; font-variant-numeric: tabular-nums; }
+.console-filter.on .console-filter-count { opacity: .7; }
+.console-card.scrolls { max-height: 380px; overflow-y: auto; }
