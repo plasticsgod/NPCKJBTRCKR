@@ -33,6 +33,24 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
   const [form, setForm] = useState({ ...EMPTY, ...job });
   const [stagedArtwork, setStagedArtwork] = useState([]); // links added before the job exists
 
+  // Printing facilities come from the Console-managed table. Seed with the
+  // legacy hardcoded list so the dropdown is never empty (and still works if
+  // the table read fails or the migration hasn't run), then replace with the
+  // live rows. Names are the stored value, so "Sttark" logic below is unaffected.
+  const [facilities, setFacilities] = useState(() => FACILITIES.map((name) => ({ name, active: true })));
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { data, error } = await supabase
+        .from("printing_facilities")
+        .select("name,active")
+        .order("name");
+      if (!alive) return;
+      if (!error && Array.isArray(data) && data.length) setFacilities(data);
+    })();
+    return () => { alive = false; };
+  }, []);
+
   // --- Project (task link) tab: mirrors the plastic order modal, kind="label" ---
   const [linkProjects, setLinkProjects] = useState([]);
   const [linkTasks, setLinkTasks] = useState([]);
@@ -196,7 +214,19 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
                 <span>Printing Facility</span>
                 <select value={form.printing_facility} onChange={(e) => set("printing_facility", e.target.value)}>
                   <option value="">— Select facility —</option>
-                  {FACILITIES.map((f) => <option key={f} value={f}>{f}</option>)}
+                  {(() => {
+                    const activeNames = facilities.filter((f) => f.active).map((f) => f.name);
+                    // Keep the order's current facility even if it was since deactivated,
+                    // so reopening an old order never silently blanks it.
+                    const names = form.printing_facility && !activeNames.includes(form.printing_facility)
+                      ? [...activeNames, form.printing_facility]
+                      : activeNames;
+                    return names.map((name) => (
+                      <option key={name} value={name}>
+                        {name}{!activeNames.includes(name) ? " (inactive)" : ""}
+                      </option>
+                    ));
+                  })()}
                 </select>
               </label>
             </div>
