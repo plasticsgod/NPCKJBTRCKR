@@ -2525,3 +2525,18 @@ input.pm-line-name { font-weight: 500; padding: 8px 10px; border: 1px solid var(
 .pli-total { background: var(--panel); font-weight: 600; }
 .pli-empty { text-align: center; padding: 14px 8px; }
 .pli-note { margin: 0; }
+
+/* ---- Admin Console ------------------------------------------------------- */
+.console-section { margin-top: 8px; }
+.console-h2 { font-size: 16px; font-weight: 600; color: var(--ink); margin: 0 0 4px; }
+.console-note { margin: 0 0 16px; max-width: 60ch; }
+.console-add { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }
+.console-add-input { flex: 1; min-width: 0; max-width: 360px; }
+.console-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-width: 520px; }
+.console-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; background: #fff; border: 1px solid var(--hairline); border-radius: 10px; }
+.console-row.inactive { background: var(--panel); }
+.console-name { font-size: 14px; font-weight: 500; color: var(--ink); display: inline-flex; align-items: center; gap: 8px; }
+.console-row.inactive .console-name { color: var(--ink-3); }
+.console-badge { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); background: var(--hairline-soft); padding: 2px 7px; border-radius: 999px; }
+.console-edit { flex: 1; min-width: 0; max-width: 320px; }
+.console-row-actions { display: flex; gap: 12px; flex: none; }

@@ -11,6 +11,7 @@ import ClientOrders from "./components/ClientOrders";
 import NotificationBell from "./components/NotificationBell";
 import ConfirmModal from "./components/ConfirmModal";
 import Customers from "./components/Customers";
+import Console from "./components/Console";
 import { DashboardSkeleton, WorkOrdersSkeleton } from "./components/Skeletons";
 import Projects from "./projects/Projects";
 import JobModal from "./components/JobModal";
@@ -18,7 +19,7 @@ import PlasticJobModal from "./components/PlasticJobModal";
 import { Toaster, toast } from "./components/Toaster";
 import SearchOverlay from "./components/SearchOverlay";
 
-const PAGES = ["dashboard", "work_orders", "plastic_work_orders", "projects", "plastics", "customers"];
+const PAGES = ["dashboard", "work_orders", "plastic_work_orders", "projects", "plastics", "customers", "console"];
 
 // Instant client-side check for the core team (matches the SQL allowlist) so
 // they never see a flash; invited "members" are confirmed via RPC below.
@@ -138,6 +139,10 @@ export default function App() {
     });
   }, [session]);
 
+  // Console admin. Single admin for now; matches the RLS rule on the tables the
+  // Console writes. (To add more later, move this to an allowlist / admins table.)
+  const isAdmin = isInternal && (session?.user?.email || "").toLowerCase() === "eduardonutramedia@gmail.com";
+
   // --- Browser-tab title reflects the current page ---------------------------
   useEffect(() => {
     const names = {
@@ -147,6 +152,7 @@ export default function App() {
       plastics: "Plastics Estimator",
       customers: "Customers",
       projects: "Projects",
+      console: "Console",
     };
     document.title = `${names[page] || "NutraPack"} · NutraPack App`;
   }, [page]);
@@ -368,6 +374,7 @@ export default function App() {
         open={navOpen}
         page={isInternal ? page : "projects"}
         isInternal={isInternal}
+        isAdmin={isAdmin}
         onClose={() => setNavOpen(false)}
         onNavigate={(p) => {
           setPage(p);
@@ -383,6 +390,8 @@ export default function App() {
             onTaskFocused={() => setFocusTaskId(null)}
             canEdit={isInternal}
           />
+        ) : page === "console" ? (
+          isAdmin ? <Console /> : <Dashboard jobs={jobs} />
         ) : page === "plastics" ? (
           <PlasticsEstimator userEmail={session.user.email} />
         ) : page === "customers" ? (
