@@ -2589,3 +2589,6 @@ input.pm-line-name { font-weight: 500; padding: 8px 10px; border: 1px solid var(
 .console-filter-count { opacity: .55; margin-left: 5px; font-variant-numeric: tabular-nums; }
 .console-filter.on .console-filter-count { opacity: .7; }
 .console-card.scrolls { max-height: 380px; overflow-y: auto; }
+
+/* Pending-invite badge in Members */
+.macc-pending { color: #a15a12; background: rgba(214,138,42,.16); }
