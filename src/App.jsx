@@ -365,6 +365,8 @@ export default function App() {
         onMenu={() => setNavOpen(true)}
         onSignOut={() => supabase.auth.signOut()}
         onSearch={() => setSearchOpen(true)}
+        isAdmin={isAdmin}
+        onOpenConsole={() => setPage("console")}
         onOpenTask={openTaskFromSearch}
         onOpenQuote={() => { setPage("plastic_work_orders"); }}
         onHome={() => isInternal && setPage("dashboard")}
