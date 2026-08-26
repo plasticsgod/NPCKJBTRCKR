@@ -212,7 +212,12 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
               </label>
               <label className="field">
                 <span>Printing Facility</span>
-                <select value={form.printing_facility} onChange={(e) => set("printing_facility", e.target.value)}>
+                <select value={form.printing_facility} onChange={(e) => {
+                  const v = e.target.value;
+                  // Switching away from Sttark drops the Sttark link so its live
+                  // status sync stops overriding this order.
+                  setForm((f) => ({ ...f, printing_facility: v, ...(v !== "Sttark" ? { sttark_order_id: "" } : {}) }));
+                }}>
                   <option value="">— Select facility —</option>
                   {(() => {
                     const activeNames = facilities.filter((f) => f.active).map((f) => f.name);
