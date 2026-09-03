@@ -27,15 +27,37 @@ const DANGER = [163, 45, 45];
 const LINE = [227, 227, 232];
 const PANEL = [245, 245, 247];
 
+// App logo, served from public/images. Fetched once and cached as a data URL
+// (with its natural pixel size, so we can scale it without distortion).
+const LOGO_URL = "/images/nutapack@300x.png";
+let _logo = null; // { dataUrl, w, h } | false (failed)
+async function getLogo() {
+  if (_logo !== null) return _logo || null;
+  try {
+    const res = await fetch(LOGO_URL);
+    const blob = await res.blob();
+    const dataUrl = await new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
+    const dim = await new Promise((r) => { const im = new Image(); im.onload = () => r({ w: im.naturalWidth, h: im.naturalHeight }); im.onerror = () => r(null); im.src = dataUrl; });
+    _logo = dim ? { dataUrl, w: dim.w, h: dim.h } : false;
+  } catch { _logo = false; }
+  return _logo || null;
+}
+
 const num = (x) => Number(x) || 0;
 const intFmt = (n) => Math.round(n).toLocaleString("en-US");
 
-function header(doc, W, M, tag, tagColor) {
+function header(doc, W, M, tag, tagColor, logo) {
   doc.setFillColor(...INK); doc.rect(0, 0, W, 76, "F");
+  let tx = M;
+  if (logo) {
+    // Fit the logo into a 40pt-tall band on the header, keep aspect ratio.
+    const h = 40, w = (logo.w / logo.h) * h;
+    try { doc.addImage(logo.dataUrl, "PNG", M, 18, w, h); tx = M + w + 14; } catch { tx = M; }
+  }
   doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(21);
-  doc.text("NUTRAPACK", M, 40);
+  doc.text("NUTRAPACK", tx, 40);
   doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(180, 180, 186);
-  doc.text("Packaging brokerage", M, 56);
+  doc.text("Packaging brokerage", tx, 56);
   doc.setFont("helvetica", "bold"); doc.setFontSize(10.5);
   const tw = doc.getTextWidth(tag) + 24;
   doc.setFillColor(...tagColor); doc.roundedRect(W - M - tw, 26, tw, 26, 13, 13, "F");
@@ -108,8 +130,9 @@ async function outboundDoc(rfq, vendor) {
   const W = doc.internal.pageSize.getWidth(), M = 50;
   const d = rfq.data || {};
   const ds = new Date(rfq.created_at || Date.now()).toISOString().slice(0, 10);
+  const logo = await getLogo();
 
-  let y = header(doc, W, M, "REQUEST FOR QUOTATION", ACCENT);
+  let y = header(doc, W, M, "REQUEST FOR QUOTATION", ACCENT, logo);
   y = metaRow(doc, W, M, y, rfq.rfq_number, ds, d.respond_by);
   y = addrRow(doc, W, M, y + 6, vendor, "Packaging brokerage");
   y += 6;
@@ -163,8 +186,9 @@ async function internalDoc(rfq) {
   const d = rfq.data || {};
   const ds = new Date(rfq.created_at || Date.now()).toISOString().slice(0, 10);
   const ct = d.cost_targets || {};
+  const logo = await getLogo();
 
-  let y = header(doc, W, M, "INTERNAL SPEC", DANGER);
+  let y = header(doc, W, M, "INTERNAL SPEC", DANGER, logo);
   y = metaRow(doc, W, M, y, rfq.rfq_number, ds, d.respond_by);
   y += 6;
   doc.setFillColor(...PANEL); doc.roundedRect(M, y, W - 2 * M, 22, 6, 6, "F");
