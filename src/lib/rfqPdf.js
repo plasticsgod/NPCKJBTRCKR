@@ -141,14 +141,31 @@ async function outboundDoc(rfq, vendor) {
 
   y = para(doc, W, M, y, "We invite your quotation to supply the flexible packaging described below on a turnkey brokerage basis (" + (d.scope || "packaging only") + "). Freight: " + (d.freight || "—") + ".");
 
-  const q = quantities(d);
-  const qtyStr = (base, withOver) => (q.overPct > 0 ? `${intFmt(base)}  ->  ${intFmt(withOver)}` : intFmt(base));
-  y = sectionTitle(doc, M, y + 4, "1 · Scope");
-  y = para(doc, W, M, y, `${d.skus || "—"} finished SKU(s), each ${d.components_per_sku || "a printed component"} — ${d.sticks_per_sachet || "—"} sticks per sachet. ${d.notes ? d.notes : ""}`);
+  // Normalize to variants (old single-size RFQs → one variant).
+  const variants = (Array.isArray(d.variants) && d.variants.length)
+    ? d.variants
+    : [{ size: "", qty: d.qty_per_variant, sachets: d.sachets_per_variant, overage: d.overage_pct }];
 
-  y = sectionTitle(doc, M, y + 4, "2 · Quantities");
-  y = specRow(doc, W, M, y, `Sticks per variant${q.overPct > 0 ? ` (+${q.overPct}% overage)` : ""}`, qtyStr(q.sticks, q.sticksO));
-  y = specRow(doc, W, M, y, `Sachets per variant${q.overPct > 0 ? ` (+${q.overPct}% overage)` : ""}`, qtyStr(q.sachets, q.sachetsO));
+  y = sectionTitle(doc, M, y + 4, "1 · Scope");
+  y = para(doc, W, M, y, `${d.product ? d.product + " — " : ""}${d.skus || "—"} finished SKU(s), each ${d.components_per_sku || "a printed component"} — ${d.sticks_per_sachet || "—"} sticks per sachet.${variants.length > 1 ? ` Quoted in ${variants.length} sizes (below).` : ""} ${d.notes ? d.notes : ""}`);
+
+  y = sectionTitle(doc, M, y + 4, "2 · Quantities" + (variants.length > 1 ? " — by size" : ""));
+  let gSticks = 0, gSach = 0;
+  variants.forEach((v, i) => {
+    const over = 1 + (Number(v.overage) || 0) / 100;
+    const sticks = (Number(v.qty) || 0) * over, sach = (Number(v.sachets) || 0) * over;
+    gSticks += sticks; gSach += sach;
+    const op = Number(v.overage) || 0;
+    const label = v.size ? v.size : (variants.length > 1 ? `Size ${i + 1}` : "Quantity");
+    const qtyStr = (base, withOver) => (op > 0 ? `${intFmt(base)}  ->  ${intFmt(withOver)}` : intFmt(base));
+    if (variants.length > 1) { doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(...INK); doc.text(label + (op > 0 ? `  (+${op}% overage)` : ""), M, y); y += 15; }
+    y = specRow(doc, W, M, y, variants.length > 1 ? "  Sticks" : `Sticks${op > 0 ? ` (+${op}% overage)` : ""}`, qtyStr(Number(v.qty) || 0, sticks));
+    y = specRow(doc, W, M, y, variants.length > 1 ? "  Sachets" : `Sachets${op > 0 ? ` (+${op}% overage)` : ""}`, qtyStr(Number(v.sachets) || 0, sach));
+  });
+  if (variants.length > 1) {
+    doc.setDrawColor(...LINE); doc.line(M, y - 2, W - M, y - 2);
+    y = specRow(doc, W, M, y + 4, "Total across sizes", `${intFmt(gSticks)} sticks · ${intFmt(gSach)} sachets`);
+  }
   y = specRow(doc, W, M, y, "Finished SKUs", d.skus);
 
   y = sectionTitle(doc, M, y + 8, "3 · Materials & print");

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "../supabaseClient";
 import { toast } from "./Toaster";
 import { downloadOutboundRFQ, downloadInternalSpec } from "../lib/rfqPdf";
@@ -9,12 +9,11 @@ const EMPTY = {
   category: "stick_packs",
   scope: "",
   project_ref: "",
+  product: "",
   skus: "",
   components_per_sku: "",
   sticks_per_sachet: "",
-  qty_per_variant: "",
-  sachets_per_variant: "",
-  overage_pct: "",
+  variants: [{ size: "", qty: "", sachets: "", overage: "8" }],
   sachet_stock: "",
   lamination: "",
   food_grade: "",
@@ -31,6 +30,22 @@ const EMPTY = {
   cost_targets: { stick: "", sachet: "", ceiling: "", strategy: "" }, // internal-only
 };
 
+// Old RFQs stored single-size fields. Convert them to one variant on load so
+// nothing breaks. Returns a data object guaranteed to have a `variants` array.
+function withVariants(data) {
+  const d = { ...data };
+  if (!Array.isArray(d.variants) || d.variants.length === 0) {
+    d.variants = [{
+      size: "",
+      qty: d.qty_per_variant ?? "",
+      sachets: d.sachets_per_variant ?? "",
+      overage: d.overage_pct ?? "8",
+    }];
+  }
+  return d;
+}
+
+
 const PRESS_OPTS = [
   "Supplier's choice (digital or conventional)",
   "Digital only",
@@ -45,7 +60,7 @@ const fmtDate = (iso) => {
   return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}/${d.getFullYear()}`;
 };
 
-export default function RFQ({ userEmail }) {
+export default function RFQ({ userEmail, openId, onOpened }) {
   const [view, setView] = useState("list");   // list | builder
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,12 +78,20 @@ export default function RFQ({ userEmail }) {
   }
   useEffect(() => { load(); }, []);
 
+  // Deep-link from a converted work order: open the requested RFQ in the builder.
+  useEffect(() => {
+    if (!openId || loading) return;
+    const r = rows.find((x) => x.id === openId);
+    if (r) { openRFQ(r); onOpened && onOpened(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openId, loading, rows]);
+
   function set(k, v) { setForm((f) => ({ ...f, [k]: v })); }
 
   function newRFQ() { setEditingId(null); setForm(EMPTY); setStatus("draft"); setView("builder"); }
   function openRFQ(r) {
     setEditingId(r.id);
-    setForm({ ...EMPTY, ...(r.data || {}), project_ref: r.project_ref || r.data?.project_ref || "", _rfq_number: r.rfq_number, _created_at: r.created_at });
+    setForm({ ...EMPTY, ...withVariants(r.data || {}), project_ref: r.project_ref || r.data?.project_ref || "", _rfq_number: r.rfq_number, _created_at: r.created_at });
     setStatus(r.status || "draft");
     setView("builder");
   }
@@ -125,8 +148,19 @@ export default function RFQ({ userEmail }) {
   }
 
   // Overage math
-  const oQty = useMemo(() => (Number(form.qty_per_variant) || 0) * (1 + (Number(form.overage_pct) || 0) / 100), [form.qty_per_variant, form.overage_pct]);
-  const oSach = useMemo(() => (Number(form.sachets_per_variant) || 0) * (1 + (Number(form.overage_pct) || 0) / 100), [form.sachets_per_variant, form.overage_pct]);
+  // Per-variant overage + cross-variant totals.
+  const variantTotals = (v) => {
+    const over = 1 + (Number(v.overage) || 0) / 100;
+    return { sticks: (Number(v.qty) || 0) * over, sachets: (Number(v.sachets) || 0) * over };
+  };
+  const grand = (form.variants || []).reduce((a, v) => {
+    const t = variantTotals(v);
+    return { sticks: a.sticks + t.sticks, sachets: a.sachets + t.sachets };
+  }, { sticks: 0, sachets: 0 });
+
+  const setVariant = (i, patch) => setForm((f) => { const a = [...f.variants]; a[i] = { ...a[i], ...patch }; return { ...f, variants: a }; });
+  const addVariant = () => setForm((f) => ({ ...f, variants: [...f.variants, { size: "", qty: "", sachets: "", overage: "8" }] }));
+  const removeVariant = (i) => setForm((f) => ({ ...f, variants: f.variants.length > 1 ? f.variants.filter((_, x) => x !== i) : f.variants }));
 
   // Vendors
   const setVendor = (i, v) => setForm((f) => { const a = [...f.vendors]; a[i] = v; return { ...f, vendors: a }; });
@@ -228,33 +262,41 @@ export default function RFQ({ userEmail }) {
         projectId = proj.id; taskId = task.id; projName = proj.name;
       }
 
-      const over = 1 + (Number(form.overage_pct) || 0) / 100;
-      const qty = Math.round((Number(form.qty_per_variant) || 0) * over);
       const vendor = (form.vendors || []).filter(Boolean)[0] || "";
-      const desc = [
+      const baseDesc = [
         `${form.skus || "—"} SKU(s) · ${form.components_per_sku || "—"}`,
         `${form.sticks_per_sachet || "—"} sticks/sachet`,
         [form.sachet_stock, form.lamination, form.food_grade, form.color_system].filter(Boolean).join(" · "),
         form.notes ? `Notes: ${form.notes}` : "",
       ].filter(Boolean).join("\n");
 
-      const { data: job, error: je } = await supabase.from("jobs").insert({
-        job_title: form.project_ref || `RFQ ${form._rfq_number || ""}`.trim(),
-        brand: form.brand || null,
-        print_qty: qty,
-        printing_facility: null,        // vendors aren't printing facilities; left blank
-        description: desc + (vendor ? `\nVendor (RFQ): ${vendor}` : ""),
-        status: "Not Submitted",
-        rfq_id: editingId,
-      }).select("id").single();
-      if (je) throw je;
+      // One work order per size (each variant = its own production run).
+      const jobIds = [];
+      for (const v of form.variants || []) {
+        const over = 1 + (Number(v.overage) || 0) / 100;
+        const qty = Math.round((Number(v.qty) || 0) * over);
+        const sizeLabel = v.size ? ` — ${v.size}` : "";
+        const desc = `Size: ${v.size || "—"}\n${baseDesc}` + (vendor ? `\nVendor (RFQ): ${vendor}` : "");
 
-      const { error: le } = await supabase.from("work_order_links")
-        .insert({ order_id: job.id, order_kind: "label", task_id: taskId, created_by: userEmail });
-      if (le) throw le;
+        const { data: job, error: je } = await supabase.from("jobs").insert({
+          job_title: `${form.project_ref || `RFQ ${form._rfq_number || ""}`.trim()}${sizeLabel}`,
+          brand: form.brand || null,
+          print_qty: qty,
+          printing_facility: null,
+          description: desc,
+          status: "Not Submitted",
+          rfq_id: editingId,
+        }).select("id").single();
+        if (je) throw je;
+        jobIds.push(job.id);
 
-      await patchRFQ({ data: { _job_id: job.id, _project_id: projectId, _project_name: projName, _seed_task_id: taskId }, status: "converted" });
-      toast.success("Label work order created — find it on Label Work Orders.");
+        const { error: le } = await supabase.from("work_order_links")
+          .insert({ order_id: job.id, order_kind: "label", task_id: taskId, created_by: userEmail });
+        if (le) throw le;
+      }
+
+      await patchRFQ({ data: { _job_id: jobIds[0], _job_ids: jobIds, _project_id: projectId, _project_name: projName, _seed_task_id: taskId }, status: "converted" });
+      toast.success(jobIds.length > 1 ? `${jobIds.length} label work orders created — one per size.` : "Label work order created — find it on Label Work Orders.");
       load();
     } catch (e) { console.error("[rfq createLabelOrder]", e); toast.error("Work order: " + (e?.message || e)); }
     setConverting("");
@@ -351,26 +393,46 @@ export default function RFQ({ userEmail }) {
           </label>
         </div>
 
-        <div className="pm-section-label">Job &amp; SKUs</div>
+        <div className="pm-section-label">Job &amp; product <span className="field-hint">— shared across all sizes</span></div>
         <div className="field-row">
           <label className="field"><span>Project reference</span><input value={form.project_ref} onChange={(e) => set("project_ref", e.target.value)} /></label>
+          <label className="field"><span>Product / flavor</span><input value={form.product} onChange={(e) => set("product", e.target.value)} /></label>
+        </div>
+        <div className="field-row">
           <label className="field"><span>Finished SKUs</span><input value={form.skus} onChange={(e) => set("skus", e.target.value)} /></label>
-        </div>
-        <div className="field-row">
           <label className="field"><span>Components per SKU</span><input value={form.components_per_sku} onChange={(e) => set("components_per_sku", e.target.value)} /></label>
-          <label className="field"><span>Sticks per sachet</span><input value={form.sticks_per_sachet} onChange={(e) => set("sticks_per_sachet", e.target.value)} /></label>
         </div>
-
-        <div className="pm-section-label">Quantities <span className="field-hint">— overage auto-calculated</span></div>
         <div className="field-row">
-          <label className="field"><span>Sticks per variant</span><input type="number" value={form.qty_per_variant} onChange={(e) => set("qty_per_variant", e.target.value)} /></label>
-          <label className="field"><span>Sachets per variant</span><input type="number" value={form.sachets_per_variant} onChange={(e) => set("sachets_per_variant", e.target.value)} /></label>
-          <label className="field"><span>Overage %</span><input type="number" value={form.overage_pct} onChange={(e) => set("overage_pct", e.target.value)} /></label>
+          <label className="field"><span>Sticks per sachet</span><input value={form.sticks_per_sachet} onChange={(e) => set("sticks_per_sachet", e.target.value)} /></label>
+          <label className="field" style={{ visibility: "hidden" }}><span>.</span><input readOnly /></label>
         </div>
-        <div className="rfq-calc"><span>Sticks with overage</span><b>{fmtInt(oQty)}</b></div>
-        <div className="rfq-calc"><span>Sachets with overage</span><b>{fmtInt(oSach)}</b></div>
 
-        <div className="pm-section-label">Materials &amp; print</div>
+        <div className="pm-section-label">Variants <span className="field-hint">— same product, one row per size</span></div>
+        <p className="muted small" style={{ margin: "0 0 4px" }}>Each size is quoted separately by the supplier. Materials, print, and vendors below are shared.</p>
+        {(form.variants || []).map((v, i) => {
+          const t = variantTotals(v);
+          return (
+            <div className="rfq-variant" key={i}>
+              <div className="rfq-variant-top">
+                <span className="rfq-variant-name"><span className="rfq-vbadge">Size {i + 1}</span> {v.size || "unnamed size"}</span>
+                <button type="button" className="rfq-x" onClick={() => removeVariant(i)} aria-label="Remove size" disabled={form.variants.length === 1}>×</button>
+              </div>
+              <div className="rfq-variant-grid">
+                <label className="field"><span>Size / label</span><input value={v.size} onChange={(e) => setVariant(i, { size: e.target.value })} placeholder="e.g. 60mm" /></label>
+                <label className="field"><span>Quantity</span><input type="number" value={v.qty} onChange={(e) => setVariant(i, { qty: e.target.value })} /></label>
+                <label className="field"><span>Sachets</span><input type="number" value={v.sachets} onChange={(e) => setVariant(i, { sachets: e.target.value })} /></label>
+                <label className="field"><span>Overage %</span><input type="number" value={v.overage} onChange={(e) => setVariant(i, { overage: e.target.value })} /></label>
+              </div>
+              <div className="rfq-calc"><span>With overage</span><b>{fmtInt(t.sticks)} sticks · {fmtInt(t.sachets)} sachets</b></div>
+            </div>
+          );
+        })}
+        <button type="button" className="btn-ghost rfq-addvend" onClick={addVariant}>+ Add another size</button>
+        {form.variants.length > 1 && (
+          <div className="rfq-calc rfq-grand"><span>Total across sizes</span><b>{fmtInt(grand.sticks)} sticks · {fmtInt(grand.sachets)} sachets · {form.variants.length} sizes</b></div>
+        )}
+
+        <div className="pm-section-label">Materials &amp; print <span className="field-hint">— shared across all sizes</span></div>
         <div className="field-row">
           <label className="field"><span>Sachet stock</span><select value={form.sachet_stock} onChange={(e) => set("sachet_stock", e.target.value)}><option value="">Select…</option><option>Premade</option><option>Roll stock</option></select></label>
           <label className="field"><span>Lamination</span><select value={form.lamination} onChange={(e) => set("lamination", e.target.value)}><option value="">Select…</option><option>Matte</option><option>Gloss</option></select></label>
