@@ -2673,4 +2673,5 @@ input.pm-line-name { font-weight: 500; padding: 8px 10px; border: 1px solid var(
 .rfq-variant-grid .field input { width: 100%; min-width: 0; }
 .rfq-variant-grid .field span { font-size: 12px; }
 @media (max-width: 620px) { .rfq-variant-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.rfq-variant .rfq-calc { max-width: none; width: 100%; margin-top: 12px; }
 .rfq-grand { max-width: 640px; font-weight: 600; }
