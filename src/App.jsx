@@ -12,6 +12,7 @@ import ConfirmModal from "./components/ConfirmModal";
 import Customers from "./components/Customers";
 import Console from "./components/Console";
 import RFQ from "./components/RFQ";
+import QuotingHub from "./components/QuotingHub";
 import { DashboardSkeleton, WorkOrdersSkeleton } from "./components/Skeletons";
 import Projects from "./projects/Projects";
 import JobModal from "./components/JobModal";
@@ -395,10 +396,13 @@ export default function App() {
           />
         ) : page === "console" ? (
           isAdmin ? <Console /> : <Dashboard jobs={jobs} />
-        ) : page === "rfq" ? (
-          <RFQ userEmail={session.user.email} openId={rfqOpenId} onOpened={() => setRfqOpenId(null)} />
-        ) : page === "plastics" ? (
-          <PlasticsEstimator userEmail={session.user.email} />
+        ) : (page === "plastics" || page === "rfq") ? (
+          <QuotingHub
+            sub={page === "rfq" ? "rfq" : "estimator"}
+            onSub={(s) => setPage(s === "rfq" ? "rfq" : "plastics")}
+            estimator={<PlasticsEstimator userEmail={session.user.email} />}
+            rfq={<RFQ userEmail={session.user.email} openId={rfqOpenId} onOpened={() => setRfqOpenId(null)} />}
+          />
         ) : page === "customers" ? (
           <Customers />
         ) : (page === "work_orders" || page === "plastic_work_orders") ? (
