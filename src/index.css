@@ -2646,3 +2646,9 @@ input.pm-line-name { font-weight: 500; padding: 8px 10px; border: 1px solid var(
 .rfq-row-del .rfq-del-btn { border: none; background: transparent; font-family: var(--ui); font-size: 13px; font-weight: 500; padding: 5px 10px; border-radius: 8px; cursor: pointer; opacity: 0; transition: opacity var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease); }
 .table .row:hover .rfq-row-del .rfq-del-btn { opacity: 1; }
 @media (hover: none) { .rfq-row-del .rfq-del-btn { opacity: 1; } }
+
+/* RFQ documents section */
+.rfq-docs { display: flex; flex-direction: column; gap: 10px; border: 0.5px solid var(--hairline); border-radius: var(--radius-ctl); padding: 14px 16px; max-width: 640px; }
+.rfq-docs-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.rfq-docs-label { font-size: 13px; font-weight: 500; color: var(--ink); }
+.rfq-docs-btns { display: flex; gap: 8px; flex-wrap: wrap; }

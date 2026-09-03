@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "../supabaseClient";
 import { toast } from "./Toaster";
+import { downloadOutboundRFQ, downloadInternalSpec } from "../lib/rfqPdf";
 
 // Stick-pack builder defaults. Everything lives in the rfqs.data JSONB blob, so
 // adding labels/cartons/boxes later needs no migration.
@@ -67,9 +68,47 @@ export default function RFQ({ userEmail }) {
   function newRFQ() { setEditingId(null); setForm(EMPTY); setStatus("draft"); setView("builder"); }
   function openRFQ(r) {
     setEditingId(r.id);
-    setForm({ ...EMPTY, ...(r.data || {}), project_ref: r.project_ref || r.data?.project_ref || "" });
+    setForm({ ...EMPTY, ...(r.data || {}), project_ref: r.project_ref || r.data?.project_ref || "", _rfq_number: r.rfq_number, _created_at: r.created_at });
     setStatus(r.status || "draft");
     setView("builder");
+  }
+
+  // Build the RFQ object the PDF lib expects (uses current form state).
+  function currentRFQ() {
+    return { rfq_number: form._rfq_number || null, project_ref: form.project_ref, created_at: form._created_at || new Date().toISOString(), data: form };
+  }
+
+  // Fetch attachment bytes from storage for merging.
+  async function fetchAttachmentBytes() {
+    const out = [];
+    for (const a of form.attachments || []) {
+      try {
+        const { data, error } = await supabase.storage.from("rfq-files").download(a.path);
+        if (error || !data) continue;
+        out.push({ name: a.name, bytes: new Uint8Array(await data.arrayBuffer()) });
+      } catch { /* skip */ }
+    }
+    return out;
+  }
+
+  const [busyPdf, setBusyPdf] = useState("");
+  async function genOutbound(vendor) {
+    if (!editingId) { toast.error("Save the RFQ first."); return; }
+    setBusyPdf(vendor);
+    try {
+      const atts = await fetchAttachmentBytes();
+      await downloadOutboundRFQ(currentRFQ(), vendor, atts);
+      // Generating the outbound doc advances draft -> issued.
+      if (status === "draft") { setStatus("issued"); await supabase.from("rfqs").update({ status: "issued" }).eq("id", editingId); load(); }
+    } catch (e) { toast.error("Couldn't build the RFQ PDF."); }
+    setBusyPdf("");
+  }
+  async function genInternal() {
+    if (!editingId) { toast.error("Save the RFQ first."); return; }
+    setBusyPdf("__internal");
+    try { await downloadInternalSpec(currentRFQ()); }
+    catch { toast.error("Couldn't build the internal spec."); }
+    setBusyPdf("");
   }
 
   // Delete an RFQ + its attachments from storage. Used from list and builder.
@@ -310,7 +349,37 @@ export default function RFQ({ userEmail }) {
           <textarea rows={2} value={form.cost_targets.strategy} onChange={(e) => set("cost_targets", { ...form.cost_targets, strategy: e.target.value })} placeholder="Leverage, walk-away notes — stays in-house." />
         </label>
 
-        <p className="muted small rfq-note">Generating the PDFs (outbound RFQ + internal spec, with attachments merged) comes next — save the RFQ first.</p>
+        <div className="pm-section-label">Documents <span className="field-hint">— generate the PDF to send (attachments merged in)</span></div>
+        {!editingId ? (
+          <p className="muted small">Save the RFQ first to generate its documents.</p>
+        ) : (
+          <div className="rfq-docs">
+            <div className="rfq-docs-row">
+              <span className="rfq-docs-label">Outbound RFQ</span>
+              <div className="rfq-docs-btns">
+                {(form.vendors || []).filter(Boolean).length === 0 ? (
+                  <span className="muted small">Add a vendor above to generate the RFQ.</span>
+                ) : (
+                  form.vendors.filter(Boolean).map((v) => (
+                    <button key={v} type="button" className="btn-ghost" onClick={() => genOutbound(v)} disabled={busyPdf === v}>
+                      {busyPdf === v ? "Building…" : `RFQ → ${v}`}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+            <div className="rfq-docs-row">
+              <span className="rfq-docs-label">Internal spec <span className="field-hint">(not for suppliers)</span></span>
+              <div className="rfq-docs-btns">
+                <button type="button" className="btn-ghost rfq-del-btn" onClick={genInternal} disabled={busyPdf === "__internal"}>
+                  {busyPdf === "__internal" ? "Building…" : "Download internal spec"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <p className="muted small rfq-note">Generating an outbound RFQ marks this as “issued” and merges any attachments after the RFQ pages.</p>
       </div>
     </div>
   );
