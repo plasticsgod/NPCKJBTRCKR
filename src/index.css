@@ -2601,7 +2601,10 @@ input.pm-line-name { font-weight: 500; padding: 8px 10px; border: 1px solid var(
 .wo-subtab.on { background: var(--primary); color: #fff; }
 
 /* ---- RFQ builder --------------------------------------------------------- */
-.rfq-form { display: flex; flex-direction: column; gap: 12px; padding: 4px 0 8px; }
+.rfq-form { display: flex; flex-direction: column; gap: 18px; padding: 8px 0 12px; max-width: 960px; }
+.rfq-form .pm-section-label { padding-top: 22px; margin-top: 8px; margin-bottom: 2px; }
+.rfq-form .field-row { gap: 18px; }
+.rfq-form .rfq-calc:first-of-type { margin-top: -4px; }
 .rfq-calc { display: flex; align-items: center; justify-content: space-between; background: var(--panel); border-radius: var(--radius-ctl); padding: 10px 12px; font-size: 13px; color: var(--ink-2); max-width: 520px; }
 .rfq-calc b { color: var(--ink); font-variant-numeric: tabular-nums; }
 .rfq-vend { display: flex; align-items: center; gap: 8px; max-width: 520px; }
