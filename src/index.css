@@ -2601,13 +2601,14 @@ input.pm-line-name { font-weight: 500; padding: 8px 10px; border: 1px solid var(
 .wo-subtab.on { background: var(--primary); color: #fff; }
 
 /* ---- RFQ builder --------------------------------------------------------- */
-.rfq-form { display: flex; flex-direction: column; gap: 18px; padding: 8px 0 12px; max-width: 960px; }
-.rfq-form .pm-section-label { padding-top: 22px; margin-top: 8px; margin-bottom: 2px; }
+.rfq-page { max-width: 880px; }
+.rfq-form { display: flex; flex-direction: column; gap: 18px; padding: 6px 20px 24px; }
+.rfq-form .pm-section-label { padding-top: 22px; margin-top: 6px; margin-bottom: 2px; }
 .rfq-form .field-row { gap: 18px; }
 .rfq-form .rfq-calc:first-of-type { margin-top: -4px; }
-.rfq-calc { display: flex; align-items: center; justify-content: space-between; background: var(--panel); border-radius: var(--radius-ctl); padding: 10px 12px; font-size: 13px; color: var(--ink-2); max-width: 520px; }
+.rfq-calc { display: flex; align-items: center; justify-content: space-between; background: var(--panel); border-radius: var(--radius-ctl); padding: 10px 12px; font-size: 13px; color: var(--ink-2); max-width: 640px; }
 .rfq-calc b { color: var(--ink); font-variant-numeric: tabular-nums; }
-.rfq-vend { display: flex; align-items: center; gap: 8px; max-width: 520px; }
+.rfq-vend { display: flex; align-items: center; gap: 8px; max-width: 640px; }
 .rfq-vend input { flex: 1; }
 .rfq-x { flex: none; width: 26px; height: 26px; border: none; background: transparent; color: var(--ink-3); font-size: 18px; line-height: 1; border-radius: 7px; cursor: pointer; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .rfq-x:hover { background: rgba(214,69,69,.1); color: #d64545; }
@@ -2617,7 +2618,7 @@ input.pm-line-name { font-weight: 500; padding: 8px 10px; border: 1px solid var(
 .rfq-drop-main { color: var(--ink); font-weight: 500; font-size: 14px; }
 .rfq-drop-btn { display: inline-block; margin-top: 2px; padding: 7px 14px; border: 1px solid var(--hairline); border-radius: 999px; background: #fff; color: var(--ink); font-size: 13px; font-weight: 600; }
 .rfq-drop:hover .rfq-drop-btn { border-color: var(--accent); color: var(--accent); }
-.rfq-files { display: flex; flex-direction: column; gap: 6px; max-width: 520px; }
+.rfq-files { display: flex; flex-direction: column; gap: 6px; max-width: 640px; }
 .rfq-file { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: var(--panel); border-radius: var(--radius-ctl); font-size: 13px; }
 .rfq-file-tag { flex: none; font-size: 9px; font-weight: 800; color: #a32d2d; background: rgba(214,69,69,.10); padding: 3px 5px; border-radius: 4px; letter-spacing: .03em; }
 .rfq-file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }

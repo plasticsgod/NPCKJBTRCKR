@@ -168,7 +168,7 @@ export default function RFQ({ userEmail }) {
   // ------------------------------------------------------------ builder view
   const hasFiles = form.attachments.length > 0;
   return (
-    <div className="page-card">
+    <div className="page-card rfq-page">
       <div className="page-head">
         <div className="page-head-left">
           <h1 className="page-title">{editingId ? "Edit RFQ" : "New request for quotation"}</h1>
