@@ -2601,7 +2601,7 @@ input.pm-line-name { font-weight: 500; padding: 8px 10px; border: 1px solid var(
 .wo-subtab.on { background: var(--primary); color: #fff; }
 
 /* ---- RFQ builder --------------------------------------------------------- */
-.rfq-page { max-width: 880px; }
+.rfq-page { max-width: 880px; margin-left: auto; margin-right: auto; }
 .rfq-form { display: flex; flex-direction: column; gap: 18px; padding: 6px 20px 24px; }
 .rfq-form .pm-section-label { padding-top: 22px; margin-top: 6px; margin-bottom: 2px; }
 .rfq-form .field-row { gap: 18px; }
