@@ -50,6 +50,7 @@ export default function RFQ({ userEmail }) {
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY);
+  const [status, setStatus] = useState("draft");
   const [saving, setSaving] = useState(false);
   const fileRef = useRef(null);
 
@@ -63,11 +64,25 @@ export default function RFQ({ userEmail }) {
 
   function set(k, v) { setForm((f) => ({ ...f, [k]: v })); }
 
-  function newRFQ() { setEditingId(null); setForm(EMPTY); setView("builder"); }
+  function newRFQ() { setEditingId(null); setForm(EMPTY); setStatus("draft"); setView("builder"); }
   function openRFQ(r) {
     setEditingId(r.id);
     setForm({ ...EMPTY, ...(r.data || {}), project_ref: r.project_ref || r.data?.project_ref || "" });
+    setStatus(r.status || "draft");
     setView("builder");
+  }
+
+  // Delete an RFQ + its attachments from storage. Used from list and builder.
+  async function deleteRFQ(r) {
+    if (r.status === "converted") { toast.error("This RFQ was converted — can't delete it."); return; }
+    if (!window.confirm(`Delete RFQ ${r.rfq_number || ""}? This can't be undone.`)) return;
+    const paths = (r.data?.attachments || []).map((a) => a.path).filter(Boolean);
+    if (paths.length) { try { await supabase.storage.from("rfq-files").remove(paths); } catch { /* best effort */ } }
+    const { error } = await supabase.from("rfqs").delete().eq("id", r.id);
+    if (error) { toast.error("Couldn't delete the RFQ."); return; }
+    toast.success("RFQ deleted.");
+    if (editingId === r.id) { setView("list"); setEditingId(null); }
+    load();
   }
 
   // Overage math
@@ -101,6 +116,7 @@ export default function RFQ({ userEmail }) {
     const payload = {
       project_ref: form.project_ref.trim(),
       category: form.category,
+      status,
       data: form,
       created_by: userEmail,
     };
@@ -144,7 +160,7 @@ export default function RFQ({ userEmail }) {
           <div className="table-wrap">
             <table className="table">
               <thead>
-                <tr><th>RFQ #</th><th>Project</th><th>Category</th><th>Status</th><th className="num">Vendors</th><th>Created</th></tr>
+                <tr><th>RFQ #</th><th>Project</th><th>Category</th><th>Status</th><th className="num">Vendors</th><th>Created</th><th></th></tr>
               </thead>
               <tbody>
                 {rows.map((r) => (
@@ -152,9 +168,12 @@ export default function RFQ({ userEmail }) {
                     <td className="cell-title">{r.rfq_number || "—"}</td>
                     <td>{r.project_ref || "—"}</td>
                     <td>{(r.category || "").replace(/_/g, " ")}</td>
-                    <td><span className={`pill pill-${(r.status || "draft")}`}>{r.status || "draft"}</span></td>
+                    <td><span className={`pill pill-rfq-${(r.status || "draft")}`}>{r.status || "draft"}</span></td>
                     <td className="num">{(r.data?.vendors || []).filter(Boolean).length}</td>
                     <td>{fmtDate(r.created_at)}</td>
+                    <td className="rfq-row-del" onClick={(e) => e.stopPropagation()}>
+                      <button type="button" className="rfq-del-btn" onClick={() => deleteRFQ(r)} aria-label={`Delete RFQ ${r.rfq_number || ""}`}>Delete</button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -175,6 +194,14 @@ export default function RFQ({ userEmail }) {
           <span className="page-meta">Stick packs</span>
         </div>
         <div className="page-head-right">
+          <select className="rfq-status-sel" value={status} onChange={(e) => setStatus(e.target.value)} aria-label="RFQ status">
+            <option value="draft">Draft</option>
+            <option value="issued">Issued</option>
+            <option value="converted">Converted</option>
+          </select>
+          {editingId && (
+            <button className="btn-ghost rfq-del-btn" onClick={() => deleteRFQ({ id: editingId, rfq_number: form.project_ref, status, data: form })}>Delete</button>
+          )}
           <button className="btn-ghost" onClick={() => { setView("list"); load(); }}>Back</button>
           <button className="btn-accent" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save RFQ"}</button>
         </div>

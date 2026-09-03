@@ -2634,3 +2634,15 @@ input.pm-line-name { font-weight: 500; padding: 8px 10px; border: 1px solid var(
 .rfq-file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
 .rfq-file-meta { flex: none; }
 .rfq-note { margin-top: 6px; }
+
+/* RFQ status pills + status control + delete */
+.pill-rfq-draft { color: var(--ink-2); background: var(--hairline-soft); }
+.pill-rfq-issued { color: #185fa5; background: rgba(10,132,255,.12); }
+.pill-rfq-converted { color: #1f7a4d; background: rgba(31,140,84,.14); }
+.rfq-status-sel { font-family: var(--ui); font-size: 13px; font-weight: 600; padding: 8px 12px; border: 0.5px solid var(--hairline); border-radius: 999px; background: #fff; color: var(--ink); cursor: pointer; }
+.rfq-del-btn { color: #d64545; }
+.rfq-del-btn:hover { background: rgba(214,69,69,.10); }
+.rfq-row-del { text-align: right; }
+.rfq-row-del .rfq-del-btn { border: none; background: transparent; font-family: var(--ui); font-size: 13px; font-weight: 500; padding: 5px 10px; border-radius: 8px; cursor: pointer; opacity: 0; transition: opacity var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease); }
+.table .row:hover .rfq-row-del .rfq-del-btn { opacity: 1; }
+@media (hover: none) { .rfq-row-del .rfq-del-btn { opacity: 1; } }
