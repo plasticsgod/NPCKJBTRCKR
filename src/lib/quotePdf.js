@@ -26,15 +26,38 @@ const ACCENT = [10, 132, 255];
 const LINE = [227, 227, 232];
 const PANEL = [245, 245, 247];
 
+// App logo (served from public/images), fetched once and cached as a data URL
+// with its natural size — same as the RFQ PDF, so both documents match.
+const LOGO_URL = "/images/logo.png";
+let _logo = null; // { dataUrl, w, h } | false
+async function getLogo() {
+  if (_logo !== null) return _logo || null;
+  try {
+    const res = await fetch(LOGO_URL);
+    const blob = await res.blob();
+    const dataUrl = await new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
+    const dim = await new Promise((r) => { const im = new Image(); im.onload = () => r({ w: im.naturalWidth, h: im.naturalHeight }); im.onerror = () => r(null); im.src = dataUrl; });
+    _logo = dim ? { dataUrl, w: dim.w, h: dim.h } : false;
+  } catch { _logo = false; }
+  return _logo || null;
+}
+
 const usd = (n) => "$" + Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const usd4 = (n) => "$" + Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 });
 
-function header(doc, W, M, tag) {
-  doc.setFillColor(...INK); doc.rect(0, 0, W, 76, "F");
-  doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(21);
-  doc.text("NUTRAPACK", M, 40);
-  doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(180, 180, 186);
-  doc.text("Tub & Lid Pricing", M, 56);
+function header(doc, W, M, tag, logo) {
+  // White header band + hairline divider + embedded logo — matches the RFQ PDF.
+  doc.setFillColor(255, 255, 255); doc.rect(0, 0, W, 76, "F");
+  doc.setDrawColor(...LINE); doc.setLineWidth(0.8); doc.line(0, 76, W, 76); doc.setLineWidth(0.2);
+  let tx = M;
+  if (logo) {
+    const h = 40, w = (logo.w / logo.h) * h;
+    try { doc.addImage(logo.dataUrl, "PNG", M, 18, w, h); tx = M + w + 14; } catch { tx = M; }
+  }
+  doc.setTextColor(...INK); doc.setFont("helvetica", "bold"); doc.setFontSize(21);
+  doc.text("NUTRAPACK", tx, 40);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(...SOFT);
+  doc.text("Tub & Lid Pricing", tx, 56);
   doc.setFont("helvetica", "bold"); doc.setFontSize(10.5);
   const tw = doc.getTextWidth(tag) + 24;
   doc.setFillColor(...ACCENT); doc.roundedRect(W - M - tw, 26, tw, 26, 13, 13, "F");
@@ -82,7 +105,8 @@ export async function buildQuotePDF(quote) {
   const doc = new J({ unit: "pt", format: "letter" });
   const W = doc.internal.pageSize.getWidth(), M = 50;
 
-  let y = header(doc, W, M, "DRAFT QUOTE");
+  const logo = await getLogo();
+  let y = header(doc, W, M, "DRAFT QUOTE", logo);
   const today = new Date(), ds = (quote.quote_date || today.toISOString().slice(0, 10));
   y = metaRow(doc, W, M, y, quote.customer, ds);
 
@@ -153,7 +177,8 @@ export async function buildClientQuotePDF(quote) {
   const doc = new J({ unit: "pt", format: "letter" });
   const W = doc.internal.pageSize.getWidth(), M = 50;
 
-  let y = header(doc, W, M, "QUOTE");
+  const logo = await getLogo();
+  let y = header(doc, W, M, "QUOTE", logo);
   const ds = (quote.quote_date || new Date().toISOString().slice(0, 10));
   y = metaRow(doc, W, M, y, quote.customer, ds);
 
