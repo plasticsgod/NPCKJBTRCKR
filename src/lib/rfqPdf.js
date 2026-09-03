@@ -29,7 +29,7 @@ const PANEL = [245, 245, 247];
 
 // App logo, served from public/images. Fetched once and cached as a data URL
 // (with its natural pixel size, so we can scale it without distortion).
-const LOGO_URL = "/images/nutapack@300x.png";
+const LOGO_URL = "/images/logo.png";
 let _logo = null; // { dataUrl, w, h } | false (failed)
 async function getLogo() {
   if (_logo !== null) return _logo || null;
