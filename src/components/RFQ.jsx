@@ -6,22 +6,22 @@ import { toast } from "./Toaster";
 // adding labels/cartons/boxes later needs no migration.
 const EMPTY = {
   category: "stick_packs",
-  scope: "Packaging only — no filling",
+  scope: "",
   project_ref: "",
   skus: "",
   components_per_sku: "",
   sticks_per_sachet: "",
   qty_per_variant: "",
   sachets_per_variant: "",
-  overage_pct: "8",
-  sachet_stock: "Premade",
-  lamination: "Matte",
-  food_grade: "Required",
-  color_system: "Process CMYK",
-  color_match: "Must match — no exceptions",
-  press_tech: "Supplier's choice (digital or conventional)",
-  artwork_status: "For quoting only — proofing to follow",
-  freight: "Handled by NutraPack",
+  overage_pct: "",
+  sachet_stock: "",
+  lamination: "",
+  food_grade: "",
+  color_system: "",
+  color_match: "",
+  press_tech: "",
+  artwork_status: "",
+  freight: "",
   shelf_life: "",
   respond_by: "",
   vendors: [""],
@@ -193,7 +193,7 @@ export default function RFQ({ userEmail }) {
           </label>
           <label className="field"><span>Turnkey scope</span>
             <select value={form.scope} onChange={(e) => set("scope", e.target.value)}>
-              <option>Packaging only — no filling</option><option>Packaging + fill</option>
+              <option value="">Select…</option><option>Packaging only — no filling</option><option>Packaging + fill</option>
             </select>
           </label>
         </div>
@@ -219,22 +219,22 @@ export default function RFQ({ userEmail }) {
 
         <div className="pm-section-label">Materials &amp; print</div>
         <div className="field-row">
-          <label className="field"><span>Sachet stock</span><select value={form.sachet_stock} onChange={(e) => set("sachet_stock", e.target.value)}><option>Premade</option><option>Roll stock</option></select></label>
-          <label className="field"><span>Lamination</span><select value={form.lamination} onChange={(e) => set("lamination", e.target.value)}><option>Matte</option><option>Gloss</option></select></label>
+          <label className="field"><span>Sachet stock</span><select value={form.sachet_stock} onChange={(e) => set("sachet_stock", e.target.value)}><option value="">Select…</option><option>Premade</option><option>Roll stock</option></select></label>
+          <label className="field"><span>Lamination</span><select value={form.lamination} onChange={(e) => set("lamination", e.target.value)}><option value="">Select…</option><option>Matte</option><option>Gloss</option></select></label>
         </div>
         <div className="field-row">
-          <label className="field"><span>Food grade</span><select value={form.food_grade} onChange={(e) => set("food_grade", e.target.value)}><option>Required</option><option>Not required</option></select></label>
-          <label className="field"><span>Color system</span><select value={form.color_system} onChange={(e) => set("color_system", e.target.value)}><option>Process CMYK</option><option>Pantone / spot</option></select></label>
+          <label className="field"><span>Food grade</span><select value={form.food_grade} onChange={(e) => set("food_grade", e.target.value)}><option value="">Select…</option><option>Required</option><option>Not required</option></select></label>
+          <label className="field"><span>Color system</span><select value={form.color_system} onChange={(e) => set("color_system", e.target.value)}><option value="">Select…</option><option>Process CMYK</option><option>Pantone / spot</option></select></label>
         </div>
         <div className="field-row">
-          <label className="field"><span>Color match</span><select value={form.color_match} onChange={(e) => set("color_match", e.target.value)}><option>Must match — no exceptions</option><option>Reference only</option></select></label>
-          <label className="field"><span>Press technology</span><select value={form.press_tech} onChange={(e) => set("press_tech", e.target.value)}>{PRESS_OPTS.map((o) => <option key={o}>{o}</option>)}</select></label>
+          <label className="field"><span>Color match</span><select value={form.color_match} onChange={(e) => set("color_match", e.target.value)}><option value="">Select…</option><option>Must match — no exceptions</option><option>Reference only</option></select></label>
+          <label className="field"><span>Press technology</span><select value={form.press_tech} onChange={(e) => set("press_tech", e.target.value)}><option value="">Select…</option>{PRESS_OPTS.map((o) => <option key={o}>{o}</option>)}</select></label>
         </div>
 
         <div className="pm-section-label">Commercial &amp; status</div>
         <div className="field-row">
-          <label className="field"><span>Artwork status</span><select value={form.artwork_status} onChange={(e) => set("artwork_status", e.target.value)}><option>For quoting only — proofing to follow</option><option>Final / production-ready</option></select></label>
-          <label className="field"><span>Freight</span><select value={form.freight} onChange={(e) => set("freight", e.target.value)}><option>Handled by NutraPack</option><option>Supplier delivers</option></select></label>
+          <label className="field"><span>Artwork status</span><select value={form.artwork_status} onChange={(e) => set("artwork_status", e.target.value)}><option value="">Select…</option><option>For quoting only — proofing to follow</option><option>Final / production-ready</option></select></label>
+          <label className="field"><span>Freight</span><select value={form.freight} onChange={(e) => set("freight", e.target.value)}><option value="">Select…</option><option>Handled by NutraPack</option><option>Supplier delivers</option></select></label>
         </div>
         <div className="field-row">
           <label className="field"><span>Shelf life target</span><input value={form.shelf_life} onChange={(e) => set("shelf_life", e.target.value)} placeholder="e.g. 24 months" /></label>

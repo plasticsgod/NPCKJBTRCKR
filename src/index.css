@@ -2601,6 +2601,16 @@ input.pm-line-name { font-weight: 500; padding: 8px 10px; border: 1px solid var(
 .wo-subtab.on { background: var(--primary); color: #fff; }
 
 /* ---- RFQ builder --------------------------------------------------------- */
+/* Match bare RFQ inputs (vendor rows) to the standard .field input look. */
+.rfq-vend input, .rfq-form textarea {
+  font-family: var(--ui); font-size: 14px; padding: 11px 14px;
+  border: 0.5px solid #e3e3e8; border-radius: var(--radius-ctl);
+  background: #f5f5f7; color: var(--ink); width: 100%;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+.rfq-vend input:focus, .rfq-form textarea:focus {
+  outline: none; background: #fff; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint);
+}
 .rfq-page { max-width: 880px; margin-left: auto; margin-right: auto; }
 .rfq-form { display: flex; flex-direction: column; gap: 18px; padding: 6px 20px 24px; }
 .rfq-form .pm-section-label { padding-top: 22px; margin-top: 6px; margin-bottom: 2px; }
