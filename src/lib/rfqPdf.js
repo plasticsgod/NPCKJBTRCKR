@@ -47,16 +47,18 @@ const num = (x) => Number(x) || 0;
 const intFmt = (n) => Math.round(n).toLocaleString("en-US");
 
 function header(doc, W, M, tag, tagColor, logo) {
-  doc.setFillColor(...INK); doc.rect(0, 0, W, 76, "F");
+  // White header band with a hairline divider (was near-black).
+  doc.setFillColor(255, 255, 255); doc.rect(0, 0, W, 76, "F");
+  doc.setDrawColor(...LINE); doc.setLineWidth(0.8); doc.line(0, 76, W, 76); doc.setLineWidth(0.2);
   let tx = M;
   if (logo) {
     // Fit the logo into a 40pt-tall band on the header, keep aspect ratio.
     const h = 40, w = (logo.w / logo.h) * h;
     try { doc.addImage(logo.dataUrl, "PNG", M, 18, w, h); tx = M + w + 14; } catch { tx = M; }
   }
-  doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(21);
+  doc.setTextColor(...INK); doc.setFont("helvetica", "bold"); doc.setFontSize(21);
   doc.text("NUTRAPACK", tx, 40);
-  doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(180, 180, 186);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(...SOFT);
   doc.text("Packaging brokerage", tx, 56);
   doc.setFont("helvetica", "bold"); doc.setFontSize(10.5);
   const tw = doc.getTextWidth(tag) + 24;
