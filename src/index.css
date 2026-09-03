@@ -2658,3 +2658,7 @@ input.pm-line-name { font-weight: 500; padding: 8px 10px; border: 1px solid var(
 
 /* RFQ convert — linked indicator */
 .rfq-linked { color: #1f7a4d; font-weight: 500; }
+
+/* "Created from RFQ" note in the job modal */
+.from-rfq-note { font-size: 13px; color: var(--ink-3); margin: 0 0 4px; }
+.from-rfq-link { font-size: 13px; }

@@ -58,6 +58,7 @@ export default function App() {
   const [customerRows, setCustomerRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
+  const [rfqOpenId, setRfqOpenId] = useState(null);   // deep-link: open this RFQ
   const [editingPlastic, setEditingPlastic] = useState(null);
   const [page, setPageState] = useState(getPageFromHash);
   const [navOpen, setNavOpen] = useState(false);
@@ -395,7 +396,7 @@ export default function App() {
         ) : page === "console" ? (
           isAdmin ? <Console /> : <Dashboard jobs={jobs} />
         ) : page === "rfq" ? (
-          <RFQ userEmail={session.user.email} />
+          <RFQ userEmail={session.user.email} openId={rfqOpenId} onOpened={() => setRfqOpenId(null)} />
         ) : page === "plastics" ? (
           <PlasticsEstimator userEmail={session.user.email} />
         ) : page === "customers" ? (
@@ -440,6 +441,7 @@ export default function App() {
           customers={customers}
           onSave={saveJob}
           onClose={() => setEditing(null)}
+          onOpenRFQ={(rfqId) => { setEditing(null); setRfqOpenId(rfqId); setPage("rfq"); }}
         />
       )}
 

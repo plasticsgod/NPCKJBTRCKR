@@ -27,10 +27,20 @@ const EMPTY = {
 const DELETE_DAYS = 30;
 const WARN_DAYS   = 3;
 
-export default function JobModal({ job, customers = [], onSave, onClose }) {
+export default function JobModal({ job, customers = [], onSave, onClose, onOpenRFQ }) {
   const isNew = !job.id;
   const [tab, setTab] = useState("details");
   const [form, setForm] = useState({ ...EMPTY, ...job });
+
+  // If this job was created from an RFQ, fetch its number for the back-link.
+  const [rfqNo, setRfqNo] = useState(null);
+  useEffect(() => {
+    if (!job.rfq_id) return;
+    let alive = true;
+    supabase.from("rfqs").select("rfq_number").eq("id", job.rfq_id).maybeSingle()
+      .then(({ data }) => { if (alive && data) setRfqNo(data.rfq_number || "RFQ"); });
+    return () => { alive = false; };
+  }, [job.rfq_id]);
   const [stagedArtwork, setStagedArtwork] = useState([]); // links added before the job exists
 
   // Printing facilities come from the Console-managed table. Seed with the
@@ -163,6 +173,15 @@ export default function JobModal({ job, customers = [], onSave, onClose }) {
         {tab === "details" && (
           <div className="modal-body">
             {deleteWarning && <p className="delete-warning">{deleteWarning}</p>}
+            {rfqNo && (
+              <p className="from-rfq-note">
+                Created from{" "}
+                <button type="button" className="link from-rfq-link"
+                  onClick={() => { onOpenRFQ && onOpenRFQ(job.rfq_id); }}>
+                  RFQ {rfqNo}
+                </button>
+              </p>
+            )}
             <label className="field">
               <span>Job Title</span>
               <input value={form.job_title} onChange={(e) => set("job_title", e.target.value)} required autoFocus />

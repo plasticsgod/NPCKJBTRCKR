@@ -205,7 +205,7 @@ export default function RFQ({ userEmail }) {
       await patchRFQ({ data: { _project_id: proj.id, _project_name: proj.name, _seed_task_id: task.id }, status: "converted" });
       toast.success(`Project created — ${proj.name}`);
       load();
-    } catch (e) { toast.error("Couldn't create the project."); }
+    } catch (e) { console.error("[rfq createProject]", e); toast.error("Project: " + (e?.message || e)); }
     setConverting("");
   }
 
@@ -256,7 +256,7 @@ export default function RFQ({ userEmail }) {
       await patchRFQ({ data: { _job_id: job.id, _project_id: projectId, _project_name: projName, _seed_task_id: taskId }, status: "converted" });
       toast.success("Label work order created — find it on Label Work Orders.");
       load();
-    } catch (e) { toast.error("Couldn't create the work order."); }
+    } catch (e) { console.error("[rfq createLabelOrder]", e); toast.error("Work order: " + (e?.message || e)); }
     setConverting("");
   }
 
