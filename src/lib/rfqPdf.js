@@ -117,12 +117,13 @@ async function outboundDoc(rfq, vendor) {
   y = para(doc, W, M, y, "We invite your quotation to supply the flexible packaging described below on a turnkey brokerage basis (" + (d.scope || "packaging only") + "). Freight: " + (d.freight || "—") + ".");
 
   const q = quantities(d);
+  const qtyStr = (base, withOver) => (q.overPct > 0 ? `${intFmt(base)}  ->  ${intFmt(withOver)}` : intFmt(base));
   y = sectionTitle(doc, M, y + 4, "1 · Scope");
   y = para(doc, W, M, y, `${d.skus || "—"} finished SKU(s), each ${d.components_per_sku || "a printed component"} — ${d.sticks_per_sachet || "—"} sticks per sachet. ${d.notes ? d.notes : ""}`);
 
   y = sectionTitle(doc, M, y + 4, "2 · Quantities");
-  y = specRow(doc, W, M, y, `Sticks per variant (+${q.overPct}% overage)`, `${intFmt(q.sticks)} \u2192 ${intFmt(q.sticksO)}`);
-  y = specRow(doc, W, M, y, `Sachets per variant (+${q.overPct}% overage)`, `${intFmt(q.sachets)} \u2192 ${intFmt(q.sachetsO)}`);
+  y = specRow(doc, W, M, y, `Sticks per variant${q.overPct > 0 ? ` (+${q.overPct}% overage)` : ""}`, qtyStr(q.sticks, q.sticksO));
+  y = specRow(doc, W, M, y, `Sachets per variant${q.overPct > 0 ? ` (+${q.overPct}% overage)` : ""}`, qtyStr(q.sachets, q.sachetsO));
   y = specRow(doc, W, M, y, "Finished SKUs", d.skus);
 
   y = sectionTitle(doc, M, y + 8, "3 · Materials & print");
@@ -145,7 +146,7 @@ async function outboundDoc(rfq, vendor) {
     y = sectionTitle(doc, M, y + 8, "6 · Enclosures");
     doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(...SOFT);
     y = para(doc, W, M, y, "Appended to this document:");
-    encl.forEach((n) => { doc.setTextColor(...INK); doc.text("\u2022  " + n, M + 4, y); y += 14; });
+    encl.forEach((n) => { doc.setTextColor(...INK); doc.text("-  " + n, M + 4, y); y += 14; });
   }
 
   y = para(doc, W, M, y + 8, "Please include unit pricing at the quantities above, tooling/plate charges, lead time, and MOQ.");
@@ -181,7 +182,7 @@ async function internalDoc(rfq) {
   y = para(doc, W, M, y, ct.strategy || "—");
 
   y = sectionTitle(doc, M, y + 4, "Vendors");
-  (d.vendors || []).filter(Boolean).forEach((v) => { doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(...INK); doc.text("\u2022  " + v, M + 4, y); y += 14; });
+  (d.vendors || []).filter(Boolean).forEach((v) => { doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(...INK); doc.text("-  " + v, M + 4, y); y += 14; });
 
   footer(doc, W, M, "Internal working document. Contains cost targets and negotiating strategy. Do not attach to supplier correspondence.");
   return new Uint8Array(doc.output("arraybuffer"));
