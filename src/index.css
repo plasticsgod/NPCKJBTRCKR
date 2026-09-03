@@ -2652,3 +2652,6 @@ input.pm-line-name { font-weight: 500; padding: 8px 10px; border: 1px solid var(
 .rfq-docs-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .rfq-docs-label { font-size: 13px; font-weight: 500; color: var(--ink); }
 .rfq-docs-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Estimator line-total error state */
+.qline-total.err { color: #d64545; font-weight: 700; letter-spacing: .02em; }

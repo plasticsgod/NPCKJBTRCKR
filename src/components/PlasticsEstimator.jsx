@@ -144,8 +144,9 @@ export default function PlasticsEstimator({ userEmail, clientMode = false, onSub
       : qn * (Number(p.pcs) || 0);
     const unit = Number(p.unit_price);
     const tot = units ? unit * units : null;
+    const error = (parseFloat(l.qty) || 0) > 0 && !units;
     const saved = units ? { name: l.name, units, unit, total: tot } : null;
-    return { unit, units, total: tot, saved };
+    return { unit, units, total: tot, error, saved };
   }
 
   function priceLine(l) {
@@ -159,13 +160,16 @@ export default function PlasticsEstimator({ userEmail, clientMode = false, onSub
     const hasMargin = l.marginIdx != null;
     const unit = hasMargin ? econ.sells[l.marginIdx] : null;
     const total = unit != null && units ? unit * units : null;
+    // Qty entered but the mode can't produce units (e.g. a lid with no
+    // pieces-per-pallet/container defined) → real error, not just "unfilled".
+    const error = (parseFloat(l.qty) || 0) > 0 && !units;
     let saved = null;
     if (hasMargin && units) {
       const freightU = kind === "set" ? unitEconomics(item, "tub", ship, ov).addOn : econ.addOn;
       const dutyU = kind === "set" ? (ov[item.id] || 0) + (ov[econ.lid.id] || 0) : econ.tariff;
       saved = { name: l.name, units, unit, total, marginLab: MARGINS[l.marginIdx].lab, freightU, dutyU, dutyIncluded: kind === "lid" };
     }
-    return { unit, units, total, saved };
+    return { unit, units, total, error, saved };
   }
 
   const priced = lines.map((l) => ({ l, ...(asClient ? priceLineClient(l) : priceLine(l)) }));
@@ -423,12 +427,14 @@ export default function PlasticsEstimator({ userEmail, clientMode = false, onSub
             </label>
           </div>
           <div className="quote-lines">
-          {priced.map(({ l, unit, units, total }) => (
+          {priced.map(({ l, unit, units, total, error }) => (
             <div className="qline" key={l.id}>
               <div className="qline-top">
                 <span className="qline-name">{l.name}</span>
                 <div className="qline-right">
-                  <span className={"qline-total" + (total == null ? " none" : "")}>{total == null ? "—" : money2(total)}</span>
+                  <span className={"qline-total" + (error ? " err" : total == null ? " none" : "")}>
+                    {error ? "ERROR" : total == null ? "—" : money2(total)}
+                  </span>
                   <button className="qline-rm" onClick={() => removeLine(l.id)} aria-label={`Remove ${l.name}`}>×</button>
                 </div>
               </div>
