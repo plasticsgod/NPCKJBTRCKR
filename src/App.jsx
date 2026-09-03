@@ -11,6 +11,7 @@ import NotificationBell from "./components/NotificationBell";
 import ConfirmModal from "./components/ConfirmModal";
 import Customers from "./components/Customers";
 import Console from "./components/Console";
+import RFQ from "./components/RFQ";
 import { DashboardSkeleton, WorkOrdersSkeleton } from "./components/Skeletons";
 import Projects from "./projects/Projects";
 import JobModal from "./components/JobModal";
@@ -18,7 +19,7 @@ import PlasticJobModal from "./components/PlasticJobModal";
 import { Toaster, toast } from "./components/Toaster";
 import SearchOverlay from "./components/SearchOverlay";
 
-const PAGES = ["dashboard", "work_orders", "plastic_work_orders", "projects", "plastics", "customers", "console"];
+const PAGES = ["dashboard", "work_orders", "plastic_work_orders", "projects", "plastics", "customers", "console", "rfq"];
 
 // Instant client-side check for the core team (matches the SQL allowlist) so
 // they never see a flash; invited "members" are confirmed via RPC below.
@@ -393,6 +394,8 @@ export default function App() {
           />
         ) : page === "console" ? (
           isAdmin ? <Console /> : <Dashboard jobs={jobs} />
+        ) : page === "rfq" ? (
+          <RFQ userEmail={session.user.email} />
         ) : page === "plastics" ? (
           <PlasticsEstimator userEmail={session.user.email} />
         ) : page === "customers" ? (
