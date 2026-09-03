@@ -173,6 +173,93 @@ export default function RFQ({ userEmail }) {
     load();
   }
 
+  // --- Convert: RFQ -> project + label work order ----------------------------
+  const [converting, setConverting] = useState("");
+
+  // Persist a patch into the RFQ's data blob + top-level fields, then reflect it.
+  async function patchRFQ(patch) {
+    const nextData = { ...form, ...patch.data };
+    const { error } = await supabase.from("rfqs")
+      .update({ data: nextData, status: patch.status ?? status })
+      .eq("id", editingId);
+    if (error) throw error;
+    setForm(nextData);
+    if (patch.status) setStatus(patch.status);
+  }
+
+  // Create a project from this RFQ (name = project ref) + a seed task to hang
+  // work orders on. Stores project_id + seed task id back on the RFQ.
+  async function createProject() {
+    if (!editingId) { toast.error("Save the RFQ first."); return; }
+    if (form._project_id) { toast.error("A project was already created for this RFQ."); return; }
+    setConverting("project");
+    try {
+      const { data: proj, error: pe } = await supabase.from("projects")
+        .insert({ name: form.project_ref || `RFQ ${form._rfq_number || ""}`.trim(), sort_order: 0 })
+        .select("id,name").single();
+      if (pe) throw pe;
+      const { data: task, error: te } = await supabase.from("tasks")
+        .insert({ project_id: proj.id, title: `RFQ ${form._rfq_number || ""} — production`.trim(), status: "To do", sort_order: 0, owners: [userEmail].filter(Boolean) })
+        .select("id").single();
+      if (te) throw te;
+      await patchRFQ({ data: { _project_id: proj.id, _project_name: proj.name, _seed_task_id: task.id }, status: "converted" });
+      toast.success(`Project created — ${proj.name}`);
+      load();
+    } catch (e) { toast.error("Couldn't create the project."); }
+    setConverting("");
+  }
+
+  // Create a standard label work order (native row in the Label Work Orders
+  // table), pre-filled from the RFQ, linked to the project via work_order_links.
+  async function createLabelOrder() {
+    if (!editingId) { toast.error("Save the RFQ first."); return; }
+    if (form._job_id) { toast.error("A label work order was already created for this RFQ."); return; }
+    setConverting("label");
+    try {
+      // Ensure there's a project + task to link under (create on the fly if not).
+      let projectId = form._project_id, taskId = form._seed_task_id, projName = form._project_name;
+      if (!projectId || !taskId) {
+        const { data: proj, error: pe } = await supabase.from("projects")
+          .insert({ name: form.project_ref || `RFQ ${form._rfq_number || ""}`.trim(), sort_order: 0 }).select("id,name").single();
+        if (pe) throw pe;
+        const { data: task, error: te } = await supabase.from("tasks")
+          .insert({ project_id: proj.id, title: `RFQ ${form._rfq_number || ""} — production`.trim(), status: "To do", sort_order: 0, owners: [userEmail].filter(Boolean) }).select("id").single();
+        if (te) throw te;
+        projectId = proj.id; taskId = task.id; projName = proj.name;
+      }
+
+      const over = 1 + (Number(form.overage_pct) || 0) / 100;
+      const qty = Math.round((Number(form.qty_per_variant) || 0) * over);
+      const vendor = (form.vendors || []).filter(Boolean)[0] || "";
+      const desc = [
+        `${form.skus || "—"} SKU(s) · ${form.components_per_sku || "—"}`,
+        `${form.sticks_per_sachet || "—"} sticks/sachet`,
+        [form.sachet_stock, form.lamination, form.food_grade, form.color_system].filter(Boolean).join(" · "),
+        form.notes ? `Notes: ${form.notes}` : "",
+      ].filter(Boolean).join("\n");
+
+      const { data: job, error: je } = await supabase.from("jobs").insert({
+        job_title: form.project_ref || `RFQ ${form._rfq_number || ""}`.trim(),
+        brand: form.brand || null,
+        print_qty: qty,
+        printing_facility: null,        // vendors aren't printing facilities; left blank
+        description: desc + (vendor ? `\nVendor (RFQ): ${vendor}` : ""),
+        status: "Not Submitted",
+        rfq_id: editingId,
+      }).select("id").single();
+      if (je) throw je;
+
+      const { error: le } = await supabase.from("work_order_links")
+        .insert({ order_id: job.id, order_kind: "label", task_id: taskId, created_by: userEmail });
+      if (le) throw le;
+
+      await patchRFQ({ data: { _job_id: job.id, _project_id: projectId, _project_name: projName, _seed_task_id: taskId }, status: "converted" });
+      toast.success("Label work order created — find it on Label Work Orders.");
+      load();
+    } catch (e) { toast.error("Couldn't create the work order."); }
+    setConverting("");
+  }
+
   // -------------------------------------------------------------- list view
   if (view === "list") {
     return (
@@ -348,6 +435,37 @@ export default function RFQ({ userEmail }) {
         <label className="field"><span>Vendor strategy <span className="field-hint">(internal)</span></span>
           <textarea rows={2} value={form.cost_targets.strategy} onChange={(e) => set("cost_targets", { ...form.cost_targets, strategy: e.target.value })} placeholder="Leverage, walk-away notes — stays in-house." />
         </label>
+
+        <div className="pm-section-label">Convert <span className="field-hint">— turn this RFQ into a project and a label work order</span></div>
+        {!editingId ? (
+          <p className="muted small">Save the RFQ first to convert it.</p>
+        ) : (
+          <div className="rfq-docs">
+            <div className="rfq-docs-row">
+              <span className="rfq-docs-label">
+                Project
+                {form._project_id && <span className="rfq-linked"> · {form._project_name || "created"}</span>}
+              </span>
+              <div className="rfq-docs-btns">
+                <button type="button" className="btn-ghost" onClick={createProject} disabled={converting === "project" || !!form._project_id}>
+                  {converting === "project" ? "Creating…" : form._project_id ? "Created" : "Create project"}
+                </button>
+              </div>
+            </div>
+            <div className="rfq-docs-row">
+              <span className="rfq-docs-label">
+                Label work order
+                {form._job_id && <span className="rfq-linked"> · created</span>}
+              </span>
+              <div className="rfq-docs-btns">
+                <button type="button" className="btn-accent" onClick={createLabelOrder} disabled={converting === "label" || !!form._job_id}>
+                  {converting === "label" ? "Creating…" : form._job_id ? "Created" : "Create label work order"}
+                </button>
+              </div>
+            </div>
+            <p className="muted small">Creates a standard order on Label Work Orders (looks like any other) and links it to the project. Marks this RFQ “converted”.</p>
+          </div>
+        )}
 
         <div className="pm-section-label">Documents <span className="field-hint">— generate the PDF to send (attachments merged in)</span></div>
         {!editingId ? (

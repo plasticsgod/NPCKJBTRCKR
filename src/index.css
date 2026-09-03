@@ -2655,3 +2655,6 @@ input.pm-line-name { font-weight: 500; padding: 8px 10px; border: 1px solid var(
 
 /* Estimator line-total error state */
 .qline-total.err { color: #d64545; font-weight: 700; letter-spacing: .02em; }
+
+/* RFQ convert — linked indicator */
+.rfq-linked { color: #1f7a4d; font-weight: 500; }
