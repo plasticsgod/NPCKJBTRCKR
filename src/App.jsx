@@ -3,8 +3,7 @@ import { supabase } from "./supabaseClient";
 import Auth from "./components/Auth";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
-import WorkOrders from "./components/WorkOrders";
-import PlasticWorkOrders from "./components/PlasticWorkOrders";
+import WorkOrdersHub from "./components/WorkOrdersHub";
 import Dashboard from "./components/Dashboard";
 import PlasticsEstimator from "./components/PlasticsEstimator";
 import ClientOrders from "./components/ClientOrders";
@@ -398,14 +397,23 @@ export default function App() {
           <PlasticsEstimator userEmail={session.user.email} />
         ) : page === "customers" ? (
           <Customers />
-        ) : page === "plastic_work_orders" ? (
-          <PlasticWorkOrders
-            jobs={plasticJobs}
-            customers={plasticCustomers}
-            onNew={() => setEditingPlastic({})}
-            onEdit={setEditingPlastic}
-            onDeleteMany={deletePlasticJobs}
-          />
+        ) : (page === "work_orders" || page === "plastic_work_orders") ? (
+          loading ? <WorkOrdersSkeleton /> : (
+            <WorkOrdersHub
+              sub={page === "plastic_work_orders" ? "plastic" : "label"}
+              onSub={(s) => setPage(s === "plastic" ? "plastic_work_orders" : "work_orders")}
+              label={{
+                jobs, customers,
+                onNew: () => setEditing({}), onEdit: setEditing,
+                onDeleteMany: deleteJobs, onStatus: changeStatus, onFacility: changeFacility,
+              }}
+              plastic={{
+                jobs: plasticJobs, customers: plasticCustomers,
+                onNew: () => setEditingPlastic({}), onEdit: setEditingPlastic,
+                onDeleteMany: deletePlasticJobs,
+              }}
+            />
+          )
         ) : page === "projects" ? (
           <Projects
             userEmail={session.user.email}
@@ -418,15 +426,7 @@ export default function App() {
         ) : page === "dashboard" ? (
           <Dashboard jobs={jobs} />
         ) : (
-          <WorkOrders
-            jobs={jobs}
-            customers={customers}
-            onNew={() => setEditing({})}
-            onEdit={setEditing}
-            onDeleteMany={deleteJobs}
-            onStatus={changeStatus}
-            onFacility={changeFacility}
-          />
+          <Dashboard jobs={jobs} />
         )}
       </main>
 

@@ -1,14 +1,14 @@
 const NAV = [
   { id: "dashboard", label: "Dashboard" },
   { id: "projects", label: "Projects" },
-  { id: "work_orders", label: "Label Work Orders" },
-  { id: "plastic_work_orders", label: "Plastics Work Orders" },
+  { id: "work_orders", label: "Work Orders", match: ["work_orders", "plastic_work_orders"] },
   { id: "plastics", label: "Plastics Estimator" },
   { id: "customers", label: "Customers" },
 ];
 
 export default function Sidebar({ open, page, isInternal = true, onClose, onNavigate }) {
   const items = isInternal ? NAV : NAV.filter((item) => item.id === "projects");
+  const isActive = (item) => (item.match ? item.match.includes(page) : page === item.id);
   return (
     <>
       <div
@@ -24,7 +24,7 @@ export default function Sidebar({ open, page, isInternal = true, onClose, onNavi
           {items.map((item) => (
             <li key={item.id}>
               <button
-                className={`nav-link ${page === item.id ? "active" : ""}`}
+                className={`nav-link ${isActive(item) ? "active" : ""}`}
                 onClick={() => onNavigate(item.id)}
               >
                 {item.label}

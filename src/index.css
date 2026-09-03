@@ -2592,3 +2592,10 @@ input.pm-line-name { font-weight: 500; padding: 8px 10px; border: 1px solid var(
 
 /* Pending-invite badge in Members */
 .macc-pending { color: #a15a12; background: rgba(214,138,42,.16); }
+
+/* Work Orders hub — Label / Plastics sub-toggle */
+.wo-hub { display: flex; flex-direction: column; }
+.wo-subtabs { display: inline-flex; gap: 2px; background: var(--panel); border-radius: 999px; padding: 3px; margin-bottom: 16px; align-self: flex-start; }
+.wo-subtab { background: transparent; border: none; cursor: pointer; font-family: var(--ui); font-size: 13px; font-weight: 600; color: var(--ink-3); padding: 7px 18px; border-radius: 999px; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+.wo-subtab:hover { color: var(--ink-2); }
+.wo-subtab.on { background: var(--primary); color: #fff; }
