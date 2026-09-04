@@ -136,8 +136,11 @@ export default function RFQ({ userEmail, openId, onOpened }) {
 
   // Delete an RFQ + its attachments from storage. Used from list and builder.
   async function deleteRFQ(r) {
-    if (r.status === "converted") { toast.error("This RFQ was converted — can't delete it."); return; }
-    if (!window.confirm(`Delete RFQ ${r.rfq_number || ""}? This can't be undone.`)) return;
+    const wasConverted = r.status === "converted";
+    const msg = wasConverted
+      ? `Delete RFQ ${r.rfq_number || ""}? Its project and work orders will remain — only this RFQ is removed. This can't be undone.`
+      : `Delete RFQ ${r.rfq_number || ""}? This can't be undone.`;
+    if (!window.confirm(msg)) return;
     const paths = (r.data?.attachments || []).map((a) => a.path).filter(Boolean);
     if (paths.length) { try { await supabase.storage.from("rfq-files").remove(paths); } catch { /* best effort */ } }
     const { error } = await supabase.from("rfqs").delete().eq("id", r.id);
