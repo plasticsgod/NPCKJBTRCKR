@@ -67,6 +67,7 @@ export default function RFQ({ userEmail, openId, onOpened }) {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const [status, setStatus] = useState("draft");
+  const [confirmDel, setConfirmDel] = useState(null); // RFQ pending delete-confirm
   const [saving, setSaving] = useState(false);
   const fileRef = useRef(null);
 
@@ -135,12 +136,10 @@ export default function RFQ({ userEmail, openId, onOpened }) {
   }
 
   // Delete an RFQ + its attachments from storage. Used from list and builder.
-  async function deleteRFQ(r) {
-    const wasConverted = r.status === "converted";
-    const msg = wasConverted
-      ? `Delete RFQ ${r.rfq_number || ""}? Its project and work orders will remain — only this RFQ is removed. This can't be undone.`
-      : `Delete RFQ ${r.rfq_number || ""}? This can't be undone.`;
-    if (!window.confirm(msg)) return;
+  // Ask first (in-app modal), then delete. Keeps the app's styled confirm.
+  function deleteRFQ(r) { setConfirmDel(r); }
+  async function doDeleteRFQ(r) {
+    setConfirmDel(null);
     const paths = (r.data?.attachments || []).map((a) => a.path).filter(Boolean);
     if (paths.length) { try { await supabase.storage.from("rfq-files").remove(paths); } catch { /* best effort */ } }
     const { error } = await supabase.from("rfqs").delete().eq("id", r.id);
@@ -306,8 +305,31 @@ export default function RFQ({ userEmail, openId, onOpened }) {
   }
 
   // -------------------------------------------------------------- list view
+  // Styled delete confirmation (app's own modal, not the browser dialog).
+  const delModal = confirmDel && (
+    <div className="overlay" onClick={() => setConfirmDel(null)}>
+      <div className="modal confirm-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <h2>Delete RFQ {confirmDel.rfq_number || ""}?</h2>
+        </div>
+        <div className="modal-body">
+          <p>
+            {confirmDel.status === "converted"
+              ? "Its project and work orders will remain — only this RFQ is removed. This can’t be undone."
+              : "This can’t be undone."}
+          </p>
+        </div>
+        <div className="modal-foot">
+          <button className="btn-ghost" onClick={() => setConfirmDel(null)}>Cancel</button>
+          <button className="btn-danger" onClick={() => doDeleteRFQ(confirmDel)}>Delete RFQ</button>
+        </div>
+      </div>
+    </div>
+  );
+
   if (view === "list") {
     return (
+      <>
       <div className="page-card">
         <div className="page-head">
           <div className="page-head-left">
@@ -352,12 +374,15 @@ export default function RFQ({ userEmail, openId, onOpened }) {
           </div>
         )}
       </div>
+      {delModal}
+      </>
     );
   }
 
   // ------------------------------------------------------------ builder view
   const hasFiles = form.attachments.length > 0;
   return (
+    <>
     <div className="page-card rfq-page">
       <div className="page-head">
         <div className="page-head-left">
@@ -565,5 +590,7 @@ export default function RFQ({ userEmail, openId, onOpened }) {
         <p className="muted small rfq-note">Generating an outbound RFQ marks this as “issued” and merges any attachments after the RFQ pages.</p>
       </div>
     </div>
+    {delModal}
+    </>
   );
 }
