@@ -13,6 +13,7 @@ import Customers from "./components/Customers";
 import Console from "./components/Console";
 import RFQ from "./components/RFQ";
 import QuotingHub from "./components/QuotingHub";
+import QuickQuote from "./components/QuickQuote";
 import { DashboardSkeleton, WorkOrdersSkeleton } from "./components/Skeletons";
 import Projects from "./projects/Projects";
 import JobModal from "./components/JobModal";
@@ -20,7 +21,7 @@ import PlasticJobModal from "./components/PlasticJobModal";
 import { Toaster, toast } from "./components/Toaster";
 import SearchOverlay from "./components/SearchOverlay";
 
-const PAGES = ["dashboard", "work_orders", "plastic_work_orders", "projects", "plastics", "customers", "console", "rfq"];
+const PAGES = ["dashboard", "work_orders", "plastic_work_orders", "projects", "plastics", "customers", "console", "rfq", "quick_quote"];
 
 // Instant client-side check for the core team (matches the SQL allowlist) so
 // they never see a flash; invited "members" are confirmed via RPC below.
@@ -155,6 +156,7 @@ export default function App() {
       customers: "Customers",
       projects: "Projects",
       console: "Console",
+      quick_quote: "Quick Quote",
     };
     document.title = `${names[page] || "NutraPack"} · NutraPack App`;
   }, [page]);
@@ -396,10 +398,11 @@ export default function App() {
           />
         ) : page === "console" ? (
           isAdmin ? <Console /> : <Dashboard jobs={jobs} />
-        ) : (page === "plastics" || page === "rfq") ? (
+        ) : (page === "quick_quote" || page === "plastics" || page === "rfq") ? (
           <QuotingHub
-            sub={page === "rfq" ? "rfq" : "estimator"}
-            onSub={(s) => setPage(s === "rfq" ? "rfq" : "plastics")}
+            sub={page === "rfq" ? "rfq" : page === "plastics" ? "estimator" : "quick"}
+            onSub={(s) => setPage(s === "rfq" ? "rfq" : s === "estimator" ? "plastics" : "quick_quote")}
+            quick={<QuickQuote userEmail={session.user.email} />}
             estimator={<PlasticsEstimator userEmail={session.user.email} />}
             rfq={<RFQ userEmail={session.user.email} openId={rfqOpenId} onOpened={() => setRfqOpenId(null)} />}
           />

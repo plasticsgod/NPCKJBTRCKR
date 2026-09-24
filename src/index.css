@@ -2675,3 +2675,117 @@ input.pm-line-name { font-weight: 500; padding: 8px 10px; border: 1px solid var(
 @media (max-width: 620px) { .rfq-variant-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .rfq-variant .rfq-calc { max-width: none; width: 100%; margin-top: 12px; }
 .rfq-grand { font-weight: 600; }
+
+/* ---- Quick quote ----------------------------------------------------------- */
+.qq-page { max-width: 1000px; margin-left: auto; margin-right: auto; }
+.qq-pad { padding: 0 20px 20px; }
+.qq-form { display: flex; flex-direction: column; gap: 16px; padding: 6px 20px 24px; }
+.qq-form .pm-section-label { padding-top: 22px; margin-top: 6px; }
+.qq-form .field-row { gap: 18px; }
+.qq-form input, .qq-form textarea, .qq-form select {
+  font-family: var(--ui); font-size: 14px; padding: 11px 14px; border: 0.5px solid #e3e3e8;
+  border-radius: var(--radius-ctl); background: #f5f5f7; color: var(--ink); width: 100%; min-width: 0;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+.qq-form input:focus, .qq-form textarea:focus, .qq-form select:focus { outline: none; background: #fff; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+.qq-form input[type=number] { font-variant-numeric: tabular-nums; }
+.qq-head-btns { flex-wrap: wrap; }
+.qq-section-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.qq-import-btn { text-transform: none; letter-spacing: 0; border: 0.5px solid var(--hairline); background: #fff; color: var(--ink); border-radius: 999px; padding: 7px 13px; font-family: var(--ui); font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.qq-import-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* line grid: same proportions on laptop + monitor */
+.qq-lines-head, .qq-line { display: grid; grid-template-columns: minmax(0,1.3fr) minmax(0,2fr) minmax(0,.9fr) minmax(0,.7fr) minmax(0,.9fr) 32px; gap: 10px; align-items: start; }
+.qq-lines-head { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); padding: 0 2px; margin-bottom: -6px; }
+.qq-lines-head .r { text-align: right; }
+.qq-lines { display: flex; flex-direction: column; }
+.qq-line { padding: 10px 0; border-top: 0.5px solid var(--hairline-soft); }
+.qq-line:first-child { border-top: none; }
+.qq-line.adj { background: linear-gradient(90deg, rgba(10,132,255,.04), transparent 70%); border-radius: 10px; }
+.qq-kind { display: block; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); margin: 5px 0 0 2px; }
+.qq-amt { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; padding: 12px 4px 0 0; }
+.qq-amt.none { color: var(--ink-3); font-weight: 500; }
+.qq-amt.neg { color: #1f7a4d; }
+.qq-x { border: none; background: transparent; color: var(--ink-3); font-size: 18px; line-height: 1; cursor: pointer; border-radius: 7px; width: 28px; height: 28px; margin-top: 8px; }
+.qq-x:hover { background: rgba(214,69,69,.1); color: #d64545; }
+.qq-money, .qq-pct, .qq-unit { position: relative; }
+.qq-money::before { content: "$"; position: absolute; left: 12px; top: 22px; transform: translateY(-50%); color: var(--ink-3); font-size: 14px; pointer-events: none; }
+.qq-form .qq-money input { padding-left: 24px; text-align: right; }
+.qq-form .qq-pct input { text-align: right; padding-right: 28px; }
+.qq-pct::after { content: "%"; position: absolute; right: 12px; top: 22px; transform: translateY(-50%); color: var(--ink-3); pointer-events: none; }
+.qq-form .qq-unit input { text-align: right; }
+.qq-form .qq-unit[data-suffix] input { padding-right: 38px; }
+.qq-unit[data-suffix]::after { content: attr(data-suffix); position: absolute; right: 12px; top: 22px; transform: translateY(-50%); color: var(--ink-3); font-size: 12.5px; pointer-events: none; }
+.qq-na { font-size: 12px; color: var(--ink-3); text-align: right; padding: 13px 6px 0 0; }
+.qq-form .qq-computed input { background: #fff; border-style: dashed; color: var(--ink-2); }
+.qq-form textarea.qq-grow { resize: none; overflow: hidden; min-height: 44px; line-height: 1.4; }
+.qq-form textarea.qq-notes { min-height: 70px; }
+.qq-adjbox { display: flex; align-items: center; gap: 10px; min-width: 0; padding-top: 3px; flex-wrap: wrap; }
+.qq-seg { display: inline-flex; flex-wrap: wrap; background: var(--panel); border-radius: 999px; padding: 3px; flex: none; }
+.qq-seg button { border: none; background: transparent; font-family: var(--ui); font-size: 12px; font-weight: 600; color: var(--ink-3); padding: 6px 11px; border-radius: 999px; cursor: pointer; }
+.qq-seg button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+
+/* packaging cost + margin strip (like the estimator) */
+.qq-pk { grid-column: 2 / 6; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--panel); border-radius: 12px; padding: 10px 12px; margin-top: 2px; }
+.qq-pk-lab { font-size: 12px; color: var(--ink-2); font-weight: 600; }
+.qq-pk-cost { width: 140px; flex: none; }
+.qq-pk-custom { width: 96px; flex: none; }
+.qq-form .qq-pk input { background: #fff; }
+.qq-pk-sell { margin-left: auto; font-size: 12.5px; color: var(--ink-2); }
+.qq-pk-sell b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* item picker (menu is portalled + fixed so the card never clips it) */
+.qq-combo { position: relative; }
+.qq-form .qq-combo input { padding-right: 30px; }
+.qq-chev { position: absolute; right: 11px; top: 22px; transform: translateY(-50%); color: var(--ink-3); font-size: 11px; pointer-events: none; }
+.qq-dd { position: fixed; z-index: 1000; max-height: 280px; overflow: auto; background: #fff; border: 0.5px solid var(--hairline); border-radius: 12px; box-shadow: 0 12px 32px rgba(20,22,40,.14); padding: 5px; }
+.qq-dd-cat { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); padding: 8px 10px 4px; }
+.qq-dd-item { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; border: none; background: transparent; font-family: var(--ui); font-size: 13.5px; color: var(--ink); padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.qq-dd-item:hover { background: var(--panel); }
+.qq-dd-item small { color: var(--ink-3); font-size: 11.5px; margin-left: auto; }
+.qq-dd-create { color: var(--accent); font-weight: 600; }
+
+.qq-addline { align-self: flex-start; }
+.qq-totals { margin-left: auto; width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 7px; }
+.qq-trow { display: flex; justify-content: space-between; font-size: 14px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.qq-trow.neg span:last-child { color: #1f7a4d; }
+.qq-trow.grand { background: var(--panel); border-radius: 12px; padding: 12px 14px; color: var(--ink); font-weight: 700; font-size: 16px; margin-top: 4px; }
+
+/* import modal */
+.qq-import { max-width: 620px; }
+.qq-drop-note { margin-top: 6px; max-width: 46ch; }
+.rfq-drop.dragover { border-color: var(--accent); background: var(--accent-tint); }
+.qq-reading { text-align: center; padding: 18px 8px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.qq-reading p { margin: 0; }
+.qq-check { margin: 0; font-size: 13px; padding: 10px 12px; border-radius: 10px; }
+.qq-check.ok { background: rgba(31,140,84,.10); color: #1f7a4d; }
+.qq-check.warn { background: rgba(214,166,42,.16); color: #8a6d1f; }
+.qq-review { display: flex; flex-direction: column; border: 0.5px solid var(--hairline); border-radius: 12px; overflow: hidden; }
+.qq-review-row { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-bottom: 0.5px solid var(--hairline-soft); cursor: pointer; font-size: 13.5px; }
+.qq-review-row:last-child { border-bottom: none; }
+.qq-review-row input { width: 16px; height: 16px; flex: none; accent-color: var(--primary); }
+.qq-review-desc { flex: 1; min-width: 0; color: var(--ink); }
+.qq-review-num { flex: none; color: var(--ink-2); font-variant-numeric: tabular-nums; font-size: 12.5px; }
+
+/* phone: each line becomes its own card */
+@media (max-width: 720px) {
+  .qq-form { padding: 4px 14px 20px; }
+  .qq-form .field-row { grid-template-columns: 1fr; }
+  .qq-head-btns { width: 100%; }
+  .qq-head-btns > * { flex: 1 1 auto; }
+  .qq-lines-head { display: none; }
+  .qq-line { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-areas: "item item x" "desc desc desc" "price qty amt"; gap: 8px; padding: 12px; margin-bottom: 10px; border: 0.5px solid var(--hairline); border-radius: 14px; background: #fff; }
+  .qq-line:first-child { border-top: 0.5px solid var(--hairline); }
+  .qq-line > .qq-c-item { grid-area: item; }
+  .qq-line > .qq-c-desc { grid-area: desc; }
+  .qq-line > .qq-c-price { grid-area: price; }
+  .qq-line > .qq-c-qty { grid-area: qty; }
+  .qq-line > .qq-amt { grid-area: amt; }
+  .qq-line > .qq-x { grid-area: x; justify-self: end; margin-top: 4px; }
+  .qq-pk { grid-column: 1 / -1; }
+  .qq-pk-sell { margin-left: 0; width: 100%; }
+  .qq-totals { max-width: none; }
+  .qq-hide-sm { display: none; }
+  .qq-review-row { flex-wrap: wrap; }
+  .qq-review-num { width: 100%; padding-left: 26px; }
+}

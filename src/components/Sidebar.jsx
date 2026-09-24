@@ -2,7 +2,7 @@ const NAV = [
   { id: "dashboard", label: "Dashboard" },
   { id: "projects", label: "Projects" },
   { id: "work_orders", label: "Work Orders", match: ["work_orders", "plastic_work_orders"] },
-  { id: "plastics", label: "Quoting", match: ["plastics", "rfq"] },
+  { id: "quick_quote", label: "Quoting", match: ["quick_quote", "plastics", "rfq"] },
   { id: "customers", label: "Customers" },
 ];
 
