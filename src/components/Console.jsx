@@ -166,6 +166,7 @@ function MembersSection() {
   const [editProject, setEditProject] = useState("");
   const [editCustomer, setEditCustomer] = useState("");
   const [rowBusy, setRowBusy] = useState(false);
+  const [confirmRevoke, setConfirmRevoke] = useState(null); // member pending revoke-confirm
 
   useEffect(() => { supabase.auth.getUser().then(({ data }) => setMyEmail((data.user?.email || "").toLowerCase())); }, []);
 
@@ -252,8 +253,9 @@ function MembersSection() {
     } catch (err) { toast.error(err.message || "Couldn't change role."); }
     setRowBusy(false);
   }
-  async function revoke(r) {
-    if (!window.confirm(`Remove all access for ${r.email}? Their login stays; you can re-invite later.`)) return;
+  function revoke(r) { setConfirmRevoke(r); }
+  async function doRevoke(r) {
+    setConfirmRevoke(null);
     setRowBusy(true);
     try {
       await removeAllGrants(r.email);
@@ -407,6 +409,20 @@ function MembersSection() {
           </div>
           )}
         </>
+      )}
+      {confirmRevoke && (
+        <div className="overlay" onClick={() => setConfirmRevoke(null)}>
+          <div className="modal confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head"><h2>Remove access?</h2></div>
+            <div className="modal-body">
+              <p>Remove all access for <b>{confirmRevoke.email}</b>? Their login stays — you can re-invite them later.</p>
+            </div>
+            <div className="modal-foot">
+              <button className="btn-ghost" onClick={() => setConfirmRevoke(null)}>Cancel</button>
+              <button className="btn-danger" onClick={() => doRevoke(confirmRevoke)}>Remove access</button>
+            </div>
+          </div>
+        </div>
       )}
     </section>
   );

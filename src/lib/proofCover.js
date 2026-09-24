@@ -2,10 +2,11 @@
 // with an uploaded PDF. Uses pdf-lib (browser-compatible, no server needed).
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 
-const ACCENT  = rgb(1, 0.357, 0.122);   // #ff5b1f
-const INK     = rgb(0.078, 0.067, 0.051); // #14110d
-const MUTED   = rgb(0.608, 0.584, 0.541); // #9b958a
-const HAIRLINE= rgb(0.831, 0.816, 0.792); // #d4cfc9
+// App palette — matches the quote / RFQ PDFs (white header, blue accent).
+const ACCENT  = rgb(0.039, 0.518, 1);     // #0a84ff
+const INK     = rgb(0.114, 0.114, 0.122); // #1d1d1f
+const MUTED   = rgb(0.431, 0.431, 0.451); // #6e6e73
+const HAIRLINE= rgb(0.890, 0.890, 0.910); // #e3e3e8
 
 export async function buildProofPDF({ jobTitle, customer, uploadedBy, date, fileName, logoUrl }) {
   const doc   = await PDFDocument.create();
@@ -15,34 +16,30 @@ export async function buildProofPDF({ jobTitle, customer, uploadedBy, date, file
   const bold   = await doc.embedFont(StandardFonts.HelveticaBold);
   const regular= await doc.embedFont(StandardFonts.Helvetica);
 
-  // --- Header bar -----------------------------------------------------------
-  page.drawRectangle({ x: 0, y: height - 80, width, height: 80, color: INK });
+  // --- Header: white band + hairline, logo, wordmark, blue pill ------------
+  page.drawRectangle({ x: 0, y: height - 80, width, height: 80, color: rgb(1, 1, 1) });
+  page.drawLine({ start: { x: 0, y: height - 80 }, end: { x: width, y: height - 80 }, thickness: 0.8, color: HAIRLINE });
 
-  // Try to embed the logo image if a URL is provided
+  let textX = 48;
   if (logoUrl) {
     try {
       const res  = await fetch(logoUrl);
       const buf  = await res.arrayBuffer();
       const img  = await doc.embedPng(buf).catch(() => doc.embedJpg(buf).catch(() => null));
       if (img) {
-        const dim = img.scaleToFit(36, 36);
-        page.drawImage(img, { x: 36, y: height - 58, width: dim.width, height: dim.height });
+        const dim = img.scaleToFit(140, 40);   // keep aspect ratio, 40pt tall max
+        page.drawImage(img, { x: 48, y: height - 60, width: dim.width, height: dim.height });
+        textX = 48 + dim.width + 14;
       }
-    } catch (_) { /* logo failed to load — skip silently */ }
+    } catch (_) { /* logo failed to load — text-only header */ }
   }
 
-  // "NUTRAPACK" wordmark
-  page.drawText("NUTRAPACK", {
-    x: 84, y: height - 50,
-    size: 20, font: bold, color: rgb(1, 1, 1),
-  });
+  page.drawText("NUTRAPACK", { x: textX, y: height - 44, size: 20, font: bold, color: INK });
+  page.drawText("Packaging", { x: textX, y: height - 58, size: 9, font: regular, color: MUTED });
 
-  // Orange accent pill — "PROOF"
-  page.drawRectangle({ x: width - 120, y: height - 62, width: 84, height: 28, color: ACCENT });
-  page.drawText("PROOF", {
-    x: width - 101, y: height - 50,
-    size: 13, font: bold, color: rgb(1, 1, 1),
-  });
+  // Blue pill — "PROOF"
+  page.drawRectangle({ x: width - 120, y: height - 54, width: 72, height: 24, color: ACCENT });
+  page.drawText("PROOF", { x: width - 105, y: height - 46, size: 11, font: bold, color: rgb(1, 1, 1) });
 
   // --- Main heading ---------------------------------------------------------
   page.drawText("NutraPack Proof", {
@@ -85,13 +82,21 @@ export async function buildProofPDF({ jobTitle, customer, uploadedBy, date, file
     { label: "Approved by (print name)", x: 48,          w: 180 },
     { label: "Signature",                x: 240,         w: 160 },
     { label: "Date",                     x: 420,         w: 110 },
-    { label: "Approved  □   Changes required  □", x: 48, w: 500 },
+    { label: "checkboxes", x: 48, w: 500 },
   ];
   let colRow = 0;
   for (const col of cols) {
     const cy = colRow < 3 ? sigY - 4 : sigY - 36;
     if (colRow === 3) {
-      page.drawText(col.label, { x: col.x, y: cy, size: 9, font: regular, color: INK });
+      // Drawn checkboxes. (The "□" character isn't in the built-in PDF font —
+      // it made this whole cover fail silently, so proofs uploaded without it.)
+      let bx = col.x;
+      for (const lab of ["Approved", "Changes required"]) {
+        page.drawText(lab, { x: bx, y: cy, size: 9, font: regular, color: INK });
+        bx += regular.widthOfTextAtSize(lab, 9) + 6;
+        page.drawRectangle({ x: bx, y: cy - 1, width: 9, height: 9, borderColor: INK, borderWidth: 0.8 });
+        bx += 30;
+      }
     } else {
       page.drawLine({ start: { x: col.x, y: cy }, end: { x: col.x + col.w, y: cy }, thickness: 0.5, color: INK });
       page.drawText(col.label, { x: col.x, y: cy - 12, size: 8, font: regular, color: MUTED });

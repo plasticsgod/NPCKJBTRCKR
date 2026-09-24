@@ -393,7 +393,7 @@ function ProofsPanel({ jobId, jobTitle, customer }) {
       try {
         const coverBytes = await buildProofPDF({
           jobTitle: jobTitle, customer, uploadedBy: userEmail, date,
-          fileName: file.name, logoUrl: "/images/favicon.png",
+          fileName: file.name, logoUrl: "/images/logo.png",
         });
 
         let finalBlob, finalName, finalMime;
@@ -422,7 +422,7 @@ function ProofsPanel({ jobId, jobTitle, customer }) {
 
         const path = `${jobId}/${Date.now()}-${finalName}`;
         const { error: upErr } = await supabase.storage.from("job-files").upload(path, finalBlob);
-        if (upErr) { alert("Upload failed: " + upErr.message); continue; }
+        if (upErr) { toast.error("Upload failed: " + upErr.message); continue; }
         await supabase.from("job_files").insert({
           job_id: jobId, name: finalName, size: finalBlob.size,
           mime_type: finalMime, storage_path: path, uploaded_by: userEmail,
@@ -452,7 +452,7 @@ function ProofsPanel({ jobId, jobTitle, customer }) {
 
   async function download(file) {
     const { data, error } = await supabase.storage.from("job-files").download(file.storage_path);
-    if (error) { alert("Download failed. Please try again."); return; }
+    if (error) { toast.error("Download failed. Please try again."); return; }
     const url = URL.createObjectURL(data);
     const a = document.createElement("a"); a.href = url; a.download = file.name; a.click();
     URL.revokeObjectURL(url);

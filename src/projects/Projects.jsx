@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "../supabaseClient";
-import { TASK_STATUSES, statusClass } from "./constants";
+import { TASK_STATUSES } from "./constants";
 import { useUsers } from "./useUsers";
 import TaskDrawer from "./TaskDrawer";
 import { notifyAssignment } from "./notifications";
@@ -51,6 +51,8 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
   const [reads, setReads] = useState({});       // { [taskId]: last_read_at ISO }
   const [draggingTaskId, setDraggingTaskId] = useState(null); // task being dragged
   const [dragOverProject, setDragOverProject] = useState(null); // project being hovered
+  // Suppresses realtime reloads triggered by this client's own multi-row writes.
+  const selfEditUntil = useRef(0);
   const users = useUsers();
   const newProjRef = useRef(null);
   const [activeProjectId, setActiveProjectId] = useState(() => {
@@ -91,10 +93,16 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
   useEffect(() => {
     load();
     loadActivity();
+    // While THIS client is performing an optimistic multi-row write (e.g. a
+    // drag-reorder writes several rows), skip realtime-triggered reloads — the
+    // optimistic state already has the final order, and reloading mid-write
+    // repaints intermediate states (the "flash"). Other users' changes after
+    // the window still reload normally.
+    const onTasksChange = () => { if (Date.now() < selfEditUntil.current) return; load(); };
     const ch = supabase
       .channel("projects-v2")
       .on("postgres_changes", { event: "*", schema: "public", table: "projects" }, load)
-      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "tasks" }, onTasksChange)
       .on("postgres_changes", { event: "*", schema: "public", table: "task_posts" }, loadActivity)
       .subscribe();
     return () => supabase.removeChannel(ch);
@@ -214,13 +222,19 @@ export default function Projects({ userEmail, focusTaskId, onTaskFocused, canEdi
     // A manual arrangement only shows under manual sort.
     if (sortBy !== "manual") setSortBy("manual");
 
+    // Suppress our own realtime reloads while these row writes land.
+    selfEditUntil.current = Date.now() + 4000;
     try {
       for (const u of changed) {
         const patch = u.id === draggedId ? { sort_order: u.sort_order, project_id: projectId } : { sort_order: u.sort_order };
         const { error } = await supabase.from("tasks").update(patch).eq("id", u.id);
         if (error) throw error;
       }
+      // Keep the window open briefly after the last write, since realtime
+      // events can arrive a beat later.
+      selfEditUntil.current = Date.now() + 1200;
     } catch {
+      selfEditUntil.current = 0;
       toast.error("Couldn't save the new order. Reloading.");
       load();
     }

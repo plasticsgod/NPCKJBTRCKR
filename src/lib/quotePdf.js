@@ -1,3 +1,4 @@
+import { toast } from "../components/Toaster";
 // Branded quote PDFs — restyled to the current app look (near-black + system
 // blue, clean/minimal). Two exports:
 //   buildQuotePDF        internal draft, splits Product / Freight / Duty
@@ -100,7 +101,7 @@ function footer(doc, W, M, disc) {
 export async function buildQuotePDF(quote) {
   let J;
   try { J = await loadJsPDF(); }
-  catch { alert("PDF library is still loading - check your connection and try again."); return; }
+  catch { toast.error("Couldn't load the PDF tool — check your connection and try again."); return; }
 
   const doc = new J({ unit: "pt", format: "letter" });
   const W = doc.internal.pageSize.getWidth(), M = 50;
@@ -172,7 +173,7 @@ export async function buildQuotePDF(quote) {
 export async function buildClientQuotePDF(quote) {
   let J;
   try { J = await loadJsPDF(); }
-  catch { alert("PDF library is still loading - check your connection and try again."); return; }
+  catch { toast.error("Couldn't load the PDF tool — check your connection and try again."); return; }
 
   const doc = new J({ unit: "pt", format: "letter" });
   const W = doc.internal.pageSize.getWidth(), M = 50;
