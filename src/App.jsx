@@ -440,7 +440,7 @@ export default function App() {
             rfq={<RFQ userEmail={session.user.email} openId={rfqOpenId} onOpened={() => setRfqOpenId(null)} />}
           />
         ) : page === "panel_builder" ? (
-          <PanelBuilder />
+          <PanelBuilder userEmail={session.user.email} />
         ) : page === "customers" ? (
           <Customers />
         ) : (page === "work_orders" || page === "plastic_work_orders") ? (

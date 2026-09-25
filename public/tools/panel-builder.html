@@ -370,6 +370,12 @@ html.embedded main.work{ padding: 16px 0 0; }
 .pane-h .status{ flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pane-h .chk{ flex: none; white-space: nowrap; }
 .pane-h select{ flex: none; }
+
+/* Inside the NutraPack app: everything autosaves, so the file "Save project" button is hidden */
+html.embedded #btnSave{ display: none !important; }
+
+/* Inside the app, keep the demo products hidden until the app loads a real panel */
+html.embedded:not(.np-ready) main.work, html.embedded:not(.np-ready) header.top{ visibility: hidden; }
 </style>
 
 <div class="app">
@@ -1680,4 +1686,168 @@ IV().addEventListener('change', e=>{
 IV().addEventListener('input', e=>{ const t=e.target; if(t.dataset.h){ imp.header[t.dataset.h]= t.type==='number'?num(t.value):t.value; } if(t.dataset.r!=null && t.type==='text'){ imp.rows[+t.dataset.r][t.dataset.f]=t.value; } });
 </script>
 
+
+
+<script>
+/* ============ NutraPack app bridge (only active inside the app) ============
+   The app saves panels to its database; this script only passes messages and
+   routes the builder's own project controls through the app.
+   App → builder:  np:load{project} · np:new · np:import · np:reimport · np:list{items,current} · np:flush
+   Builder → app:  np:ready · np:change{project} · np:created{project} · np:spec-file{file,mode}
+                   np:switch{id} · np:request{action:'new'|'duplicate'} · np:import-cancelled · np:flushed
+   Panel math, checks and PDF/SVG exports are untouched. */
+(function(){
+  "use strict";
+  if (window.self === window.top) return;                 // standalone file: behaves as before
+  var ORIGIN = window.location.origin;
+  function send(msg){ try{ window.parent.postMessage(msg, ORIGIN); }catch(_){} }
+  function cur(){ return state.projects[state.cur]; }
+  function clone(o){ return JSON.parse(JSON.stringify(o)); }
+
+  var lastId = null, lastJSON = "", timer = null, ready = false;
+  var appList = [], appCurrent = null;                    // saved panels, for the dropdown
+
+  // ---- report edits (debounced); a new project id = a new panel ----------
+  function check(){
+    timer = null;
+    var p = cur(); if (!p || !ready) return;
+    var j = JSON.stringify(p);
+    if (p.id !== lastId){ lastId = p.id; lastJSON = j; send({type:"np:created", project: JSON.parse(j)}); return; }
+    if (j !== lastJSON){ lastJSON = j; send({type:"np:change", project: JSON.parse(j)}); }
+  }
+  function soon(){ if (timer) clearTimeout(timer); timer = setTimeout(check, 350); }
+  ["input","change","click","drop","keyup"].forEach(function(ev){ document.addEventListener(ev, soon, true); });
+  setInterval(check, 2000);
+
+  var baseRender = renderAll;
+  renderAll = function(){ baseRender(); soon(); };
+
+  // ---- the project dropdown shows the app's saved panels ------------------
+  renderProjects = function(){
+    var sel = document.getElementById("projPick"); if (!sel) return;
+    var p = cur();
+    var items = appList.slice();
+    if (!appCurrent && p) items.unshift({ id: "", name: (p.name || "Untitled product") + " (not saved yet)" });
+    sel.innerHTML = items.map(function(it){
+      var on = (it.id || "") === (appCurrent || "");
+      return '<option value="' + esc(it.id || "") + '"' + (on ? " selected" : "") + ">" + esc(it.name || "Untitled product") + "</option>";
+    }).join("");
+  };
+
+  // Route the builder's own controls through the app (capture phase = before the builder's handlers).
+  document.addEventListener("change", function(e){
+    if (e.target && e.target.id === "projPick"){
+      e.stopImmediatePropagation();
+      var id = e.target.value;
+      if (id && id !== appCurrent){ flush(); send({type:"np:switch", id: id}); }
+    }
+  }, true);
+  document.addEventListener("click", function(e){
+    var b = e.target && e.target.closest && e.target.closest("#btnNew, #btnDup, #btnReimport");
+    if (!b) return;
+    e.stopImmediatePropagation(); e.preventDefault();
+    flush();
+    if (b.id === "btnNew") send({type:"np:request", action:"new"});
+    else if (b.id === "btnDup") send({type:"np:request", action:"duplicate"});
+    else if (b.id === "btnReimport") startReimport();
+  }, true);
+
+  // "Import spec…" → "New from spec…"; add "Update from spec…" next to it.
+  (function(){
+    var imp = document.getElementById("btnImport");
+    if (!imp) return;
+    imp.textContent = "New from spec…";
+    var up = document.createElement("button");
+    up.type = "button"; up.id = "btnReimport"; up.className = imp.className;
+    up.textContent = "Update from spec…";
+    up.title = "Re-import a revised spec into this panel (keeps name, styling and text)";
+    imp.insertAdjacentElement("afterend", up);
+  })();
+
+  // ---- imports: new panel, or update the current one -----------------------
+  var importing = null, importStartId = null, reimportBase = null;
+  function startReimport(){
+    var p = cur(); if (!p) return;
+    reimportBase = clone(p); importing = "update"; importStartId = p.id;
+    openImport();
+  }
+  document.getElementById("btnImport").addEventListener("click", function(){
+    importing = "new"; importStartId = cur() ? cur().id : null;
+  }, true);
+
+  // Keep the panel's identity and look; take the formula side from the new spec.
+  function mergeImport(base, imported){
+    var m = clone(base);
+    ["form","serving","rows","flags","suggested","ref","coman"].forEach(function(k){
+      if (imported[k] !== undefined) m[k] = clone(imported[k]);
+    });
+    if (!m.client && imported.client) m.client = imported.client;
+    if (!m.name || m.name === "Untitled product") m.name = imported.name;
+    m.allergensReviewed = false;                          // new formula → review allergens again
+    m.id = base.id;
+    return m;
+  }
+
+  var creating = false;
+  var baseCreate = createFromImport;
+  createFromImport = function(){
+    var file = (typeof imp !== "undefined" && imp.file) ? imp.file : null;
+    var mode = importing || "new";
+    var base = reimportBase;                             // keep it: the builder closes the import screen mid-create
+    creating = true;
+    try { baseCreate(); } finally { creating = false; }  // builds the project the builder's usual way
+    reimportBase = null;
+    if (mode === "update" && base){
+      var merged = mergeImport(base, cur());
+      state.projects = [merged]; state.cur = 0;
+      baseRender();
+      lastId = merged.id; lastJSON = "";                 // force a save of the updated panel
+      check();
+    } else {
+      check();                                           // reports np:created for the new panel
+    }
+    if (file) send({type:"np:spec-file", file: file, mode: mode});
+    importing = null;
+  };
+
+  var baseClose = closeImport;
+  closeImport = function(){
+    baseClose();
+    if (creating || !importing) return;                  // closing because an import finished, not a cancel
+    var was = importing; importing = null; reimportBase = null;
+    setTimeout(function(){ var p = cur(); if (!p || p.id === importStartId) send({type:"np:import-cancelled", mode: was}); }, 0);
+  };
+
+  // ---- load / new / flush ---------------------------------------------------
+  function markReady(){ ready = true; document.documentElement.classList.add("np-ready"); }
+  function show(p){
+    state.projects = [p]; state.cur = 0; state.tab = "formula"; state.open = null;
+    lastId = p.id; lastJSON = JSON.stringify(p);
+    baseRender();
+  }
+  function flush(){
+    var a = document.activeElement;
+    if (a && a !== document.body && typeof a.blur === "function"){
+      a.dispatchEvent(new Event("change", { bubbles: true }));
+      a.blur();
+    }
+    if (timer){ clearTimeout(timer); timer = null; }
+    check();
+  }
+
+  window.addEventListener("message", function(e){
+    if (e.origin !== ORIGIN || e.source !== window.parent) return;
+    var m = e.data || {};
+    if (m.type === "np:flush"){ flush(); send({type:"np:flushed"}); return; }
+    if (m.type === "np:list"){ appList = m.items || []; appCurrent = m.current || null; renderProjects(); return; }
+    if (ready) flush();
+    if (m.type === "np:load" && m.project){ markReady(); appCurrent = m.id || appCurrent; show(m.project); }
+    else if (m.type === "np:new"){ markReady(); appCurrent = null; var p = blankProject(); show(p); lastId = null; check(); }
+    else if (m.type === "np:import"){ markReady(); importing = "new"; importStartId = cur() ? cur().id : null; lastId = importStartId; lastJSON = cur() ? JSON.stringify(cur()) : ""; openImport(); }
+    else if (m.type === "np:reimport"){ markReady(); startReimport(); }
+  });
+
+  send({type:"np:ready"});
+})();
+</script>
 </body></html>
