@@ -43,6 +43,14 @@ export function buildMondayDigest(d: any, now: Date) {
     const u = team.get(id) || {};
     return focus.has(String(u.email || "").toLowerCase()) || focus.has(String(u.name || "").toLowerCase());
   };
+  // Item status from the board's Status column (label, lowercased).
+  const statusOf = (item: any) => {
+    const vals = (item?.column_values || []).filter((cv: any) => cv && typeof cv.label !== "undefined");
+    const main = vals.find((cv: any) => /status/i.test(cv.column?.title || "")) || vals[0];
+    return String(main?.label || "").trim().toLowerCase();
+  };
+  const isDone = (item: any) => statusOf(item) === "done";
+  const isPendingReview = (item: any) => statusOf(item) === "pending review";
   const assignees = (item: any) => {
     const ids = new Set<string>();
     for (const cv of item?.column_values || []) for (const p of cv?.persons_and_teams || []) if (p.kind !== "team" && team.has(String(p.id))) ids.add(String(p.id));
@@ -72,7 +80,9 @@ export function buildMondayDigest(d: any, now: Date) {
       if (t < cutoff) continue;
       const answered = (itemPosts.get(u.item.id) || []).some((p) => p.t > t && p.by !== by && team.has(p.by));
       if (answered) continue;
-      const tagged = mentionedIds(post.body).filter((id) => team.has(id) && id !== by);
+      const allTagged = mentionedIds(post.body).filter((id) => id !== by);
+      if (team.has(by) && allTagged.some((id) => !team.has(id))) continue;   // tags a client → waiting on client only
+      const tagged = allTagged.filter((id) => team.has(id));
       const cat = team.has(by) ? "internal" : "client";
       if (tagged.length) { for (const who of tagged) add(u.item, who, t, cat, by); continue; }
       // No @mention: only client/guest messages need an answer → the item's assigned person(s).
@@ -98,11 +108,30 @@ export function buildMondayDigest(d: any, now: Date) {
       }
     }
   }
+  // Status overrides (messages win when a client wrote something newer):
+  //  • Done           → hide internal handoffs + waiting-on-client; a newer unanswered client message still shows (💬).
+  //  • Pending Review → waiting on client, unless a client wrote after us (then it's already 💬 on our side).
+  //  • In Queue / anything else → normal rules.
+  for (const [k, o] of open) if (o.cat === "internal" && isDone(o.item)) open.delete(k);
+  for (const [k, w] of waitClient) if (isDone(w.item)) waitClient.delete(k);
+  const seenItems = new Map<string, any>();
+  for (const u of d.updates || []) if (u?.item) seenItems.set(u.item.id, u.item);
+  for (const [id, item] of seenItems) {
+    if (!isPendingReview(item)) continue;
+    const clientWaitingOnUs = [...open.values()].some((o) => o.item.id === id && o.cat === "client");
+    if (clientWaitingOnUs) continue;
+    const alreadyWaiting = [...waitClient.values()].some((w) => w.item.id === id);
+    if (alreadyWaiting) continue;
+    const teamPosts = (itemPosts.get(id) || []).filter((p) => team.has(p.by) && p.t >= cutoff).sort((a, b) => b.t - a.t);
+    if (!teamPosts.length) continue;                              // no team activity in the last 14 days → ignore
+    const owners = assignees(item);
+    waitClient.set(id + "|pending", { item, who: "pending", asker: owners[0] || teamPosts[0].by, t: teamPosts[0].t });
+  }
   if (!open.size && !waitClient.size) return null;
 
   const first = (id: string) => id === "unassigned" ? "Unassigned" : String(team.get(id)?.name || "Unknown").split(" ")[0];
   const days = (t: number) => Math.floor((now.getTime() - t) / 864e5);
-  const clientName = (id: string) => String(guests.get(id)?.name || guests.get(id)?.email || "Client");
+  const clientName = (id: string) => id === "pending" ? "Client (Pending Review)" : String(guests.get(id)?.name || guests.get(id)?.email || "Client");
 
   // One row per item per category: everyone it's waiting on + the longest wait.
   const rowsFor = (cat: string) => {
@@ -135,6 +164,29 @@ export function buildMondayDigest(d: any, now: Date) {
     if (o.cat === "client") x.c++; else x.i++;
   }
   const total = (id: string) => perPerson.get(id)!.c + perPerson.get(id)!.i;
+  const itemsOf = new Map<string, Map<string, { item: any; t: number }>>();
+  for (const o of open.values()) {
+    const m = itemsOf.get(o.who) || itemsOf.set(o.who, new Map()).get(o.who)!;
+    const prev = m.get(o.item.id);
+    if (!prev || o.t < prev.t) m.set(o.item.id, { item: o.item, t: o.t });
+  }
+  // One row per person with a "⋯" menu: their 4 oldest items + "See all in Monday"
+  // (Slack allows 5 options max in an overflow menu; each option opens the link).
+  const personBlock = (id: string, icon: string) => {
+    const x = perPerson.get(id)!;
+    const split = [x.c ? `${x.c} 💬` : "", x.i ? `${x.i} 🛠️` : ""].filter(Boolean).join(" · ");
+    const list = [...(itemsOf.get(id)?.values() || [])].sort((a, b) => a.t - b.t).slice(0, 4);
+    const options = list.map((r, n) => {
+      const dd = days(r.t);
+      return { text: { type: "plain_text", text: clip(`${dd >= LATE_DAYS ? "🔴" : "🟡"} ${dd}d · ${r.item.name}`, 74), emoji: true }, value: `i${n}-${r.item.id}`.slice(0, 150), url: itemUrl(r.item) };
+    });
+    options.push({ text: { type: "plain_text", text: "See all in Monday →", emoji: true }, value: "all", url: slug ? `https://${slug}.monday.com` : "https://monday.com" });
+    return {
+      type: "section",
+      text: { type: "mrkdwn", text: `${icon} *${esc(first(id))}* — ${total(id)}  _(${split})_` },
+      accessory: { type: "overflow", action_id: `person-${id}`.slice(0, 255), options },
+    };
+  };
   const tally = (ids: string[]) => ids.sort((a, b) => total(b) - total(a)).map((id) => {
     const x = perPerson.get(id)!;
     const split = [x.c ? `${x.c} 💬` : "", x.i ? `${x.i} 🛠️` : ""].filter(Boolean).join(" · ");
@@ -154,7 +206,7 @@ export function buildMondayDigest(d: any, now: Date) {
   const cRows = [...cItems.values()].sort((a, b) => a.t - b.t);
   const cLine = (r: any) => `⌛ *${days(r.t)}d*   <${itemUrl(r.item)}|${esc(clip(r.item.name, 48))}>  ·  _${esc(clip(r.item.board?.name || "", 28))}_  ·  ${esc(r.whos.map(clientName).join(", "))}  _(asked by ${esc(r.askers.map(first).join(", "))})_`;
   const perClient = new Map<string, number>();
-  for (const w of waitClient.values()) perClient.set(w.who, (perClient.get(w.who) || 0) + 1);
+  for (const w of waitClient.values()) if (w.who !== "pending") perClient.set(w.who, (perClient.get(w.who) || 0) + 1);
   const clientTally = [...perClient.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([id, n]) => `${esc(clientName(id))} *${n}*`).join("  ·  ");
 
   const today = now.toLocaleDateString("en-US", { timeZone: TZ, weekday: "long", month: "short", day: "numeric" });
@@ -174,15 +226,14 @@ export function buildMondayDigest(d: any, now: Date) {
       { type: "section", text: { type: "mrkdwn", text: [`*⌛ WAITING ON CLIENT*  —  showing ${Math.min(10, cRows.length)} of ${cRows.length}`, ...cRows.slice(0, 10).map(cLine)].join("\n") } },
       { type: "divider" },
     ] : []),
-    { type: "section", text: { type: "mrkdwn", text: [
-      "*📊 BY PERSON*",
-      mineIds.length ? `🎯 *You three* —  ${tally(mineIds)}` : "🎯 *You three* —  nothing waiting 🎉",
-      teamIds.length ? `👥 *Team* —  ${tally(teamIds)}` : "",
-      clientTally ? `🤝 *Clients* —  ${clientTally}` : "",
-    ].filter(Boolean).join("\n") } },
+    { type: "section", text: { type: "mrkdwn", text: "*📊 BY PERSON*  —  tap ⋯ to see their oldest items" } },
+    ...mineIds.sort((a, b) => total(b) - total(a)).map((id) => personBlock(id, "🎯")),
+    ...teamIds.sort((a, b) => total(b) - total(a)).slice(0, 15).map((id) => personBlock(id, "👥")),
+    ...(mineIds.length ? [] : [{ type: "context", elements: [{ type: "mrkdwn", text: "🎯 You three — nothing waiting 🎉" }] }]),
+    ...(clientTally ? [{ type: "context", elements: [{ type: "mrkdwn", text: `🤝 *Clients* —  ${clientTally}` }] }] : []),
     { type: "divider" },
     { type: "actions", elements: [{ type: "button", text: { type: "plain_text", text: "Open Monday.com" }, url: slug ? `https://${slug}.monday.com` : "https://monday.com" }] },
-    { type: "context", elements: [{ type: "mrkdwn", text: `Clears once anyone on the team writes on the item (comment or new update). Reactions don't count. Untagged client messages count toward whoever is assigned. Waiting on client clears when anyone on the client side writes on the item. 🔴 = ${LATE_DAYS}+ days.` }] },
+    { type: "context", elements: [{ type: "mrkdwn", text: `Clears once anyone on the team writes on the item (comment or new update). Reactions don't count. Untagged client messages count toward whoever is assigned. Waiting on client clears when anyone on the client side writes on the item. Status: Done hides it, Pending Review = waiting on client — unless a client wrote something newer. 🔴 = ${LATE_DAYS}+ days.` }] },
   ];
   return { text: `<!channel> 🦄 ${clientRows.length} for clients, ${internalRows.length} internal, ${cRows.length} waiting on clients`, blocks };
 }
@@ -196,6 +247,7 @@ async function monday(query: string, token: string) {
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
+  if ((req.headers.get("content-type") || "").includes("application/x-www-form-urlencoded")) return new Response("", { status: 200 });
   if (req.headers.get("x-digest-secret") !== Deno.env.get("DIGEST_SECRET")) return json({ error: "Unauthorized" }, 401);
   const body = await req.json().catch(() => ({}));
   const token = Deno.env.get("MONDAY_API_TOKEN");
@@ -211,7 +263,7 @@ Deno.serve(async (req) => {
     for (let page = 1; page <= 30; page++) {
       const d = await monday(`query { updates(limit: 100, page: ${page}) {
         id body text_body created_at creator { id name }
-        item { id name board { id name } column_values(types: [people]) { ... on PeopleValue { persons_and_teams { id kind } } } }
+        item { id name board { id name } column_values(types: [people, status]) { column { title } ... on PeopleValue { persons_and_teams { id kind } } ... on StatusValue { label } } }
         replies { id body text_body created_at creator { id name } }
       } }`, token);
       const batch = d.updates || [];
