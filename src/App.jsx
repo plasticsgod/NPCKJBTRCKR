@@ -32,9 +32,19 @@ const KNOWN_INTERNAL = [
   "cc@nutramedia.co",
 ];
 
+// Hash routes: "#page" or, for links from Slack, "#page?task=ID" / "?job=ID" / "?plastic=ID".
+function parseHash() {
+  const raw = window.location.hash.replace("#", "");
+  const [p, q = ""] = raw.split("?");
+  return { page: PAGES.includes(p) ? p : "dashboard", params: new URLSearchParams(q) };
+}
 function getPageFromHash() {
-  const h = window.location.hash.replace("#", "");
-  return PAGES.includes(h) ? h : "dashboard";
+  return parseHash().page;
+}
+function getDeepLink() {
+  const { params } = parseHash();
+  const link = { task: params.get("task"), job: params.get("job"), plastic: params.get("plastic") };
+  return link.task || link.job || link.plastic ? link : null;
 }
 
 // Invite and password-reset emails land back here with a #type=invite (or
@@ -66,6 +76,7 @@ export default function App() {
   const [navOpen, setNavOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [focusTaskId, setFocusTaskId] = useState(null);
+  const [deepLink, setDeepLink] = useState(getDeepLink);   // item to open from a Slack link
   const [clientFocusQuoteId, setClientFocusQuoteId] = useState(null); // client: open this order in My Orders
 
   function setPage(p) {
@@ -75,10 +86,29 @@ export default function App() {
 
   // Keep page in sync if user presses browser back/forward
   useEffect(() => {
-    function onHashChange() { setPageState(getPageFromHash()); }
+    function onHashChange() { setPageState(getPageFromHash()); const dl = getDeepLink(); if (dl) setDeepLink(dl); }
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
+
+  // Open the exact task / order a Slack link points at, then tidy the URL.
+  useEffect(() => {
+    if (!deepLink) return;
+    const done = () => {
+      setDeepLink(null);
+      window.history.replaceState(null, "", "#" + getPageFromHash());
+    };
+    if (deepLink.task) { setFocusTaskId(deepLink.task); done(); return; }
+    if (deepLink.job) {
+      const j = jobs.find((x) => String(x.id) === deepLink.job);
+      if (j) { setEditing(j); done(); } else if (!loading) done();
+      return;
+    }
+    if (deepLink.plastic) {
+      const j = plasticJobs.find((x) => String(x.id) === deepLink.plastic);
+      if (j) { setEditingPlastic(j); done(); } else if (!loading && plasticJobs.length) done();
+    }
+  }, [deepLink, jobs, plasticJobs, loading]);
 
   // ⌘K / Ctrl+K opens global search from anywhere.
   useEffect(() => {

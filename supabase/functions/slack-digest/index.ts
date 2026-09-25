@@ -49,6 +49,15 @@ const money = (n: number) => "$" + Number(n || 0).toLocaleString("en-US", { mini
 // Pure: data in, Slack Block Kit message out. Returns null on a quiet day.
 export function buildDigest(d: any, today: string) {
   const weekEnd = addDays(today, 6);
+  const noon = Date.parse(today + "T12:00:00Z");
+  const daysSince = (iso: string) => Math.max(0, Math.floor((noon - Date.parse(iso)) / 864e5));
+  const STUCK_DAYS = 7;   // an order sitting this long in one status gets a 🔴
+
+  // Links that open the exact item in the app.
+  const taskUrl = (t: any) => `${APP_URL}/#projects?task=${t.id}`;
+  const jobUrl = (j: any) => `${APP_URL}/#work_orders?job=${j.id}`;
+  const plasticUrl = (j: any) => `${APP_URL}/#plastic_work_orders?plastic=${j.id}`;
+
   const open = (d.tasks || []).filter((t: any) => t.status !== "Done" && t.due_date);
   const overdue = open.filter((t: any) => t.due_date < today).sort((a: any, b: any) => a.due_date.localeCompare(b.due_date));
   const dueWeek = open.filter((t: any) => t.due_date >= today && t.due_date <= weekEnd).sort((a: any, b: any) => a.due_date.localeCompare(b.due_date));
@@ -66,18 +75,20 @@ export function buildDigest(d: any, today: string) {
   const quiet = !overdue.length && !dueWeek.length && !labelOpen.length && !plasticBoard.length && !waiting;
   if (quiet) return null;
 
-  const count = (arr: any[], s: string) => arr.filter((j) => j.status === s).length;
-  const statusLine = (label: string, arr: any[], statuses: [string, string][]) => {
-    const parts = statuses.map(([s, lab]) => [lab, count(arr, s)] as [string, number]).filter(([, n]) => n > 0).map(([lab, n]) => `${lab} *${n}*`);
-    return parts.length ? `*${label}*  ·  ${parts.join("  ·  ")}` : `*${label}*  ·  _nothing open_`;
-  };
-  const taskLine = (t: any, overdueStyle: boolean) =>
-    `• <${APP_URL}/#projects|${esc(t.title)}>${proj(t.project_id) ? `  _— ${esc(proj(t.project_id))}_` : ""}  ·  ${overdueStyle ? "due " + niceDate(t.due_date) : weekday(t.due_date)}${who(t) ? `  ·  ${esc(who(t))}` : ""}`;
   const cap = (lines: string[], max = 10) => lines.length > max ? [...lines.slice(0, max), `_…and ${lines.length - max} more in the app_`] : lines;
+  const inStatus = (j: any) => {
+    if (!j.status_changed_at) return "";
+    const n = daysSince(j.status_changed_at);
+    return n >= STUCK_DAYS ? `  ·  🔴 *${n}d*` : `  ·  ${n}d`;
+  };
+
+  // Tasks — oldest first, with how late they are.
+  const overdueLine = (t: any) => `🔴 *${daysSince(t.due_date + "T12:00:00Z")}d*   <${taskUrl(t)}|${esc(t.title)}>${proj(t.project_id) ? `  _— ${esc(proj(t.project_id))}_` : ""}  ·  due ${niceDate(t.due_date)}${who(t) ? `  ·  ${esc(who(t))}` : ""}`;
+  const weekLine = (t: any) => `🟡 *${weekday(t.due_date)}*   <${taskUrl(t)}|${esc(t.title)}>${proj(t.project_id) ? `  _— ${esc(proj(t.project_id))}_` : ""}${who(t) ? `  ·  ${esc(who(t))}` : ""}`;
 
   const blocks: any[] = [
     { type: "header", text: { type: "plain_text", text: "🐋 Good morning — here's what's due", emoji: true } },
-    { type: "context", elements: [{ type: "mrkdwn", text: `${new Date(today + "T12:00:00Z").toLocaleDateString("en-US", { timeZone: "UTC", weekday: "long", month: "short", day: "numeric" })}  ·  NutraPack daily digest` }] },
+    { type: "context", elements: [{ type: "mrkdwn", text: `<!channel>  ·  ${new Date(today + "T12:00:00Z").toLocaleDateString("en-US", { timeZone: "UTC", weekday: "long", month: "short", day: "numeric" })}  ·  NutraPack daily digest` }] },
     { type: "section", fields: [
       { type: "mrkdwn", text: `*${overdue.length}*\nOverdue` },
       { type: "mrkdwn", text: `*${dueWeek.length}*\nDue this week` },
@@ -90,13 +101,15 @@ export function buildDigest(d: any, today: string) {
     if (blocks[blocks.length - 1].type !== "divider") blocks.push({ type: "divider" });
     blocks.push({ type: "section", text: { type: "mrkdwn", text } });
   };
-  if (overdue.length) addSection(["🔴 *OVERDUE*", ...cap(overdue.map((t: any) => taskLine(t, true)))].join("\n"));
-  if (dueWeek.length) addSection(["🟡 *DUE THIS WEEK*", ...cap(dueWeek.map((t: any) => taskLine(t, false)))].join("\n"));
-  // Label work orders — each job listed under its status (line by line).
+  if (overdue.length) addSection([`🔴 *OVERDUE*  —  oldest first`, ...cap(overdue.map(overdueLine))].join("\n"));
+  if (dueWeek.length) addSection([`🟡 *DUE THIS WEEK*`, ...cap(dueWeek.map(weekLine))].join("\n"));
+
+  // Label work orders — each job under its status, with days in that status.
   const jobLine = (j: any) => {
     const bits = [j.brand, j.printing_facility, j.print_qty ? `${Number(j.print_qty).toLocaleString("en-US")} labels` : ""].filter(Boolean).map(esc);
-    return `• <${APP_URL}/#work_orders|${esc(j.job_title || "Untitled job")}>${bits.length ? "  ·  " + bits.join("  ·  ") : ""}`;
+    return `• <${jobUrl(j)}|${esc(j.job_title || "Untitled job")}>${bits.length ? "  ·  " + bits.join("  ·  ") : ""}${inStatus(j)}`;
   };
+  const byAge = (a: any, b: any) => String(a.status_changed_at || "").localeCompare(String(b.status_changed_at || ""));
   const LABEL_GROUPS: [string, string][] = [
     ["Not Submitted", "📝 Not submitted"],
     ["Waiting for proofs and approval", "🎨 Waiting on proofs"],
@@ -105,45 +118,90 @@ export function buildDigest(d: any, today: string) {
   ];
   const labelLines = [`🏭 *LABEL WORK ORDERS*  ·  <${APP_URL}/#work_orders|open>`];
   for (const [status, title] of LABEL_GROUPS) {
-    const list = labelOpen.filter((j: any) => j.status === status);
+    const list = labelOpen.filter((j: any) => j.status === status).sort(byAge);
     if (!list.length) continue;
     labelLines.push(`*${title}* (${list.length})`, ...cap(list.map(jobLine), 8));
   }
-  const shippedN = count(labelOpen, "Shipped");
+  const shippedN = labelOpen.filter((j: any) => j.status === "Shipped").length;
   if (shippedN) labelLines.push(`🚚 Shipped, not yet delivered: *${shippedN}*`);
   if (labelLines.length === 1) labelLines.push("_Nothing open_");
   addSection(labelLines.join("\n"));
 
-  // Plastics — status counts.
-  addSection([
-    `📦 *PLASTIC WORK ORDERS*  ·  <${APP_URL}/#plastic_work_orders|open>`,
-    statusLine("Plastics", plasticBoard, [["Submitted", "Submitted"], ["In Production", "In production"], ["Shipped", "Shipped"]]),
-  ].join("\n"));
+  // Plastics — line by line, same as labels.
+  const plasticLine = (j: any) => {
+    const qty = j.qty ? `${Number(j.qty).toLocaleString("en-US")} ${j.qty_unit || "units"}` : "";
+    const bits = [j.job_title && j.brand ? j.brand : "", qty].filter(Boolean).map(esc);
+    return `• <${plasticUrl(j)}|${esc(j.job_title || j.brand || "Untitled order")}>${bits.length ? "  ·  " + bits.join("  ·  ") : ""}${inStatus(j)}`;
+  };
+  const PLASTIC_GROUPS: [string, string][] = [
+    ["Submitted", "📝 Submitted"],
+    ["In Production", "🏗️ In production"],
+  ];
+  const plasticLines = [`📦 *PLASTIC WORK ORDERS*  ·  <${APP_URL}/#plastic_work_orders|open>`];
+  for (const [status, title] of PLASTIC_GROUPS) {
+    const list = plasticBoard.filter((j: any) => j.status === status).sort(byAge);
+    if (!list.length) continue;
+    plasticLines.push(`*${title}* (${list.length})`, ...cap(list.map(plasticLine), 8));
+  }
+  const pShipped = plasticBoard.filter((j: any) => j.status === "Shipped").length;
+  if (pShipped) plasticLines.push(`🚚 Shipped, not yet delivered: *${pShipped}*`);
+  if (plasticLines.length === 1) plasticLines.push("_Nothing open_");
+  addSection(plasticLines.join("\n"));
+
   if (waiting) {
     const lines = [
-      ...pendingOrders.map((j: any) => `• <${APP_URL}/#plastic_work_orders|${esc(j.brand || j.job_title || "Client order")}>  ·  client order awaiting your approval${j.revenue ? `  ·  ${money(j.revenue)}` : ""}`),
+      ...pendingOrders.map((j: any) => `• <${plasticUrl(j)}|${esc(j.brand || j.job_title || "Client order")}>  ·  client order awaiting your approval${j.revenue ? `  ·  ${money(j.revenue)}` : ""}`),
       ...sentQuotes.map((q: any) => `• <${APP_URL}/#quick_quote|${esc(q.quote_number)}${q.customer ? " — " + esc(q.customer) : ""}>  ·  quote sent, waiting on customer${q.total != null ? `  ·  ${money(q.total)}` : ""}`),
     ];
     addSection(["💬 *WAITING ON APPROVAL*", ...cap(lines)].join("\n"));
   }
+
+  // By person — each person's tasks behind a "⋯" menu (4 oldest + a link to all).
+  const people = new Map<string, any[]>();
+  for (const t of [...overdue, ...dueWeek]) {
+    const list: string[] = (t.owners && t.owners.length ? t.owners : t.owner ? [t.owner] : []);
+    for (const e of list) { const k = String(e || "").toLowerCase(); if (k) (people.get(k) || people.set(k, []).get(k)!).push(t); }
+  }
+  if (people.size) {
+    blocks.push({ type: "divider" });
+    blocks.push({ type: "section", text: { type: "mrkdwn", text: "*📊 BY PERSON*  —  tap ⋯ to see their tasks" } });
+    const sorted = [...people.entries()].sort((a, b) => b[1].length - a[1].length).slice(0, 15);
+    for (const [email, tasks] of sorted) {
+      const name = NAMES[email] || email.split("@")[0];
+      const od = tasks.filter((t: any) => t.due_date < today).length, wk = tasks.length - od;
+      const split = [od ? `${od} overdue` : "", wk ? `${wk} this week` : ""].filter(Boolean).join(" · ");
+      const options = tasks.slice(0, 4).map((t: any, n: number) => {
+        const label = t.due_date < today ? `🔴 ${daysSince(t.due_date + "T12:00:00Z")}d · ${t.title}` : `🟡 ${weekday(t.due_date)} · ${t.title}`;
+        return { text: { type: "plain_text", text: label.length > 74 ? label.slice(0, 73) + "…" : label, emoji: true }, value: `t${n}-${t.id}`.slice(0, 150), url: taskUrl(t) };
+      });
+      options.push({ text: { type: "plain_text", text: "Open Projects →", emoji: true }, value: "all", url: `${APP_URL}/#projects` });
+      blocks.push({
+        type: "section",
+        text: { type: "mrkdwn", text: `👤 *${esc(name)}* — ${tasks.length}  _(${split})_` },
+        accessory: { type: "overflow", action_id: `person-${email}`.slice(0, 255), options },
+      });
+    }
+  }
+
   blocks.push({ type: "divider" });
   blocks.push({ type: "actions", elements: [{ type: "button", text: { type: "plain_text", text: "Open NutraPack app" }, url: APP_URL }] });
-  blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: "Posted every weekday at 8 AM. Reply in a thread to discuss." }] });
+  blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: `Posted every weekday at 8 AM. Days on orders = time in current status (🔴 = ${STUCK_DAYS}+ days). Reply in a thread to discuss.` }] });
 
-  return { text: `NutraPack digest: ${overdue.length} overdue, ${dueWeek.length} due this week`, blocks };
+  return { text: `<!channel> NutraPack digest: ${overdue.length} overdue, ${dueWeek.length} due this week`, blocks: blocks.slice(0, 50) };
 }
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
+  if ((req.headers.get("content-type") || "").includes("application/x-www-form-urlencoded")) return new Response("", { status: 200 });
   if (req.headers.get("x-digest-secret") !== Deno.env.get("DIGEST_SECRET")) return json({ error: "Unauthorized" }, 401);
   const body = await req.json().catch(() => ({}));
 
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
   const [tasks, projects, jobs, plastic, quotes] = await Promise.all([
-    db.from("tasks").select("title,status,due_date,owner,owners,project_id").neq("status", "Done").not("due_date", "is", null),
+    db.from("tasks").select("id,title,status,due_date,owner,owners,project_id").neq("status", "Done").not("due_date", "is", null),
     db.from("projects").select("id,name"),
-    db.from("jobs").select("job_title,brand,status,printing_facility,print_qty").order("created_at", { ascending: true }),
-    db.from("plastic_jobs").select("status,approval,brand,job_title,revenue"),
+    db.from("jobs").select("id,job_title,brand,status,printing_facility,print_qty,status_changed_at").order("created_at", { ascending: true }),
+    db.from("plastic_jobs").select("id,status,approval,brand,job_title,revenue,qty,qty_unit,status_changed_at"),
     db.from("quick_quotes").select("quote_number,customer,status,total"),
   ]);
   const err = [tasks, projects, jobs, plastic].find((r) => r.error);
