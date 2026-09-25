@@ -21,6 +21,15 @@ const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { sta
 const esc = (s: string) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const clip = (s: string, n = 90) => { const t = String(s || "").replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n - 1) + "…" : t; };
 
+// A client message that says "approved" (and isn't a question or a "not approved")
+// needs no reply from us.
+export function isApproval(text: string): boolean {
+  const t = String(text || "").replace(/<[^>]+>/g, " ").toLowerCase();
+  if (!/\bapproved\b/.test(t)) return false;
+  if (/\b(not|un|isn'?t|wasn'?t|haven'?t|hasn'?t)\s*approved\b/.test(t)) return false;
+  return !t.includes("?");
+}
+
 // Monday stores mentions inside the HTML body: data-mention-type="User" data-mention-id="123"
 export function mentionedIds(html: string): string[] {
   const ids = new Set<string>();
@@ -59,11 +68,14 @@ export function buildMondayDigest(d: any, now: Date) {
 
   // Every post on each item (updates + comments). A later written post by a
   // teammate other than the asker = answered. Reactions are never read.
-  const itemPosts = new Map<string, { t: number; by: string }[]>();
+  const itemPosts = new Map<string, { t: number; by: string; approval?: boolean }[]>();
   for (const u of d.updates || []) {
     if (!u?.item) continue;
     const list = itemPosts.get(u.item.id) || itemPosts.set(u.item.id, []).get(u.item.id)!;
-    for (const p of [u, ...(u.replies || [])]) list.push({ t: new Date(p.created_at).getTime(), by: String(p.creator?.id || "") });
+    for (const p of [u, ...(u.replies || [])]) {
+      const by = String(p.creator?.id || "");
+      list.push({ t: new Date(p.created_at).getTime(), by, approval: !team.has(by) && isApproval(p.text_body || p.body) });
+    }
   }
 
   // Open (item, person) pairs — keep the oldest wait per pair.
@@ -78,8 +90,13 @@ export function buildMondayDigest(d: any, now: Date) {
     for (const post of [u, ...(u.replies || [])]) {
       const t = new Date(post.created_at).getTime(), by = String(post.creator?.id || "");
       if (t < cutoff) continue;
-      const answered = (itemPosts.get(u.item.id) || []).some((p) => p.t > t && p.by !== by && team.has(p.by));
+      const posts = itemPosts.get(u.item.id) || [];
+      const answered = posts.some((p) => p.t > t && p.by !== by && team.has(p.by));
       if (answered) continue;
+      if (!team.has(by)) {
+        if (isApproval(post.text_body || post.body)) continue;                     // client said "approved" → nothing owed
+        if (posts.some((p) => p.t > t && p.approval)) continue;                     // client approved later → earlier ask resolved
+      }
       const allTagged = mentionedIds(post.body).filter((id) => id !== by);
       if (team.has(by) && allTagged.some((id) => !team.has(id))) continue;   // tags a client → waiting on client only
       const tagged = allTagged.filter((id) => team.has(id));
@@ -233,7 +250,7 @@ export function buildMondayDigest(d: any, now: Date) {
     ...(clientTally ? [{ type: "context", elements: [{ type: "mrkdwn", text: `🤝 *Clients* —  ${clientTally}` }] }] : []),
     { type: "divider" },
     { type: "actions", elements: [{ type: "button", text: { type: "plain_text", text: "Open Monday.com" }, url: slug ? `https://${slug}.monday.com` : "https://monday.com" }] },
-    { type: "context", elements: [{ type: "mrkdwn", text: `Clears once anyone on the team writes on the item (comment or new update). Reactions don't count. Untagged client messages count toward whoever is assigned. Waiting on client clears when anyone on the client side writes on the item. Status: Done hides it, Pending Review = waiting on client — unless a client wrote something newer. 🔴 = ${LATE_DAYS}+ days.` }] },
+    { type: "context", elements: [{ type: "mrkdwn", text: `Clears once anyone on the team writes on the item (comment or new update). Reactions don't count. Untagged client messages count toward whoever is assigned. Waiting on client clears when anyone on the client side writes on the item. Status: Done hides it, Pending Review = waiting on client — unless a client wrote something newer. A client \"Approved\" (not a question) needs no reply. 🔴 = ${LATE_DAYS}+ days.` }] },
   ];
   return { text: `<!channel> 🦄 ${clientRows.length} for clients, ${internalRows.length} internal, ${cRows.length} waiting on clients`, blocks };
 }
