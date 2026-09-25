@@ -136,6 +136,21 @@ async function uploadToThread(channel: string, thread_ts: string, files: { name:
   if (!done.ok) throw new Error(`files.completeUploadExternal: ${done.error}`);
 }
 
+// Slack file URLs can redirect between Slack hosts; fetch() drops the Authorization
+// header on cross-host redirects, so follow them by hand and keep it for Slack hosts only.
+async function downloadSlackFile(url: string) {
+  let res: Response = new Response(null, { status: 599 });
+  for (let hop = 0; hop < 5; hop++) {
+    const host = new URL(url).host;
+    const slackHost = /(^|\.)slack(-edge)?\.com$/.test(host) || /(^|\.)slack-files\.com$/.test(host);
+    res = await fetch(url, { headers: slackHost ? { Authorization: `Bearer ${BOT_TOKEN}` } : {}, redirect: "manual" });
+    const loc = res.headers.get("location");
+    if (res.status >= 300 && res.status < 400 && loc) { await res.body?.cancel(); url = new URL(loc, url).toString(); continue; }
+    break;
+  }
+  return { res, bytes: new Uint8Array(await res.arrayBuffer()), finalUrl: url };
+}
+
 // ---------------------------------------------------------------------------
 async function claimEvent(eventId: string) {        // Slack retries deliveries; handle each event once
   if (!eventId) return true;
@@ -148,6 +163,9 @@ async function claimEvent(eventId: string) {        // Slack retries deliveries;
   console.error("[slack-panels] event log:", error.message);
   return true;                                      // table problem: better to answer than to drop
 }
+
+/** How a file went: ✅ "ok" (panel made, nothing blocking) · ⚠️ "questions" (blocking items) · ⚠️ "failed" (couldn't read). */
+type Outcome = "ok" | "questions" | "failed";
 
 async function handleEvent(body: any) {
   const ev = body.event;
@@ -164,14 +182,22 @@ async function handleEvent(body: any) {
   const inThread = !!ev.thread_ts && ev.thread_ts !== ev.ts;
   await slack("reactions.add", { channel: ev.channel, timestamp: ev.ts, name: "eyes" });
   const who = await whoIs(ev.user);
+  const outcomes: Outcome[] = [];
   try {
-    for (const f of ev.files) await handleFile(ev.channel, root, inThread, f, who);
+    for (const f of ev.files) {
+      try { outcomes.push(await handleFile(ev.channel, root, inThread, f, who)); }
+      catch (e) { console.error("[slack-panels] file failed:", e); outcomes.push("failed"); }
+    }
   } finally {
     await slack("reactions.remove", { channel: ev.channel, timestamp: ev.ts, name: "eyes" });
+    // ✅ panel made, nothing blocking · ⚠️ blocking questions for the co-man, or a file it couldn't read
+    const done = outcomes.length && outcomes.every((o) => o === "ok");
+    await slack("reactions.add", { channel: ev.channel, timestamp: ev.ts, name: done ? "white_check_mark" : "warning" });
   }
 }
 
-async function handleFile(channel: string, root: string, inThread: boolean, file: any, who: string) {
+async function handleFile(channel: string, root: string, inThread: boolean, file: any, who: string): Promise<Outcome> {
+  const fail = async (text: string): Promise<Outcome> => { await reply(channel, root, text); return "failed"; };
   if (!(file.url_private_download || file.url_private) || file.file_access === "check_file_info") {
     const j = await slack("files.info", { file: file.id });
     if (j.ok) file = j.file;
@@ -182,25 +208,24 @@ async function handleFile(channel: string, root: string, inThread: boolean, file
   const builder = `<${panelLink()}|Panel Builder>`;
 
   if (mime.startsWith("image/") || ["heic", "jpg", "jpeg", "png", "gif", "webp"].includes(type)) {
-    return reply(channel, root, `I can't read photos of a spec. Post the co-man's PDF here, or build the panel in ${builder}.`);
+    return fail( `I can't read photos of a spec. Post the co-man's PDF here, or build the panel in ${builder}.`);
   }
   if (["xlsx", "xls", "xlsm", "csv"].includes(type)) {
-    return reply(channel, root, `I can't read Excel specs yet. Use *New from spec…* in ${builder} — it maps the columns for you.`);
+    return fail( `I can't read Excel specs yet. Use *New from spec…* in ${builder} — it maps the columns for you.`);
   }
   if (!(type === "pdf" || mime === "application/pdf" || /\.pdf$/i.test(name))) {
-    return reply(channel, root, `I couldn't read *${escSlack(name)}*. I read co-man spec PDFs (Veritacor, ACB, or any PDF with an ingredient table). You can also start in ${builder}.`);
+    return fail( `I couldn't read *${escSlack(name)}*. I read co-man spec PDFs (Veritacor, ACB, or any PDF with an ingredient table). You can also start in ${builder}.`);
   }
   if ((file.size ?? 0) > MAX_BYTES) {
-    return reply(channel, root, `*${escSlack(name)}* is over 20 MB — too big for me. Try *New from spec…* in ${builder}.`);
+    return fail( `*${escSlack(name)}* is over 20 MB — too big for me. Try *New from spec…* in ${builder}.`);
   }
 
   try {
     // 1. download (bot token + files:read)
-    const res = await fetch(file.url_private_download || file.url_private, { headers: { Authorization: `Bearer ${BOT_TOKEN}` } });
-    const bytes = new Uint8Array(await res.arrayBuffer());
+    const { res, bytes, finalUrl } = await downloadSlackFile(file.url_private_download || file.url_private);
     if (!res.ok || new TextDecoder().decode(bytes.slice(0, 5)) !== "%PDF-") {
-      console.error("[slack-panels] download", res.status, res.headers.get("content-type"));
-      return reply(channel, root, `I couldn't download *${escSlack(name)}* from Slack. (Check that the NutraPack app has the \`files:read\` scope.)`);
+      console.error("[slack-panels] download", res.status, res.headers.get("content-type"), new URL(finalUrl).host, `${bytes.length} bytes`);
+      return fail(`I couldn't download *${escSlack(name)}* from Slack. (Check that the NutraPack app has the \`files:read\` scope and that SLACK_BOT_TOKEN is the token from after the last reinstall.)`);
     }
 
     // 2. read it with the builder's import
@@ -281,14 +306,15 @@ async function handleFile(channel: string, root: string, inThread: boolean, file
       { name: `${out.fileBase}_SFP.pdf`, data: out.pdf, title: `${fields.name} — Supplement Facts (draft PDF)` },
       { name: `${out.fileBase}_SFP.svg`, data: new TextEncoder().encode(out.svg), title: `${fields.name} — Supplement Facts (draft SVG)` },
     ], lines.join("\n"));
+    return c.block > 0 ? "questions" : "ok";
   } catch (e) {
     if (e instanceof SpecError) {
       const why = e.code === "no-text" ? "it has no text layer (it looks like a scan)"
         : e.code === "no-rows" ? "I opened it but didn't find an ingredient table"
         : "the PDF wouldn't open";
-      return reply(channel, root, `I couldn't read *${escSlack(name)}*: ${why}. You can build it in ${builder} with *New from spec…* or by hand.`);
+      return fail( `I couldn't read *${escSlack(name)}*: ${why}. You can build it in ${builder} with *New from spec…* or by hand.`);
     }
     console.error("[slack-panels] failed on", name, e);
-    return reply(channel, root, `Something went wrong with *${escSlack(name)}*. Try *New from spec…* in ${builder}.`);
+    return fail( `Something went wrong with *${escSlack(name)}*. Try *New from spec…* in ${builder}.`);
   }
 }
