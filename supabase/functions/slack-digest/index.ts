@@ -86,8 +86,12 @@ export function buildDigest(d: any, today: string) {
     ] },
     { type: "divider" },
   ];
-  if (overdue.length) blocks.push({ type: "section", text: { type: "mrkdwn", text: ["🔴 *Overdue*", ...cap(overdue.map((t: any) => taskLine(t, true)))].join("\n") } });
-  if (dueWeek.length) blocks.push({ type: "section", text: { type: "mrkdwn", text: ["🟡 *Due this week*", ...cap(dueWeek.map((t: any) => taskLine(t, false)))].join("\n") } });
+  const addSection = (text: string) => {
+    if (blocks[blocks.length - 1].type !== "divider") blocks.push({ type: "divider" });
+    blocks.push({ type: "section", text: { type: "mrkdwn", text } });
+  };
+  if (overdue.length) addSection(["🔴 *OVERDUE*", ...cap(overdue.map((t: any) => taskLine(t, true)))].join("\n"));
+  if (dueWeek.length) addSection(["🟡 *DUE THIS WEEK*", ...cap(dueWeek.map((t: any) => taskLine(t, false)))].join("\n"));
   // Label work orders — each job listed under its status (line by line).
   const jobLine = (j: any) => {
     const bits = [j.brand, j.printing_facility, j.print_qty ? `${Number(j.print_qty).toLocaleString("en-US")} labels` : ""].filter(Boolean).map(esc);
@@ -99,7 +103,7 @@ export function buildDigest(d: any, today: string) {
     ["In Queue", "⏳ In queue"],
     ["Printing", "🖨️ Printing"],
   ];
-  const labelLines = [`🏭 *Label work orders*  ·  <${APP_URL}/#work_orders|open>`];
+  const labelLines = [`🏭 *LABEL WORK ORDERS*  ·  <${APP_URL}/#work_orders|open>`];
   for (const [status, title] of LABEL_GROUPS) {
     const list = labelOpen.filter((j: any) => j.status === status);
     if (!list.length) continue;
@@ -108,20 +112,21 @@ export function buildDigest(d: any, today: string) {
   const shippedN = count(labelOpen, "Shipped");
   if (shippedN) labelLines.push(`🚚 Shipped, not yet delivered: *${shippedN}*`);
   if (labelLines.length === 1) labelLines.push("_Nothing open_");
-  blocks.push({ type: "section", text: { type: "mrkdwn", text: labelLines.join("\n") } });
+  addSection(labelLines.join("\n"));
 
   // Plastics — status counts.
-  blocks.push({ type: "section", text: { type: "mrkdwn", text: [
-    `📦 *Plastics work orders*  ·  <${APP_URL}/#plastic_work_orders|open>`,
+  addSection([
+    `📦 *PLASTIC WORK ORDERS*  ·  <${APP_URL}/#plastic_work_orders|open>`,
     statusLine("Plastics", plasticBoard, [["Submitted", "Submitted"], ["In Production", "In production"], ["Shipped", "Shipped"]]),
-  ].join("\n") } });
+  ].join("\n"));
   if (waiting) {
     const lines = [
       ...pendingOrders.map((j: any) => `• <${APP_URL}/#plastic_work_orders|${esc(j.brand || j.job_title || "Client order")}>  ·  client order awaiting your approval${j.revenue ? `  ·  ${money(j.revenue)}` : ""}`),
       ...sentQuotes.map((q: any) => `• <${APP_URL}/#quick_quote|${esc(q.quote_number)}${q.customer ? " — " + esc(q.customer) : ""}>  ·  quote sent, waiting on customer${q.total != null ? `  ·  ${money(q.total)}` : ""}`),
     ];
-    blocks.push({ type: "section", text: { type: "mrkdwn", text: ["💬 *Waiting on approval*", ...cap(lines)].join("\n") } });
+    addSection(["💬 *WAITING ON APPROVAL*", ...cap(lines)].join("\n"));
   }
+  blocks.push({ type: "divider" });
   blocks.push({ type: "actions", elements: [{ type: "button", text: { type: "plain_text", text: "Open NutraPack app" }, url: APP_URL }] });
   blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: "Posted every weekday at 8 AM. Reply in a thread to discuss." }] });
 
