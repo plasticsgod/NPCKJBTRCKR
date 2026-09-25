@@ -12,6 +12,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { importSpec, mergeSpec, renderPanel, diffRows, SpecError } from "../_shared/panel-convert.js";
 import { loadPdfjs, loadFonts } from "../_shared/panel-runtime.ts";
+import { panelQuestions } from "../_shared/panel-questions.js";
 
 const BOT_TOKEN = Deno.env.get("SLACK_BOT_TOKEN") ?? "";
 const SIGNING_SECRET = Deno.env.get("SLACK_SIGNING_SECRET") ?? "";
@@ -279,18 +280,19 @@ async function handleFile(channel: string, root: string, inThread: boolean, file
     const { error: saveErr } = await db.from("panel_projects").update(target ? { ...fields, files: nextFiles } : { files: nextFiles }).eq("id", id);
     if (saveErr) throw saveErr;
 
-    // 5. reply in the thread: PDF + SVG + summary
+    // 5. reply in the thread: summary + questions first (so they arrive even if an upload fails), then the files
     const c = out.counts;
+    const who2 = fields.coman || "the co-man";
+    const { questions, beforePrint } = panelQuestions(project, out.flags);
     const lines = [
       `*${escSlack(fields.name)}*${fields.customer ? ` · ${escSlack(fields.customer)}` : ""}${fields.coman ? ` · ${escSlack(fields.coman)}` : ""} — ${target ? "updated from the revised spec" : "new panel"}`,
       `*Draft* · ${c.block} blocking · ${plural(c.warn, "warning")} — review before print`,
     ];
-    const blocking = out.flags.filter((f: any) => f.sev === "block");
-    if (blocking.length) {
-      lines.push("", "*Blocking*");
-      blocking.slice(0, 6).forEach((f: any) => lines.push(`• ${escSlack(f.msg)}${f.det ? ` — ${escSlack(f.det)}` : ""}`));
-      if (blocking.length > 6) lines.push(`• …and ${blocking.length - 6} more`);
+    if (questions.length) {
+      lines.push("", `*Questions for ${escSlack(who2)}*`);
+      questions.forEach((q, i) => lines.push(`${i + 1}. ${q.block ? ":octagonal_sign: " : ""}${escSlack(q.text)}`));
     }
+    if (beforePrint.length) lines.push("", `*Before print (NutraPack)*: ${beforePrint.map(escSlack).join(" · ")}`);
     if (target) {
       const changes = diffRows(before, project);
       lines.push("", "*Changes from the previous spec*");
@@ -301,12 +303,18 @@ async function handleFile(channel: string, root: string, inThread: boolean, file
     if (imp.template === "generic") lines.push("", "_Read with the generic table reader — check every row against the spec._");
     lines.push("", `<${panelLink(id)}|Open in NutraPack>`);
     lines.push(`_Read as ${escSlack(imp.templateLabel)} · ${plural(imp.rowCount, "row")} · ${escSlack(out.metrics)}_`);
+    await reply(channel, root, lines.join("\n"));
 
-    await uploadToThread(channel, root, [
-      { name: `${out.fileBase}_SFP.pdf`, data: out.pdf, title: `${fields.name} — Supplement Facts (draft PDF)` },
-      { name: `${out.fileBase}_SFP.svg`, data: new TextEncoder().encode(out.svg), title: `${fields.name} — Supplement Facts (draft SVG)` },
-    ], lines.join("\n"));
-    return c.block > 0 ? "questions" : "ok";
+    try {
+      await uploadToThread(channel, root, [
+        { name: `${out.fileBase}_SFP.pdf`, data: out.pdf, title: `${fields.name} — Supplement Facts (draft PDF)` },
+        { name: `${out.fileBase}_SFP.svg`, data: new TextEncoder().encode(out.svg), title: `${fields.name} — Supplement Facts (draft SVG)` },
+      ], `Draft panel files for *${escSlack(fields.name)}* — not for print until the questions above are answered.`);
+    } catch (e) {
+      console.error("[slack-panels] file upload:", e);
+      await reply(channel, root, `I couldn't attach the PDF and SVG (check the \`files:write\` scope). The panel is saved — download it from <${panelLink(id)}|NutraPack>.`);
+    }
+    return c.block > 0 || questions.length ? "questions" : "ok";
   } catch (e) {
     if (e instanceof SpecError) {
       const why = e.code === "no-text" ? "it has no text layer (it looks like a scan)"
