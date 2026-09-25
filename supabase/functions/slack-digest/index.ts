@@ -88,9 +88,31 @@ export function buildDigest(d: any, today: string) {
   ];
   if (overdue.length) blocks.push({ type: "section", text: { type: "mrkdwn", text: ["🔴 *Overdue*", ...cap(overdue.map((t: any) => taskLine(t, true)))].join("\n") } });
   if (dueWeek.length) blocks.push({ type: "section", text: { type: "mrkdwn", text: ["🟡 *Due this week*", ...cap(dueWeek.map((t: any) => taskLine(t, false)))].join("\n") } });
+  // Label work orders — each job listed under its status (line by line).
+  const jobLine = (j: any) => {
+    const bits = [j.brand, j.printing_facility, j.print_qty ? `${Number(j.print_qty).toLocaleString("en-US")} labels` : ""].filter(Boolean).map(esc);
+    return `• <${APP_URL}/#work_orders|${esc(j.job_title || "Untitled job")}>${bits.length ? "  ·  " + bits.join("  ·  ") : ""}`;
+  };
+  const LABEL_GROUPS: [string, string][] = [
+    ["Not Submitted", "📝 Not submitted"],
+    ["Waiting for proofs and approval", "🎨 Waiting on proofs"],
+    ["In Queue", "⏳ In queue"],
+    ["Printing", "🖨️ Printing"],
+  ];
+  const labelLines = [`🏭 *Label work orders*  ·  <${APP_URL}/#work_orders|open>`];
+  for (const [status, title] of LABEL_GROUPS) {
+    const list = labelOpen.filter((j: any) => j.status === status);
+    if (!list.length) continue;
+    labelLines.push(`*${title}* (${list.length})`, ...cap(list.map(jobLine), 8));
+  }
+  const shippedN = count(labelOpen, "Shipped");
+  if (shippedN) labelLines.push(`🚚 Shipped, not yet delivered: *${shippedN}*`);
+  if (labelLines.length === 1) labelLines.push("_Nothing open_");
+  blocks.push({ type: "section", text: { type: "mrkdwn", text: labelLines.join("\n") } });
+
+  // Plastics — status counts.
   blocks.push({ type: "section", text: { type: "mrkdwn", text: [
-    `🏭 *Work orders*  ·  <${APP_URL}/#work_orders|open>`,
-    statusLine("Labels", labelOpen, [["Not Submitted", "Not submitted"], ["Waiting for proofs and approval", "Waiting on proofs"], ["In Queue", "In queue"], ["Printing", "Printing"], ["Shipped", "Shipped"]]),
+    `📦 *Plastics work orders*  ·  <${APP_URL}/#plastic_work_orders|open>`,
     statusLine("Plastics", plasticBoard, [["Submitted", "Submitted"], ["In Production", "In production"], ["Shipped", "Shipped"]]),
   ].join("\n") } });
   if (waiting) {
@@ -115,7 +137,7 @@ Deno.serve(async (req) => {
   const [tasks, projects, jobs, plastic, quotes] = await Promise.all([
     db.from("tasks").select("title,status,due_date,owner,owners,project_id").neq("status", "Done").not("due_date", "is", null),
     db.from("projects").select("id,name"),
-    db.from("jobs").select("status"),
+    db.from("jobs").select("job_title,brand,status,printing_facility,print_qty").order("created_at", { ascending: true }),
     db.from("plastic_jobs").select("status,approval,brand,job_title,revenue"),
     db.from("quick_quotes").select("quote_number,customer,status,total"),
   ]);
