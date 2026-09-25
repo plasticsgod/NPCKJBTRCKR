@@ -86,6 +86,15 @@ export default function App() {
     window.location.hash = p;
   }
 
+  // The address bar always shows the real page (e.g. an old "#supplement_facts"
+  // becomes "#panel_builder"). Leaves login/invite links and item links alone.
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (/access_token|refresh_token|type=|error=/.test(hash)) return;
+    const [raw] = hash.replace("#", "").split("?");
+    if (raw !== page) window.history.replaceState(null, "", "#" + page);
+  }, [page]);
+
   // Keep page in sync if user presses browser back/forward
   useEffect(() => {
     function onHashChange() { setPageState(getPageFromHash()); const dl = getDeepLink(); if (dl) setDeepLink(dl); }

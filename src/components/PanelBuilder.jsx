@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "../supabaseClient";
 import { toast } from "./Toaster";
+import Avatar from "../projects/Avatar";
+import { displayName } from "../projects/userMap";
 
 // Panel Builder — saved panels (Supplement Facts today, Nutrition Facts later).
 // The builder is a self-contained tool (/public/tools/panel-builder.html) shown in
@@ -13,8 +15,6 @@ const FRAME_SRC = "/tools/panel-builder.html";
 const BUCKET = "panel-files";
 const AUTOSAVE_MS = 1200;
 
-const firstName = (email) => (email ? String(email).split("@")[0].split(/[._]/)[0] : "");
-const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "");
 function when(iso) {
   if (!iso) return "—";
   const d = new Date(iso), mins = Math.round((Date.now() - d.getTime()) / 60000);
@@ -24,6 +24,16 @@ function when(iso) {
   return d.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
 }
 const newProjectId = () => Math.random().toString(36).slice(2, 9);
+
+// Address bar: "#panel_builder" for the list, "#panel_builder?panel=<id>" for an open panel.
+function setPanelUrl(id) {
+  const want = "#panel_builder" + (id ? `?panel=${id}` : "");
+  if (window.location.hash !== want) window.history.replaceState(null, "", want);
+}
+function panelFromUrl() {
+  const [page, q = ""] = window.location.hash.replace("#", "").split("?");
+  return page === "panel_builder" ? new URLSearchParams(q).get("panel") : null;
+}
 const safeName = (n) => String(n || "spec").replace(/[^\w.\-]+/g, "_").slice(-120);
 
 export default function PanelBuilder({ userEmail }) {
@@ -60,6 +70,10 @@ export default function PanelBuilder({ userEmail }) {
     setLoading(false);
   }, []);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const id = panelFromUrl();
+    if (id) openPanel({ id });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep the builder's project dropdown in sync with the saved list.
   const sendList = useCallback((list) => {
@@ -89,7 +103,7 @@ export default function PanelBuilder({ userEmail }) {
         .insert({ ...fields, panel_type: "supplement", created_by: userEmail })
         .select("id").single();
       error = res.error;
-      if (!error && res.data) { rowIdRef.current = res.data.id; setHasRow(true); }
+      if (!error && res.data) { rowIdRef.current = res.data.id; setHasRow(true); setPanelUrl(res.data.id); }
     }
     if (error) {
       console.error("[panel save]", error);
@@ -158,7 +172,7 @@ export default function PanelBuilder({ userEmail }) {
     return data;
   }
   function showRow(row) {
-    rowIdRef.current = row.id; pendingRef.current = null; setHasRow(true);
+    rowIdRef.current = row.id; pendingRef.current = null; setHasRow(true); setPanelUrl(row.id);
     setTitle(row.name); setFiles(row.files || []); setSavedAt(row.updated_at); setStatus("saved"); setFilesOpen(false);
     modeRef.current = { kind: "load", project: row.data, id: row.id };
   }
@@ -176,7 +190,7 @@ export default function PanelBuilder({ userEmail }) {
     sendList();
   }
   function startBlank(kind) {
-    rowIdRef.current = null; pendingRef.current = null; setHasRow(false);
+    rowIdRef.current = null; pendingRef.current = null; setHasRow(false); setPanelUrl(null);
     setTitle(""); setFiles([]); setSavedAt(null); setStatus("idle"); setFilesOpen(false);
     modeRef.current = { kind };
   }
@@ -218,12 +232,13 @@ export default function PanelBuilder({ userEmail }) {
     const { error } = await supabase.from("panel_projects").delete().eq("id", r.id);
     if (error) { toast.error("Couldn't delete the panel."); return; }
     toast.success("Panel deleted.");
-    if (rowIdRef.current === r.id) { rowIdRef.current = null; pendingRef.current = null; setView("list"); }
+    if (rowIdRef.current === r.id) { rowIdRef.current = null; pendingRef.current = null; setPanelUrl(null); setView("list"); }
     load();
   }
 
   async function backToList() {
     await flushAndSave();
+    setPanelUrl(null);
     setView("list");
     load();
   }
@@ -264,7 +279,7 @@ export default function PanelBuilder({ userEmail }) {
         if (m.action === "new") newInPlace();
         else if (m.action === "duplicate") duplicateInPlace();
       } else if (m.type === "np:import-cancelled") {
-        if (!rowIdRef.current && m.mode !== "update") { setView("list"); load(); }
+        if (!rowIdRef.current && m.mode !== "update") { setPanelUrl(null); setView("list"); load(); }
       } else if (m.type === "np:flushed") {
         flushWaiter.current?.();
       }
@@ -334,7 +349,12 @@ export default function PanelBuilder({ userEmail }) {
                       <td>{r.customer || "—"}</td>
                       <td>{r.coman || "—"}</td>
                       <td className="num">{(r.files || []).length || "—"}</td>
-                      <td>{when(r.updated_at)}{r.updated_by ? ` · ${cap(firstName(r.updated_by))}` : ""}</td>
+                      <td>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
+                          {r.updated_by ? <Avatar email={r.updated_by} size="sm" /> : null}
+                          <span>{r.updated_by ? `${displayName(r.updated_by)} · ` : ""}{when(r.updated_at)}</span>
+                        </span>
+                      </td>
                       <td className="rfq-row-del" onClick={(e) => e.stopPropagation()} style={{ whiteSpace: "nowrap" }}>
                         <button type="button" className="rfq-del-btn" style={{ color: "var(--ink-2)" }} onClick={() => duplicateRow(r.id, false)}>Duplicate</button>
                         <button type="button" className="rfq-del-btn" onClick={() => setConfirmDel(r)}>Delete</button>
@@ -391,7 +411,7 @@ export default function PanelBuilder({ userEmail }) {
                       {f.name}{i === 0 ? <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 600, color: "var(--accent)" }}>LATEST</span> : null}
                     </span>
                     <span style={{ fontSize: 12, color: "var(--ink-3)" }}>
-                      {f.kind === "update" ? "Updated panel" : "Created panel"} · {when(f.uploaded_at)}{f.uploaded_by ? ` · ${cap(firstName(f.uploaded_by))}` : ""}
+                      {f.kind === "update" ? "Updated panel" : "Created panel"} · {when(f.uploaded_at)}{f.uploaded_by ? ` · ${displayName(f.uploaded_by)}` : ""}
                     </span>
                   </button>
                 ))}
