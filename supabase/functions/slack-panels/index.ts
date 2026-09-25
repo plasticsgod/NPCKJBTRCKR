@@ -33,17 +33,30 @@ const escSlack = (s: unknown) => String(s ?? "").replace(/&/g, "&amp;").replace(
 // ---------------------------------------------------------------------------
 // HTTP entry: verify, answer fast, work in the background.
 Deno.serve(async (req) => {
-  if (req.method !== "POST") return new Response("ok");
+  // Open the function URL in a browser to see whether it's deployed and configured.
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({
+      ok: true, function: "slack-panels",
+      signing_secret_set: !!SIGNING_SECRET, bot_token_set: BOT_TOKEN.startsWith("xoxb-"),
+      channel: PANEL_CHANNEL,
+    }, null, 2), { headers: { "Content-Type": "application/json" } });
+  }
   const raw = await req.text();
-  if (!(await verifySlack(req, raw))) return new Response("invalid signature", { status: 401 });
+  let body: any = null;
+  try { body = JSON.parse(raw); } catch { /* not JSON */ }
 
-  let body: any;
-  try { body = JSON.parse(raw); } catch { return new Response("ok"); }   // not an Events API payload
-
-  if (body.type === "url_verification") {
+  // Slack's Request URL check. Echoing the challenge reveals nothing, so answer it even
+  // before the signing secret is set up; just log when the signature doesn't check out.
+  if (body?.type === "url_verification") {
+    if (!(await verifySlack(req, raw))) console.warn("[slack-panels] url_verification: signature not verified — check SLACK_SIGNING_SECRET");
     return new Response(JSON.stringify({ challenge: body.challenge }), { headers: { "Content-Type": "application/json" } });
   }
-  if (body.type === "event_callback") background(handleEvent(body));
+
+  if (!(await verifySlack(req, raw))) {
+    console.error("[slack-panels] rejected request: bad or missing signature", SIGNING_SECRET ? "(secret is set — does it match the app's Signing Secret?)" : "(SLACK_SIGNING_SECRET is not set)");
+    return new Response("invalid signature", { status: 401 });
+  }
+  if (body?.type === "event_callback") background(handleEvent(body));
   return new Response("ok");                                            // Slack wants a 200 within 3 s
 });
 
