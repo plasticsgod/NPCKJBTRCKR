@@ -151,11 +151,14 @@ async function claimEvent(eventId: string) {        // Slack retries deliveries;
 
 async function handleEvent(body: any) {
   const ev = body.event;
-  if (!ev || ev.type !== "message" || !Array.isArray(ev.files) || !ev.files.length) return;
-  if (ev.bot_id || (ev.subtype && !["file_share", "thread_broadcast"].includes(ev.subtype))) return;
-  if (ev.user && ev.user === (await botUserId())) return;             // our own uploads
-  if (!(await isPanelChannel(ev.channel))) return;
-  if (!(await claimEvent(body.event_id))) return;
+  const skip = (why: string) => console.log(`[slack-panels] skipped ${ev?.type}/${ev?.subtype ?? "-"} in ${ev?.channel}: ${why}`);
+  console.log(`[slack-panels] event ${body.event_id}: ${ev?.type}/${ev?.subtype ?? "-"} channel ${ev?.channel} files ${ev?.files?.length ?? 0}`);
+  if (!ev || ev.type !== "message") return skip("not a message");
+  if (!Array.isArray(ev.files) || !ev.files.length) return skip("no files");
+  if (ev.bot_id || (ev.subtype && !["file_share", "thread_broadcast"].includes(ev.subtype))) return skip("bot message or edit");
+  if (ev.user && ev.user === (await botUserId())) return skip("our own upload");
+  if (!(await isPanelChannel(ev.channel))) return skip(`channel is "${channelNames.get(ev.channel) || "?"}", expecting "${PANEL_CHANNEL}" (set SLACK_PANEL_CHANNEL to change)`);
+  if (!(await claimEvent(body.event_id))) return skip("already handled (Slack retry)");
 
   const root = ev.thread_ts || ev.ts;                                 // the thread this spec belongs to
   const inThread = !!ev.thread_ts && ev.thread_ts !== ev.ts;
