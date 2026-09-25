@@ -1,0 +1,1683 @@
+<!doctype html><html><head>
+<script>if(window.self!==window.top){document.documentElement.classList.add("embedded");}</script>
+<meta charset="utf-8"><title>Supplement Facts Builder</title><meta name="description" content="Build FDA Supplement Facts panels from a co-man formula and export live-text vector artwork."><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4F6F5; --surface:#FFFFFF; --surface-2:#EDF1F0; --ink:#15191A; --muted:#5B6568; --faint:#8A9396;
+  --line:#D6DCDA; --line-strong:#B9C2C0; --accent:#0A6C7B; --accent-bg:#E1F0F1; --on-accent:#FFFFFF;
+  --warn:#A86500; --warn-bg:#FBF0DC; --block:#B0271F; --block-bg:#FBE6E4; --info:#35577A; --info-bg:#E6EEF6;
+  --ok:#2E7243; --ok-bg:#E3F1E7; --artboard:#E4E8E7; --focus:0 0 0 2px #0A6C7B55;
+  --sans:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif; --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#111516; --surface:#191E1F; --surface-2:#20272A; --ink:#E7ECEB; --muted:#A3AEB0; --faint:#7B878A;
+    --line:#2D3538; --line-strong:#43504F; --accent:#4FB3C2; --accent-bg:#133238; --on-accent:#081416;
+    --warn:#E3A33F; --warn-bg:#35270F; --block:#F07A70; --block-bg:#3A1714; --info:#8FB3D9; --info-bg:#172535;
+    --ok:#6FC08A; --ok-bg:#15291C; --artboard:#0C1011; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#111516; --surface:#191E1F; --surface-2:#20272A; --ink:#E7ECEB; --muted:#A3AEB0; --faint:#7B878A;
+  --line:#2D3538; --line-strong:#43504F; --accent:#4FB3C2; --accent-bg:#133238; --on-accent:#081416;
+  --warn:#E3A33F; --warn-bg:#35270F; --block:#F07A70; --block-bg:#3A1714; --info:#8FB3D9; --info-bg:#172535;
+  --ok:#6FC08A; --ok-bg:#15291C; --artboard:#0C1011; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--paper);color:var(--ink);font:13px/1.45 var(--sans);margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+.app{display:grid;grid-template-rows:auto 1fr;min-height:100%}
+header.top{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
+.brand{display:flex;flex-direction:column;line-height:1.15;margin-right:8px}
+.brand b{font-weight:600;font-size:14px;letter-spacing:.01em}
+.brand span{font-size:11px;color:var(--muted)}
+.projsel{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.projsel select{min-width:220px}
+.spacer{flex:1}
+.btn{border:1px solid var(--line-strong);background:var(--surface);border-radius:6px;padding:5px 10px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--surface-2)}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:none;box-shadow:var(--focus)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.sm{padding:2px 7px;font-size:12px}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.ghost:hover{background:var(--surface-2)}
+.btn.danger{color:var(--block)}
+.exports{display:flex;gap:6px;flex-wrap:wrap}
+main.work{display:grid;grid-template-columns:minmax(360px,440px) minmax(0,1fr) minmax(260px,320px);min-height:0}
+.pane{min-width:0;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.pane:last-child{border-right:0}
+.pane-h{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--surface);flex-wrap:wrap}
+.pane-b{overflow:auto;padding:12px;flex:1;min-height:0}
+.tabs{display:flex;gap:2px;flex-wrap:wrap}
+.tab{border:0;background:transparent;padding:5px 9px;border-radius:5px;cursor:pointer;color:var(--muted)}
+.tab[aria-selected="true"]{background:var(--accent-bg);color:var(--accent);font-weight:500}
+.lbl{font-size:11px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin:14px 0 6px;display:flex;align-items:center;gap:6px}
+.lbl:first-child{margin-top:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.f{display:flex;flex-direction:column;gap:3px;min-width:0}
+.f>span{font-size:11.5px;color:var(--muted)}
+input[type=text],input[type=number],select,textarea{width:100%;background:var(--surface);border:1px solid var(--line-strong);border-radius:5px;padding:4px 6px;min-width:0}
+input[type=number]{font-family:var(--mono);font-size:12px}
+textarea{resize:vertical;min-height:54px}
+.chk{display:flex;align-items:center;gap:6px;font-size:12.5px}
+.hint{font-size:11.5px;color:var(--muted);margin:4px 0 0}
+.row{border:1px solid var(--line);border-radius:7px;background:var(--surface);margin-bottom:6px}
+.row>summary{list-style:none;display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:6px 8px;cursor:pointer}
+.row>summary::-webkit-details-marker{display:none}
+.row[open]>summary{border-bottom:1px solid var(--line)}
+.row .body{padding:8px;display:flex;flex-direction:column;gap:8px}
+.kind{font:500 10px/1 var(--mono);text-transform:uppercase;letter-spacing:.05em;padding:3px 5px;border-radius:4px;background:var(--surface-2);color:var(--muted)}
+.kind.nut{background:var(--accent-bg);color:var(--accent)}
+.kind.grp{background:var(--info-bg);color:var(--info)}
+.kind.oth{background:var(--surface-2);color:var(--muted)}
+.rname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rname.child{padding-left:14px}
+.rname.child2{padding-left:28px}
+.ramt{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.dot.block{background:var(--block)}.dot.warn{background:var(--warn)}.dot.info{background:var(--info)}
+.rowtools{display:flex;gap:4px;justify-content:flex-end}
+.addbar{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px}
+.stage{flex:1;overflow:auto;background:var(--artboard);padding:24px 16px;min-height:0}
+.board{margin:0 auto;width:max-content;max-width:100%}
+.sheet{padding:18px;border-radius:4px;display:inline-block;position:relative}
+.sheet.light{background:#FFFFFF}
+.sheet.inverse{background:#3A3D3F}
+.sheet svg{display:block;overflow:visible}
+.caption{font-size:11.5px;color:var(--muted);margin:10px 0 0;text-align:center}
+.outside{max-width:560px;margin:18px auto 0;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.card h4{margin:0 0 6px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:500;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.card p{margin:0}
+.flags{display:flex;flex-direction:column;gap:6px}
+.flag{border:1px solid var(--line);border-left:3px solid var(--info);border-radius:0 6px 6px 0;background:var(--surface);padding:7px 9px;cursor:default}
+.flag.block{border-left-color:var(--block)}.flag.warn{border-left-color:var(--warn)}
+.flag.link{cursor:pointer}.flag.link:hover{background:var(--surface-2)}
+.flag .t{display:flex;gap:6px;align-items:baseline}
+.flag .n{font:500 11px var(--mono);color:var(--muted);min-width:18px}
+.flag .m{font-weight:500}
+.flag .d{color:var(--muted);font-size:12px;margin-top:2px;padding-left:24px}
+.flag .src{font:10.5px var(--mono);color:var(--faint);text-transform:uppercase;letter-spacing:.04em;padding-left:24px;margin-top:3px}
+.counts{display:flex;gap:6px;flex-wrap:wrap}
+.pill{font:500 11px var(--mono);padding:2px 7px;border-radius:10px}
+.pill.block{background:var(--block-bg);color:var(--block)}.pill.warn{background:var(--warn-bg);color:var(--warn)}.pill.info{background:var(--info-bg);color:var(--info)}.pill.ok{background:var(--ok-bg);color:var(--ok)}
+.status{font-size:12px;color:var(--muted)}
+.status b{color:var(--ink);font-weight:500}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:7px 14px;border-radius:6px;font-size:12.5px;z-index:10}
+table.mini{width:100%;border-collapse:collapse;font-size:12px}
+table.mini td,table.mini th{padding:3px 4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+table.mini th{font-weight:500;color:var(--muted);font-size:11px}
+table.mini td.num{font-family:var(--mono)}
+.mono{font-family:var(--mono)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.importv{padding:16px;display:flex;flex-direction:column;gap:14px;max-width:1280px;width:100%;margin:0 auto}
+.importv h2{margin:0;font-size:18px;font-weight:600;text-wrap:balance}
+.importv h3{margin:0 0 8px;font-size:13px;font-weight:600}
+.drop{border:1.5px dashed var(--line-strong);border-radius:10px;background:var(--surface);padding:22px;text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center}
+.drop.over{border-color:var(--accent);background:var(--accent-bg)}
+.steps{display:flex;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.steps span{padding:3px 8px;border-radius:12px;background:var(--surface-2)}
+.steps span.on{background:var(--accent-bg);color:var(--accent);font-weight:500}
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table.rev{border-collapse:collapse;width:100%;min-width:980px;font-size:12px}
+table.rev th,table.rev td{padding:4px 6px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+table.rev th{font-weight:500;color:var(--muted);font-size:11px;background:var(--surface-2);position:sticky;top:0}
+table.rev td.num{font-family:var(--mono)}
+table.rev tr.skip td{opacity:.45}
+table.rev input[type=text]{min-width:160px}
+table.rev input[type=number]{width:84px}
+table.rev select[data-f=role]{min-width:200px}
+table.rev select[data-f=unit]{min-width:92px}
+table.rev{min-width:1100px}
+table.grid{border-collapse:collapse;font-size:11.5px;font-family:var(--mono)}
+table.grid td,table.grid th{border:1px solid var(--line);padding:2px 5px;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis}
+table.grid th{background:var(--surface-2);font-weight:500}
+table.grid tr.hdr td{background:var(--accent-bg);color:var(--accent)}
+.ibar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.note-s{font-size:11.5px;color:var(--muted)}
+.note-s.warn{color:var(--warn)}.note-s.block{color:var(--block)}
+pre.raw{max-height:260px;overflow:auto;background:var(--surface-2);padding:8px;border-radius:6px;font:11px/1.4 var(--mono);white-space:pre-wrap}
+@media (max-width:1180px){
+  main.work{grid-template-columns:minmax(340px,420px) minmax(0,1fr)}
+  .pane.checks{grid-column:1 / -1;border-top:1px solid var(--line);border-right:0}
+}
+@media (max-width:780px){
+  main.work{grid-template-columns:minmax(0,1fr)}
+  .pane{border-right:0;border-bottom:1px solid var(--line)}
+  .stage{min-height:420px}
+  .projsel select{min-width:0;width:100%}
+  .grid3{grid-template-columns:1fr 1fr}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ==========================================================================
+   NutraPack app styles — values copied from the app's index.css.
+   Only the look changes: class names are untouched, so imports, the panel
+   math and the PDF/SVG exports behave exactly as before.
+   ========================================================================== */
+
+/* --- App design tokens (verbatim from index.css :root) ------------------- */
+:root, :root[data-theme="dark"]{
+  --bg: #f4f5f7;
+  --bg-grad-1: #fbfbfd;
+  --bg-grad-2: #eef0f3;
+  --panel: #f2f3f5;
+  --surface-app: rgba(255, 255, 255, 0.92);
+  --surface-solid: #ffffff;
+  --accent-app: #0a84ff;
+  --accent-press: #0060df;
+  --accent-tint: rgba(10, 132, 255, 0.10);
+  --primary: #1d1d1f;
+  --primary-press: #000000;
+  --ease: cubic-bezier(.22, .61, .36, 1);
+  --dur: 200ms;
+  --dur-fast: 130ms;
+  --ink-1: #1d1d1f;
+  --ink-2: #6e6e73;
+  --ink-3: #a1a1a6;
+  --hairline: rgba(20, 22, 40, 0.10);
+  --hairline-soft: rgba(20, 22, 40, 0.055);
+  --radius-card: 20px;
+  --radius-ctl: 12px;
+  --shadow-card: 0 1px 2px rgba(20,22,40,.04), 0 14px 34px rgba(20,22,40,.055);
+  --ui: "Geist", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* The builder's own variable names, pointed at the app's values */
+  --paper: var(--bg); --surface: var(--surface-solid); --surface-2: var(--panel);
+  --ink: var(--ink-1); --muted: var(--ink-2); --faint: var(--ink-3);
+  --line: var(--hairline-soft); --line-strong: var(--hairline);
+  --accent: var(--accent-app); --accent-bg: var(--accent-tint); --on-accent: #fff;
+  --warn: #b25e00; --warn-bg: #fff1de; --block: #d64545; --block-bg: rgba(214,69,69,.10);
+  --info: #185fa5; --info-bg: var(--accent-tint); --ok: #1f7a4d; --ok-bg: rgba(31,140,84,.14);
+  --artboard: var(--panel); --focus: 0 0 0 3px var(--accent-tint);
+  --sans: var(--ui); --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: light;
+}
+/* The app is light-only, so the builder is too. */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper: var(--bg); --surface: var(--surface-solid); --surface-2: var(--panel);
+    --ink: var(--ink-1); --muted: var(--ink-2); --faint: var(--ink-3);
+    --line: var(--hairline-soft); --line-strong: var(--hairline);
+    --accent: var(--accent-app); --accent-bg: var(--accent-tint); --on-accent: #fff;
+    --warn: #b25e00; --warn-bg: #fff1de; --block: #d64545; --block-bg: rgba(214,69,69,.10);
+    --info: #185fa5; --info-bg: var(--accent-tint); --ok: #1f7a4d; --ok-bg: rgba(31,140,84,.14);
+    --artboard: var(--panel); color-scheme: light;
+  }
+}
+
+/* --- body (app: body) ---------------------------------------------------- */
+body{
+  background: var(--bg);
+  background: radial-gradient(130% 110% at 50% 0%, var(--bg-grad-1) 0%, var(--bg) 45%, var(--bg-grad-2) 100%);
+  background-attachment: fixed;
+  color: var(--ink-1);
+  font-family: var(--ui);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- Header → app .page-card + .page-head / .page-title / .page-meta ----- */
+header.top{
+  margin: 16px 16px 0;
+  background: var(--surface-app); border: 0.5px solid rgba(255,255,255,.7);
+  border-radius: var(--radius-card); box-shadow: var(--shadow-card);
+  padding: 15px 20px 13px; gap: 12px 14px;
+}
+.brand b{ font-family: var(--ui); font-size: 18px; font-weight: 600; letter-spacing: -.01em; }
+.brand span{ font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+
+/* --- Buttons → app .btn-ghost / .btn-accent ------------------------------ */
+.btn{
+  background: rgba(120, 120, 128, 0.12); border: none; color: var(--ink-1); cursor: pointer;
+  font-weight: 500; font-size: 14px; letter-spacing: -0.01em; padding: 10px 18px; border-radius: 999px;
+  transition: transform var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.btn:hover{ background: rgba(120, 120, 128, 0.20); }
+.btn.primary{ background: var(--primary); color: #fff; }
+.btn.primary:hover{ filter: none; background: var(--primary-press); }
+.btn.sm{ padding: 6px 12px; font-size: 13px; }
+.btn.ghost{ background: transparent; }
+.btn.ghost:hover{ background: rgba(120, 120, 128, 0.12); }
+.btn.danger{ color: #d64545; }                         /* app .rfq-del-btn */
+.btn.danger:hover{ background: rgba(214,69,69,.10); }
+.btn:focus-visible{ outline: none; box-shadow: 0 0 0 3px var(--accent-tint); }
+
+/* --- Fields → app .field input / select / textarea (+ focus, + chevron) -- */
+input[type=text], input[type=number], select, textarea{
+  font-family: var(--ui); font-size: 14px; padding: 11px 14px;
+  border: 0.5px solid #e3e3e8; border-radius: var(--radius-ctl);
+  background: #f5f5f7; color: var(--ink-1);
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+input[type=text]:focus, input[type=number]:focus, select:focus, textarea:focus,
+input[type=text]:focus-visible, input[type=number]:focus-visible, select:focus-visible, textarea:focus-visible{
+  outline: none; background: #fff; border-color: var(--accent-app); box-shadow: 0 0 0 3px var(--accent-tint);
+}
+select{
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a8a90' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat: no-repeat; background-position: right 11px center; padding-right: 34px;
+}
+input[type=number]{ font-family: var(--ui); font-variant-numeric: tabular-nums; }
+input[type=checkbox]{ accent-color: var(--primary); }
+/* Field labels → app .field > span */
+.f{ gap: 6px; }
+.f>span{ font-family: var(--ui); font-size: 13px; font-weight: 500; letter-spacing: -0.01em; text-transform: none; color: var(--ink-2); }
+
+/* --- Workspace columns → app .page-card ---------------------------------- */
+main.work{ gap: 16px; padding: 16px; }
+.pane, .pane:last-child{
+  background: var(--surface-app); border: 0.5px solid rgba(255,255,255,.7);
+  border-radius: var(--radius-card); overflow: hidden; box-shadow: var(--shadow-card);
+}
+.pane-h{ padding: 15px 20px 13px; border-bottom: 0.5px solid var(--hairline-soft); background: transparent; }
+.pane-b{ padding: 16px 20px 20px; }
+.stage{ background: var(--panel); padding: 28px 20px; }
+.sheet{ border-radius: var(--radius-ctl); box-shadow: var(--shadow-card); }
+
+/* --- Tabs → app .wo-subtabs / .wo-subtab / .wo-subtab.on ----------------- */
+.tabs{ display: inline-flex; gap: 2px; background: var(--panel); border-radius: 999px; padding: 3px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+.tabs::-webkit-scrollbar{ display: none; }
+.tab{ background: transparent; border: none; cursor: pointer; font-family: var(--ui); font-size: 13px; font-weight: 600; color: var(--ink-3); padding: 7px 18px; border-radius: 999px; white-space: nowrap; flex: none; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+.tab[aria-selected="true"]{ background: var(--primary); color: #fff; font-weight: 600; }
+
+/* --- Section labels → app .pm-section-label ------------------------------ */
+.lbl{ font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); padding-top: 16px; margin: 4px 0 10px; border-top: 0.5px solid var(--hairline-soft); }
+.lbl:first-child{ border-top: none; padding-top: 0; margin-top: 0; }
+.hint, .note-s, .status, .caption{ font-family: var(--ui); color: var(--ink-3); }
+.hint{ font-size: 12.5px; }
+
+/* --- Formula rows + cards → app card look (.rfq-variant) ----------------- */
+.row{ background: #fff; border: 0.5px solid var(--hairline); border-radius: var(--radius-ctl); box-shadow: var(--shadow-card); margin-bottom: 10px; }
+.row>summary{ padding: 12px 14px; gap: 10px; }
+.row[open]>summary{ border-bottom: 0.5px solid var(--hairline-soft); }
+.row .body{ padding: 14px; gap: 12px; }
+.kind{ font-family: var(--ui); font-weight: 600; font-size: 10.5px; letter-spacing: .04em; padding: 3px 9px; border-radius: 999px; }
+.kind.nut{ color: var(--accent-app); background: var(--accent-tint); }
+.addbar{ gap: 8px; margin: 10px 0 6px; }
+.card{ background: #fff; border: 0.5px solid var(--hairline); border-radius: var(--radius-ctl); box-shadow: var(--shadow-card); padding: 14px 16px; }
+.card h4{ font-size: 12px; font-weight: 600; letter-spacing: .06em; color: var(--ink-3); }
+.outside{ gap: 12px; }
+
+/* --- Checks column -------------------------------------------------------- */
+.flags{ gap: 10px; }
+.flag{ background: #fff; border: 0.5px solid var(--hairline); border-left: 3px solid var(--info); border-radius: var(--radius-ctl); padding: 12px 14px; box-shadow: var(--shadow-card); }
+.flag.link:hover{ background: var(--panel); }
+.flag .m{ font-weight: 600; letter-spacing: -0.01em; }
+.flag .d{ color: var(--ink-2); font-size: 13px; }
+.flag .n, .flag .src{ font-family: var(--ui); color: var(--ink-3); }
+/* Status chips → app .pill shape, tinted */
+.pill{ display: inline-flex; align-items: center; font-family: var(--ui); font-size: 12.5px; font-weight: 500; letter-spacing: -0.01em; padding: 5px 13px; border-radius: 999px; }
+
+/* --- Import view ---------------------------------------------------------- */
+.importv{ padding: 16px; gap: 16px; }
+.importv h2{ font-family: var(--ui); font-size: 18px; font-weight: 600; letter-spacing: -.01em; }
+.importv h3{ font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); }
+.drop{ border: 2px dashed var(--hairline); border-radius: var(--radius-ctl); background: transparent; padding: 20px 16px; transition: border-color var(--dur-fast) var(--ease); }  /* app .rfq-drop */
+.drop.over{ border-color: var(--accent-app); background: var(--accent-tint); }                                                            /* app .rfq-drop.dragover */
+.steps span{ border-radius: 999px; padding: 5px 13px; font-weight: 600; font-size: 13px; background: var(--panel); color: var(--ink-3); }
+.steps span.on{ background: var(--primary); color: #fff; }
+.tblwrap{ background: #fff; border: 0.5px solid var(--hairline); border-radius: var(--radius-ctl); box-shadow: var(--shadow-card); }
+table.rev th, table.rev td, table.mini th, table.mini td{ border-bottom: 1px solid var(--hairline-soft); }
+table.rev th{ background: var(--panel); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); }
+table.rev td{ padding: 8px 10px; }
+table.mini th{ font-weight: 600; color: var(--ink-3); }
+pre.raw{ border-radius: var(--radius-ctl); background: var(--panel); }
+
+/* --- Toast → app .toast ----------------------------------------------------- */
+.toast{ background: var(--ink-1); color: #fff; border-radius: 12px; padding: 12px 14px; box-shadow: 0 12px 32px rgba(20, 17, 13, .26); font-family: var(--ui); font-size: 14px; line-height: 1.35; }
+
+
+/* Header layout: title · project controls (flexible) · exports — one row on desktop */
+header.top{ flex-wrap: nowrap; }
+.projsel{ flex: 1; min-width: 0; }
+.projsel select{ min-width: 0; width: 100%; max-width: 560px; }
+header.top .spacer{ display: none; }
+.exports{ flex: none; }
+@media (max-width:1180px){ header.top{ flex-wrap: wrap; } .projsel{ flex-basis: 100%; order: 3; } header.top .spacer{ display: block; } }
+/* Check counts stay on one line next to "Checks" */
+.pane-h .counts{ flex-wrap: nowrap; gap: 6px; }
+.pane-h .counts .pill{ padding: 4px 10px; font-size: 12px; }
+
+/* --- Phones: same cards, stacked (app spacing) ------------------------------ */
+@media (max-width:1180px){ .pane.checks{ border-top: 0.5px solid rgba(255,255,255,.7); } }
+@media (max-width:780px){
+  header.top{ margin: 12px 12px 0; }
+  main.work{ gap: 12px; padding: 12px; }
+  .exports{ width: 100%; }
+  .exports .btn{ flex: 1; }
+}
+
+/* Inside the NutraPack app (iframe): no second background, no outer margins */
+html.embedded, html.embedded body{ background: transparent; }
+html.embedded header.top{ margin: 0; }
+html.embedded main.work{ padding: 16px 0 0; }
+@media (max-width:780px){ html.embedded main.work{ padding: 12px 0 0; } }
+
+/* Compact dropdowns in column headers (e.g. zoom) so they stay on one line */
+.pane-h select{ padding: 7px 30px 7px 12px; font-size: 13px; width: auto; background-position: right 9px center; }
+
+/* Column headers stay on one line; the font status shortens with "…" */
+.pane-h{ flex-wrap: nowrap; }
+.pane-h .status{ flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pane-h .chk{ flex: none; white-space: nowrap; }
+.pane-h select{ flex: none; }
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand"><b>Supplement Facts Builder</b><span>21 CFR 101.36 · live-text vector export</span></div>
+    <div class="projsel">
+      <label class="sr-only" for="projPick">Project</label>
+      <select id="projPick"></select>
+      <button class="btn sm" id="btnImport" type="button"><b style="font-weight:600">Import spec…</b></button>
+      <button class="btn sm" id="btnNew" type="button">New</button>
+      <button class="btn sm" id="btnDup" type="button">Duplicate</button>
+      <button class="btn sm" id="btnOpen" type="button">Open…</button>
+      <button class="btn sm" id="btnSave" type="button">Save project</button>
+      <input type="file" id="fileOpen" accept=".json,application/json" hidden>
+    </div>
+    <div class="spacer"></div>
+    <div class="exports">
+      <button class="btn primary" id="btnPdf" type="button">Export PDF (100K)</button>
+      <button class="btn" id="btnSvg" type="button">Export SVG</button>
+      <button class="btn" id="btnCopy" type="button">Copy SVG code</button>
+    </div>
+  </header>
+  <main class="work">
+    <section class="pane" aria-label="Editor">
+      <div class="pane-h"><div class="tabs" role="tablist" id="tabs"></div></div>
+      <div class="pane-b" id="editor"></div>
+    </section>
+    <section class="pane" aria-label="Preview">
+      <div class="pane-h">
+        <span class="status" id="fontStatus"></span>
+        <div class="spacer"></div>
+        <label class="chk"><input type="checkbox" id="optOverlay" checked> Risk markers</label>
+        <label class="sr-only" for="zoom">Zoom</label>
+        <select id="zoom" style="width:auto"><option value="1">100%</option><option value="1.5">150%</option><option value="2" selected>200%</option><option value="3">300%</option></select>
+      </div>
+      <div class="stage"><div class="board" id="board"></div></div>
+    </section>
+    <section class="pane checks" aria-label="Checks">
+      <div class="pane-h"><b style="font-weight:500">Checks</b><div class="spacer"></div><div class="counts" id="counts"></div></div>
+      <div class="pane-b"><div class="flags" id="flags"></div></div>
+    </section>
+  </main>
+  <section class="importv" id="importView" hidden aria-label="Import a spec"></section>
+</div>
+
+<script>
+"use strict";
+/* ---------- reference data ---------- */
+const MACROS = [
+  {k:'calories', label:'Calories', unit:'', dv:null, round:'cal', indent:0},
+  {k:'totalFat', label:'Total Fat', unit:'g', dv:78, round:'fat', indent:0, pct:true},
+  {k:'satFat', label:'Saturated Fat', unit:'g', dv:20, round:'fat', indent:1, pct:true},
+  {k:'transFat', label:'Trans Fat', unit:'g', dv:null, round:'fat', indent:1},
+  {k:'cholesterol', label:'Cholesterol', unit:'mg', dv:300, round:'chol', indent:0, pct:true},
+  {k:'totalCarb', label:'Total Carbohydrate', unit:'g', dv:275, round:'g', indent:0, pct:true},
+  {k:'fiber', label:'Dietary Fiber', unit:'g', dv:28, round:'g', indent:1, pct:true},
+  {k:'totalSugars', label:'Total Sugars', unit:'g', dv:null, round:'g', indent:1},
+  {k:'addedSugars', label:'Added Sugars', unit:'g', dv:50, round:'g', indent:2, pct:true},
+  {k:'protein', label:'Protein', unit:'g', dv:50, round:'g', indent:0, pct:false}
+];
+const VM = [
+  ['vitA','Vitamin A','mcg',900],['vitC','Vitamin C','mg',90],['vitD','Vitamin D','mcg',20],['vitE','Vitamin E','mg',15],
+  ['vitK','Vitamin K','mcg',120],['thiamin','Thiamin','mg',1.2],['riboflavin','Riboflavin','mg',1.3],['niacin','Niacin','mg',16],
+  ['vitB6','Vitamin B6','mg',1.7],['folate','Folate','mcg',400],['vitB12','Vitamin B12','mcg',2.4],['biotin','Biotin','mcg',30],
+  ['pantothenic','Pantothenic Acid','mg',5],['choline','Choline','mg',550],['calcium','Calcium','mg',1300],['iron','Iron','mg',18],
+  ['phosphorus','Phosphorus','mg',1250],['iodine','Iodine','mcg',150],['magnesium','Magnesium','mg',420],['zinc','Zinc','mg',11],
+  ['selenium','Selenium','mcg',55],['copper','Copper','mg',0.9],['manganese','Manganese','mg',2.3],['chromium','Chromium','mcg',35],
+  ['molybdenum','Molybdenum','mcg',45],['chloride','Chloride','mg',2300],['sodium','Sodium','mg',2300],['potassium','Potassium','mg',4700],
+  ['fluoride','Fluoride','mg',null]
+].map((a,i)=>({k:a[0],label:a[1],unit:a[2],dv:a[3],order:i}));
+const VMK = Object.fromEntries(VM.map(v=>[v.k,v]));
+const UNITS_VM = ['mg','mcg','g','mcg DFE','mcg RAE','mg NE','mg DFE'];
+const FONTS = {
+  'Myriad Pro':{css:'"Myriad Pro"',ps:{r:'MyriadPro-Regular',b:'MyriadPro-Bold',i:'MyriadPro-It',bi:'MyriadPro-BoldIt'}},
+  'Myriad Pro Condensed':{css:'"Myriad Pro Cond","Myriad Pro Condensed"',ps:{r:'MyriadPro-Cond',b:'MyriadPro-BoldCond',i:'MyriadPro-CondIt',bi:'MyriadPro-BoldCondIt'}},
+  'Myriad Pro Semi Condensed':{css:'"Myriad Pro SemiCond","Myriad Pro Semi Condensed"',ps:{r:'MyriadPro-SemiCn',b:'MyriadPro-BoldSemiCn',i:'MyriadPro-SemiCnIt',bi:'MyriadPro-BoldSemiCnIt'}},
+  'Helvetica Neue':{css:'"Helvetica Neue"',ps:{r:'HelveticaNeue',b:'HelveticaNeue-Bold',i:'HelveticaNeue-Italic',bi:'HelveticaNeue-BoldItalic'}},
+  'Helvetica Neue LT Std Condensed':{css:'"Helvetica Neue LT Std","HelveticaNeueLTStd-Cn"',ps:{r:'HelveticaNeueLTStd-Cn',b:'HelveticaNeueLTStd-BdCn',i:'HelveticaNeueLTStd-CnO',bi:'HelveticaNeueLTStd-BdCnO'}},
+  'Helvetica':{css:'Helvetica',ps:{r:'Helvetica',b:'Helvetica-Bold',i:'Helvetica-Oblique',bi:'Helvetica-BoldOblique'}},
+  'Arial':{css:'Arial',ps:{r:'ArialMT',b:'Arial-BoldMT',i:'Arial-ItalicMT',bi:'Arial-BoldItalicMT'}},
+  'Arial Narrow':{css:'"Arial Narrow"',ps:{r:'ArialNarrow',b:'ArialNarrow-Bold',i:'ArialNarrow-Italic',bi:'ArialNarrow-BoldItalic'}},
+  'Acumin Pro':{css:'"Acumin Pro"',ps:{r:'AcuminPro-Regular',b:'AcuminPro-Bold',i:'AcuminPro-Italic',bi:'AcuminPro-BoldItalic'}},
+  'Acumin Pro Condensed':{css:'"Acumin Pro Condensed"',ps:{r:'AcuminProCond-Regular',b:'AcuminProCond-Bold',i:'AcuminProCond-Italic',bi:'AcuminProCond-BoldItalic'}},
+  'Futura PT':{css:'"Futura PT"',ps:{r:'FuturaPT-Book',b:'FuturaPT-Bold',i:'FuturaPT-BookObl',bi:'FuturaPT-BoldObl'}},
+  'Custom':null
+};
+const PROCESS = {digital:{label:'Digital',minRule:0.25,minType:4},flexo:{label:'Flexo',minRule:0.5,minType:4.5},direct:{label:'Direct print (can/bottle)',minRule:0.5,minType:5}};
+const CATEGORIES = ['excipient','flavor','sweetener','acid','color','capsule','preservative','other'];
+
+/* ---------- helpers ---------- */
+const uid = ()=>Math.random().toString(36).slice(2,9);
+const esc = s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num = v=>{const n=parseFloat(v);return Number.isFinite(n)?n:null};
+const trim = (n,d=3)=>String(+Number(n).toFixed(d));
+function toMg(v,unit){ if(v==null) return null; unit=String(unit||'mg'); if(unit.startsWith('mcg')) return v/1000; if(unit==='g') return v*1000; return v; }
+function inDvUnit(v,unit,dvUnit){ const mg=toMg(v,unit); return dvUnit==='mcg'? mg*1000 : mg; }
+function roundTo(v,step){ return Math.round(v/step)*step; }
+function titleCase(s){ return s; }
+
+/* ---------- sample projects ---------- */
+function baseText(){ return {titleCase:'title', servingBold:true, servingColon:false, amtHead:'Amount Per Serving', dvHead:'% Daily Value', carbLabel:'Total Carbohydrate', pctSym:'*', pctNote:'Percent Daily Values are based on a 2,000 calorie diet.', daggerNote:'Daily Value not established.', unitSpace:true, naKRound:true, boldNames:false, flavorMix:'Natural & Artificial Flavors', containsUpper:false, oiLabel:'Other Ingredients:', sfDisclaimer:true}; }
+function baseStyle(){ return {family:'Myriad Pro', custom:{css:'',r:'',b:'',i:'',bi:''}, titleFamily:'same', titleStyle:'b', fitTitle:true, titleSize:18, body:7, head:6.5, foot:6, lead:1.12, rowPad:0.7, widthIn:2.4, pad:3, colGap:4, indent:5, box:0.5, heavy:5, medium:2.5, hair:0.35, rowRules:true, groupBars:true, inverse:false, oiSize:6.5, oiGap:6, showOI:true}; }
+function baseMacros(){ const m={}; MACROS.forEach(x=>m[x.k]={v:null,status:'missing',show:'auto'}); return m; }
+const R = (o)=>Object.assign({id:uid(), status:'verified', note:'', noteSev:'info', tm:'', tmStatus:'n/a', allergen:''}, o);
+
+function sampleHydration(){
+  const macros = baseMacros();
+  macros.calories = {v:4.8, status:'estimated', show:'auto'};
+  macros.totalCarb = {v:0, status:'estimated', show:'auto'};
+  macros.totalSugars = {v:0, status:'estimated', show:'auto'};
+  return {
+    id:uid(), name:'Hydration Watermelon — stick pack', coman:'Arizona Custom Blends (ACB)', client:'Bassline LLC', ref:'Quote 232218 Rev 3 · Formula 12878',
+    form:'powder', serving:{qty:'1', unit:'Stick Pack', weight:6.49, pattern:'unit_weight', spc:'1', showSpc:false},
+    pkg:{area:9.6, areaSource:'estimated', process:'flexo'}, allergensReviewed:false,
+    macros,
+    rows:[
+      R({kind:'nutrient', nk:'magnesium', amt:55, unit:'mg', source:'TRAACS® magnesium bisglycinate chelate', conn:'as', place:'panel', input:561, tm:'TRAACS®', tmStatus:'pending', note:'Spec shows "Traacs®" at 10% Mg. Confirm styling with the Balchem/Albion TLA, and confirm whether this grade is buffered (magnesium oxide would need to be named in the source).', noteSev:'warn'}),
+      R({kind:'nutrient', nk:'sodium', amt:600, unit:'mg', source:'pink Himalayan salt', conn:'as', place:'panel', input:1654.26}),
+      R({kind:'nutrient', nk:'potassium', amt:200, unit:'mg', source:'potassium citrate', conn:'as', place:'panel', input:566.667}),
+      R({kind:'ingredient', name:'Creatine Monohydrate (micronized)', amt:2, unit:'g', parent:'', input:2040}),
+      R({kind:'other', name:'Malic Acid', cat:'acid', input:700}),
+      R({kind:'other', name:'Citric Acid', cat:'acid', input:400}),
+      R({kind:'other', name:'Natural Watermelon Flavor', cat:'flavor', ftype:'natural', input:350, status:'estimated', note:'No composition statement yet. Carriers (e.g. maltodextrin, gum arabic) can change carbs and allergens.', noteSev:'info'}),
+      R({kind:'other', name:'Natural Strawberry Flavor', cat:'flavor', ftype:'natural', input:125, status:'estimated', note:'Second flavor in a watermelon product: front-panel flavor naming may need "with other natural flavors".', noteSev:'warn'}),
+      R({kind:'other', name:'Stevia Leaf Extract (Reb M)', cat:'sweetener', input:90, status:'missing', note:'ACB draft says "Steviol Glycosides (Reb M)", spec says "Reb M Stevia Leaf Extract". Leaf-extracted vs. bioconversion Reb M changes the name. Get the supplier spec.', noteSev:'warn'})
+    ],
+    flags:[
+      {sev:'block', msg:'ACB draft lists Sodium before Magnesium', det:'101.36 order is Magnesium → Chloride → Sodium → Potassium. The builder sorts this automatically.'},
+      {sev:'warn', msg:'ACB draft: "Total Carbohydrates" and "Total Sugars 0%"', det:'Name is "Total Carbohydrate". Total Sugars has no DV, so its %DV cell stays blank.'},
+      {sev:'warn', msg:'ACB draft: orphan "*" footnote and "Servings Per Container 15"', det:'The * note references nothing in the panel. 15 servings applies to the retail box, not the stick film.'},
+      {sev:'warn', msg:'ACB draft Other Ingredients order', det:'Combined Natural Flavors (475 mg) outweigh Citric Acid (400 mg). Recheck order for each of the three flavors.'},
+      {sev:'info', msg:'Suggested use needs a water volume', det:'Spec does not state it.'}
+    ],
+    suggested:{qty:'1 stick pack', liquid:'', timing:'', freq:'', override:''},
+    callouts:[{src:'row:1', label:'Sodium', amt:''},{src:'row:3', label:'Creatine', amt:''}],
+    text:baseText(), style:Object.assign(baseStyle(),{widthIn:2.1, body:6, head:5.5, foot:5, heavy:4, medium:2, pad:2.5})
+  };
+}
+function sampleThermo(){
+  const macros = baseMacros();
+  const g1 = uid();
+  return {
+    id:uid(), name:'Thermo — 60 veggie capsules', coman:'Veritacor', client:'Diane Duran', ref:'Spec sheet Ver 2 · 9/10/2026',
+    form:'capsule', serving:{qty:'2', unit:'Capsules', weight:null, pattern:'unit', spc:'30', showSpc:true},
+    pkg:{area:20.6, areaSource:'estimated', process:'digital'}, allergensReviewed:true, macros,
+    rows:[
+      R({kind:'nutrient', nk:'vitB12', amt:300, unit:'mcg', source:'methylcobalamin', conn:'as', place:'panel', input:30}),
+      R({kind:'nutrient', nk:'chromium', amt:200, unit:'mcg', source:'chromium picolinate', conn:'as', place:'panel', input:1.6667}),
+      R({kind:'ingredient', name:'Alpha-GPC (L-Alpha Glycerylphosphorylcholine)', amt:300, unit:'mg', parent:'', input:300, status:'missing', note:'Spec lists "Alpha GPC 50%" at 100% potency. If this is a 50% powder, 300 mg input = 150 mg alpha-GPC. Declaring 300 mg would be a misbranding risk.', noteSev:'block'}),
+      R({kind:'ingredient', name:'Caffeine Anhydrous', amt:225, unit:'mg', parent:'', input:225, caff:100}),
+      R({kind:'ingredient', name:'Green Tea (_Camellia sinensis_) leaf extract (std. 45% EGCG)', amt:200, unit:'mg', parent:'', input:200, botanical:true, note:'Spec says "ECGC" and gives no plant part or caffeine content. Leaf assumed; caffeine from this extract is unknown.', noteSev:'warn'}),
+      R({kind:'ingredient', name:'Dicaffeine Malate', amt:50, unit:'mg', parent:'', input:50, caff:74, tm:'Infinergy®?', tmStatus:'pending', note:'If sourced as Infinergy®, the trademark applies. ~74% caffeine by weight.', noteSev:'info'}),
+      R({kind:'ingredient', name:'Grains of Paradise (_Aframomum melegueta_) seed extract', amt:20, unit:'mg', parent:'', input:20, botanical:true, note:'Spec misspells "Aframoamum" and gives no plant part. Seed assumed.', noteSev:'warn'}),
+      R({kind:'ingredient', name:'Black Pepper (_Piper nigrum_) fruit extract (std. 95% piperine)', amt:5, unit:'mg', parent:'', input:5.2632, botanical:true, note:'Spec grosses the input to 5.26 mg, which implies the 5 mg claim is piperine, not extract. Confirm, and check for BioPerine®.', noteSev:'warn'}),
+      R({kind:'ingredient', name:'Huperzine A (from _Huperzia serrata_ whole plant extract)', amt:250, unit:'mcg', parent:'', input:25, botanical:true, note:'Alternative declaration: "Toothed Clubmoss (Huperzia serrata) extract (std. 1% Huperzine A) 25 mg". Plant part not in spec.', noteSev:'info'}),
+      R({kind:'other', name:'Rice Flour', cat:'excipient', input:200}),
+      R({kind:'other', name:'Vegetable Capsule', cat:'capsule', input:192, status:'estimated', note:'Capsule weight not on the spec. 2 × ~96 mg size 0 HPMC assumed; it decides whether capsule or rice flour is listed first.', noteSev:'warn'}),
+      R({kind:'other', name:'Magnesium Stearate', cat:'excipient', input:30})
+    ],
+    flags:[
+      {sev:'block', msg:'Spec "Other Ingredients" field is blank', det:'The builder generated it from the formula: rice flour, capsule, magnesium stearate.'},
+      {sev:'warn', msg:'Calories and carbohydrate not provided', det:'~1.09 g per serving. Likely below declaration thresholds, but confirm with supplier data.'}
+    ],
+    suggested:{qty:'2 capsules', liquid:'', timing:'', freq:'daily', override:''},
+    callouts:[{src:'caffeine', label:'Caffeine', amt:''}],
+    text:baseText(), style:Object.assign(baseStyle(),{widthIn:2.3})
+  };
+}
+function sampleDetox(){
+  const macros = baseMacros();
+  return {
+    id:uid(), name:'Detox — 56 veggie capsules', coman:'Veritacor', client:'Diane Duran', ref:'Spec sheet Ver 2 · 9/10/2026',
+    form:'capsule', serving:{qty:'4', unit:'Capsules', weight:null, pattern:'unit', spc:'14', showSpc:true},
+    pkg:{area:20.6, areaSource:'estimated', process:'digital'}, allergensReviewed:true, macros,
+    rows:[
+      R({kind:'ingredient', name:'Cascara Sagrada (_Frangula purshiana_) bark extract (4:1)', amt:400, unit:'mg', parent:'', input:400, botanical:true}),
+      R({kind:'ingredient', name:'Burdock (_Arctium lappa_) root extract (4:1)', amt:400, unit:'mg', parent:'', input:400, botanical:true}),
+      R({kind:'ingredient', name:'Psyllium (_Plantago ovata_) seed husk powder', amt:250, unit:'mg', parent:'', input:250, botanical:true}),
+      R({kind:'ingredient', name:'Dandelion (_Taraxacum officinale_) root powder', amt:200, unit:'mg', parent:'', input:200, botanical:true}),
+      R({kind:'ingredient', name:'Uva Ursi (_Arctostaphylos uva-ursi_) leaf extract', amt:200, unit:'mg', parent:'', input:200, botanical:true}),
+      R({kind:'ingredient', name:'Senna (_Senna alexandrina_) leaf extract (std. 20% sennosides)', amt:200, unit:'mg', parent:'', input:200, botanical:true, note:'Stimulant laxatives (senna, cascara) and uva ursi carry AHPA-recommended label warnings. Not an FDA requirement; confirm with the brand.', noteSev:'warn'}),
+      R({kind:'ingredient', name:'Alpha Lipoic Acid', amt:25, unit:'mg', parent:'', input:25}),
+      R({kind:'ingredient', name:'Black Pepper (_Piper nigrum_) fruit extract (std. 95% piperine)', amt:5, unit:'mg', parent:'', input:5.2632, botanical:true, note:'Same potency question as Thermo: is 5 mg piperine or extract?', noteSev:'warn'}),
+      R({kind:'other', name:'Vegetable Capsule', cat:'capsule', input:384, status:'estimated', note:'4 × ~96 mg size 0 HPMC assumed. At that weight the capsule outweighs the rice flour and is listed first.', noteSev:'warn'}),
+      R({kind:'other', name:'Rice Flour', cat:'excipient', input:300}),
+      R({kind:'other', name:'Magnesium Stearate', cat:'excipient', input:30})
+    ],
+    flags:[
+      {sev:'block', msg:'Spec Other Ingredients lists "Silica"', det:'Silica is not in the formula. It is left out here until the co-man confirms.'},
+      {sev:'block', msg:'Calories and carbohydrate likely declarable', det:'A 2 g serving of 4:1 extracts, psyllium and rice flour. Request supplier nutrition data; dietary fiber may also apply.'},
+      {sev:'warn', msg:'Latin names and plant parts supplied by the builder', det:'The spec lists common names only. Confirm each binomial and plant part against supplier specs.'}
+    ],
+    suggested:{qty:'4 capsules', liquid:'', timing:'', freq:'daily', override:''},
+    callouts:[],
+    text:baseText(), style:Object.assign(baseStyle(),{widthIn:2.5})
+  };
+}
+function sampleC4(){
+  const macros = baseMacros();
+  macros.calories = {v:10, status:'verified', show:'auto'};
+  macros.totalCarb = {v:1, status:'verified', show:'auto'};
+  macros.totalSugars = {v:0, status:'verified', show:'show'};
+  macros.addedSugars = {v:0, status:'verified', show:'show'};
+  const gE=uid(), gV=uid(), gU=uid(), gF=uid();
+  const t = Object.assign(baseText(), {naKRound:false, titleCase:'upper', servingBold:false, servingColon:true, dvHead:'%DV', pctSym:'**', pctNote:'Percent Daily Values (DV) based on a 2,000-calorie diet.', unitSpace:false, containsUpper:true});
+  return {
+    id:uid(), name:'C4 Ultimate Shred — Nutrabolt reference', coman:'Nutrabolt (reference label)', client:'Reference only', ref:'GNC label file 447990',
+    form:'powder', serving:{qty:'1 level scoop', unit:'', weight:20.3, pattern:'weight_approx', spc:'20', showSpc:true},
+    pkg:{area:60, areaSource:'estimated', process:'digital'}, allergensReviewed:true, macros,
+    rows:[
+      R({kind:'nutrient', nk:'vitB6', amt:3.4, unit:'mg', source:'Pyridoxal-5-Phosphate', conn:'as', place:'panel'}),
+      R({kind:'nutrient', nk:'folate', amt:100, unit:'mcg DFE', source:'6S-5-Methyltetrahydrofolate calcium salt', conn:'as', place:'panel'}),
+      R({kind:'nutrient', nk:'vitB12', amt:6, unit:'mcg', source:'Methylcobalamin', conn:'as', place:'panel'}),
+      R({kind:'nutrient', nk:'calcium', amt:80, unit:'mg', source:'', conn:'as', place:'panel', note:'No source in the panel. Calcium silicate is named in Other Ingredients instead, which 101.36(d) allows.', noteSev:'info'}),
+      R({kind:'nutrient', nk:'phosphorus', amt:75, unit:'mg', source:'Dipotassium Phosphate', conn:'as', place:'panel'}),
+      R({kind:'nutrient', nk:'magnesium', amt:20, unit:'mg', source:'Magnesium Citrate', conn:'as', place:'panel'}),
+      R({kind:'nutrient', nk:'chloride', amt:340, unit:'mg', source:'Sea Salt', conn:'from', place:'panel'}),
+      R({kind:'nutrient', nk:'sodium', amt:225, unit:'mg', source:'Sea Salt', conn:'from', place:'panel'}),
+      R({kind:'nutrient', nk:'potassium', amt:190, unit:'mg', source:'Dipotassium Phosphate', conn:'as', place:'panel'}),
+      R({id:gE, kind:'group', name:'Endurance & Performance Complex', parent:'', showTotal:true, override:''}),
+      R({kind:'ingredient', name:'CarnoSyn® Beta-Alanine', amt:3.2, unit:'g', parent:gE, tm:'CarnoSyn®', tmStatus:'tla'}),
+      R({id:gV, kind:'group', name:'Velox® Patented Performance Blend', parent:gE, showTotal:false, override:'', tm:'Velox®', tmStatus:'tla'}),
+      R({kind:'ingredient', name:'L-Citrulline', amt:3, unit:'g', parent:gV}),
+      R({kind:'ingredient', name:'L-Arginine', amt:3, unit:'g', parent:gV}),
+      R({kind:'ingredient', name:'BetaPower® Betaine Anhydrous', amt:1.25, unit:'g', parent:gE, tm:'BetaPower®', tmStatus:'tla'}),
+      R({kind:'ingredient', name:'PeptiPump® Bioactive Lentil Peptides', amt:200, unit:'mg', parent:gE, tm:'PeptiPump®', tmStatus:'tla'}),
+      R({id:gU, kind:'group', name:'Ultimate Energy, Focus & Stimulant Matrix', parent:'', showTotal:true, override:''}),
+      R({kind:'ingredient', name:'L-Tyrosine', amt:1, unit:'g', parent:gU}),
+      R({kind:'ingredient', name:'Caffeine Anhydrous', amt:300, unit:'mg', parent:gU, caff:100}),
+      R({kind:'ingredient', name:'Dynamine™ (as Methylliberine)', amt:50, unit:'mg', parent:gU, tm:'Dynamine™', tmStatus:'tla'}),
+      R({kind:'ingredient', name:'TeaCrine® (as Theacrine)', amt:10, unit:'mg', parent:gU, tm:'TeaCrine®', tmStatus:'tla'}),
+      R({kind:'ingredient', name:'Toothed Clubmoss (_Huperzia serrata_) aerial parts extract (std. 1% Huperzine A)', amt:5, unit:'mg', parent:gU, botanical:true}),
+      R({kind:'ingredient', name:'_Rauwolfia vomitoria_ root bark extract', amt:1, unit:'mg', parent:gU, botanical:true}),
+      R({id:gF, kind:'group', name:'Enhanced Fat Burning Matrix', parent:'', showTotal:true, override:'410 g'}),
+      R({kind:'ingredient', name:'MitoBurn® Beta-Aminoisobutyric Acid (BAIBA)', amt:250, unit:'mg', parent:gF, tm:'MitoBurn®', tmStatus:'tla'}),
+      R({kind:'ingredient', name:'Oligonol® Lychee fruit extract and Green Tea leaf extract', amt:100, unit:'mg', parent:gF, tm:'Oligonol®', tmStatus:'tla', allergen:'Tree Nuts (Lychee Nut)'}),
+      R({kind:'ingredient', name:'CaloriBurn® Grains of Paradise (_Aframomum melegueta_) seed extract', amt:40, unit:'mg', parent:gF, tm:'CaloriBurn®', tmStatus:'tla', botanical:true}),
+      R({kind:'ingredient', name:'Cayenne (_Capsicum annuum_) fruit extract (std. 5% Capsaicinoids)', amt:20, unit:'mg', parent:gF, botanical:true}),
+      R({kind:'other', name:'Citric Acid', cat:'acid', input:1500, status:'estimated'}),
+      R({kind:'other', name:'Natural Flavors', cat:'flavor', ftype:'natural', input:700, status:'estimated'}),
+      R({kind:'other', name:'Artificial Flavors', cat:'flavor', ftype:'artificial', input:500, status:'estimated'}),
+      R({kind:'other', name:'Malic Acid', cat:'acid', input:1000, status:'estimated'}),
+      R({kind:'other', name:'Calcium Silicate', cat:'excipient', input:400, status:'estimated'}),
+      R({kind:'other', name:'Silicon Dioxide', cat:'excipient', input:300, status:'estimated'}),
+      R({kind:'other', name:'Acesulfame Potassium', cat:'sweetener', input:150, status:'estimated'}),
+      R({kind:'other', name:'Sucralose', cat:'sweetener', input:100, status:'estimated'}),
+      R({kind:'other', name:'Vegetable Juice Powder', cat:'color', input:50, status:'estimated'}),
+      R({kind:'other', name:'Beta-Carotene', cat:'color', input:20, status:'estimated'})
+    ],
+    flags:[
+      {sev:'info', msg:'Nutrabolt prints Sodium as 225 mg', det:'Strict 101.9(c) rounding gives 230 mg. Rounding is switched off here to match the printed label.'},
+      {sev:'info', msg:'Reference project', det:'Rebuilt from the published C4 Ultimate Shred label to benchmark Nutrabolt formatting. Other Ingredients weights are back-filled to match the printed order.'}
+    ],
+    suggested:{qty:'', liquid:'', timing:'', freq:'', override:'Take one serving (approx. 1 scoop) of C4 Ultimate® Shred with 12 fl. oz. of water and consume 20-30 minutes before training.'},
+    callouts:[{src:'caffeine',label:'Caffeine',amt:''},{src:'name:CarnoSyn® Beta-Alanine',label:'CarnoSyn® Beta-Alanine',amt:''}],
+    text:t,
+    style:Object.assign(baseStyle(),{family:'Helvetica Neue LT Std Condensed', titleFamily:'same', titleStyle:'b', widthIn:2.85, body:6.5, head:6, foot:6, lead:1.08, rowPad:0.45, heavy:3.2, medium:1.6, hair:0.35, inverse:true, pad:3})
+  };
+}
+function blankProject(){
+  return {id:uid(), name:'Untitled product', coman:'', client:'', ref:'', form:'capsule', serving:{qty:'2', unit:'Capsules', weight:null, pattern:'unit', spc:'30', showSpc:true},
+    pkg:{area:null, areaSource:'estimated', process:'digital'}, allergensReviewed:false, macros:baseMacros(), rows:[], flags:[],
+    suggested:{qty:'2 capsules', liquid:'', timing:'', freq:'daily', override:''}, callouts:[], text:baseText(), style:baseStyle()};
+}
+
+const state = { projects:[sampleHydration(), sampleThermo(), sampleDetox(), sampleC4()], cur:0, tab:'formula', open:null, overlay:true, zoom:2, loadedFonts:{} };
+const P = ()=>state.projects[state.cur];
+
+/* ---------- text measurement ---------- */
+const mctx = document.createElement('canvas').getContext('2d');
+function fontDef(p, which){
+  const S=p.style;
+  let fam = which==='title' && S.titleFamily!=='same' ? S.titleFamily : S.family;
+  if(fam==='Custom'){ const c=S.custom; return {name:c.css||'Custom', css:c.css?`"${c.css}"`:'sans-serif', ps:{r:c.r||'Custom-Regular', b:c.b||c.r||'Custom-Bold', i:c.i||c.r||'Custom-Italic', bi:c.bi||c.b||'Custom-BoldItalic'}}; }
+  const f = FONTS[fam]||FONTS['Myriad Pro']; return {name:fam, css:f.css, ps:f.ps};
+}
+const FALLBACK = ', "Helvetica Neue", Arial, sans-serif';
+function cssFont(f, seg, size){ return `${seg.i?'italic ':''}${seg.b?'700 ':'400 '}${size}px ${f.css}${FALLBACK}`; }
+const mcache = new Map();
+function measure(f, seg, size){
+  const key = f.css+'|'+(seg.b?1:0)+(seg.i?1:0)+'|'+seg.text;
+  let w = mcache.get(key);
+  if(w==null){ mctx.font = cssFont(f,seg,100); w = mctx.measureText(seg.text).width/100; mcache.set(key,w); }
+  return w*size;
+}
+function measureSegs(f, segs, size){ return segs.reduce((a,s)=>a+measure(f,s,size),0); }
+function fontAvailable(css){
+  const t='mmmmmmmmmmlli1WQ@#'; let diff=false;
+  for(const base of ['monospace','serif']){ mctx.font=`40px ${base}`; const a=mctx.measureText(t).width; mctx.font=`40px ${css}, ${base}`; const b=mctx.measureText(t).width; if(Math.abs(a-b)>0.01) diff=true; }
+  return diff;
+}
+function parseMarkup(s, base={}){
+  const out=[]; const re=/(\*\*[^*]+\*\*|_[^_]+_)/g; let last=0, m;
+  s=String(s||'');
+  while((m=re.exec(s))){ if(m.index>last) out.push({text:s.slice(last,m.index), b:!!base.b, i:!!base.i});
+    const tok=m[0]; if(tok.startsWith('**')) out.push({text:tok.slice(2,-2), b:true, i:!!base.i}); else out.push({text:tok.slice(1,-1), b:!!base.b, i:true}); last=m.index+tok.length; }
+  if(last<s.length) out.push({text:s.slice(last), b:!!base.b, i:!!base.i});
+  return out.filter(x=>x.text);
+}
+const plain = s=>String(s||'').replace(/\*\*|_/g,'');
+function wrapSegs(f, segs, size, maxW, contIndent){
+  // words are runs of non-space text that may span style changes, e.g. "(" + italic "Aframomum"
+  const words=[]; let cur=null;
+  segs.forEach(s=>{ s.text.split(/(\s+)/).forEach(part=>{ if(part==='') return;
+    if(/^\s+$/.test(part)){ cur=null; words.push({space:true, pieces:[{text:' ',b:s.b,i:s.i}]}); return; }
+    if(!cur){ cur={space:false, pieces:[]}; words.push(cur); }
+    cur.pieces.push({text:part,b:s.b,i:s.i}); }); });
+  const wW=w=>w.pieces.reduce((a,pc)=>a+measure(f,pc,size),0);
+  const lines=[]; let line=[], w=0, limit=maxW;
+  for(const wd of words){
+    if(wd.space){ if(line.length){ line.push(wd); w+=wW(wd);} continue; }
+    const ww=wW(wd);
+    if(line.length && w+ww>limit){ while(line.length && line[line.length-1].space) line.pop(); lines.push(line); line=[]; w=0; limit=maxW-contIndent; }
+    line.push(wd); w+=ww;
+  }
+  while(line.length && line[line.length-1].space) line.pop();
+  if(line.length) lines.push(line);
+  return lines.map(l=>{ const m=[]; l.forEach(wd=>wd.pieces.forEach(s=>{ const pr=m[m.length-1]; if(pr && pr.b===s.b && pr.i===s.i) pr.text+=s.text; else m.push({text:s.text,b:s.b,i:s.i}); })); return m; });
+}
+
+/* ---------- rules engine ---------- */
+function roundMacro(kind, v){
+  if(v==null) return null;
+  if(kind==='cal'){ if(v<5) return 0; if(v<=50) return roundTo(v,5); return roundTo(v,10); }
+  if(kind==='g'){ if(v<0.5) return 0; if(v<1) return '<1'; return Math.round(v); }
+  if(kind==='fat'){ if(v<0.5) return 0; if(v<5) return roundTo(v,0.5); return Math.round(v); }
+  if(kind==='chol'){ if(v<2) return 0; if(v<5) return '<5'; return roundTo(v,5); }
+  return v;
+}
+function roundNaK(v){ if(v<5) return 0; if(v<=140) return roundTo(v,5); return roundTo(v,10); }
+function pctText(p){ if(p==null) return ''; if(p>0 && p<1) return '<1%'; return Math.round(p).toLocaleString('en-US')+'%'; }
+function amtStr(p, v, unit){ const sp=p.text.unitSpace?' ':''; if(v==='' || v==null) return ''; return `${typeof v==='number'?trim(v):v}${unit?sp+unit:''}`; }
+function childrenOf(p, gid){ return p.rows.filter(r=>(r.kind==='ingredient'||r.kind==='group') && (r.parent||'')===gid); }
+function groupSumMg(p, gid){ let s=0; for(const c of childrenOf(p,gid)){ if(c.kind==='group') s+=groupSumMg(p,c.id); else s+=toMg(num(c.amt)||0,c.unit)||0; } return s; }
+function fmtTotal(p, mg){ if(mg>=1000) return amtStr(p, +trim(mg/1000,3), 'g'); return amtStr(p, +trim(mg,2), 'mg'); }
+function parseAmt(s){ const m=String(s||'').match(/([\d.]+)\s*(mcg|mg|g)\b/i); return m?{v:parseFloat(m[1]),u:m[2].toLowerCase()}:null; }
+
+function computePanel(p){
+  const T=p.text, rowsTop=[], rowsDI=[];
+  let pctUsed=false, daggerUsed=false;
+  // macros
+  for(const m of MACROS){
+    const e=p.macros[m.k]; if(!e) continue;
+    const rv = roundMacro(m.round, num(e.v));
+    const isZero = rv===0 || rv==null;
+    let show = e.show==='show' ? true : e.show==='hide' ? false : (!isZero);
+    if(e.v==null && e.show!=='show') show=false;
+    if(!show) continue;
+    let label = m.k==='totalCarb' ? T.carbLabel : m.label;
+    let amount = m.k==='calories' ? String(rv??0) : amtStr(p, rv??0, m.unit);
+    let name = label;
+    if(m.k==='addedSugars'){ name = `Includes ${amtStr(p, rv??0, 'g')} Added Sugars`; amount=''; }
+    let dv='';
+    if(m.dv && m.pct!==false){ const base = rv==='<1'?Math.min(num(e.v)||0.99,0.99):(typeof rv==='number'?rv:0); dv=pctText(base/m.dv*100); if(dv) { dv+=T.pctSym; pctUsed=true; } }
+    rowsTop.push({key:'m_'+m.k, segs:[{text:name,b:false,i:false}], amount, dv, indent:m.indent, macro:m.k});
+  }
+  // vitamins & minerals
+  const nuts = p.rows.filter(r=>r.kind==='nutrient' && VMK[r.nk]).slice().sort((a,b)=>(VMK[a.nk]?.order??99)-(VMK[b.nk]?.order??99));
+  for(const r of nuts){
+    const def=VMK[r.nk]; let v=num(r.amt);
+    if(T.naKRound && (r.nk==='sodium'||r.nk==='potassium') && v!=null) v=roundNaK(v);
+    const label = r.label || def.label;
+    let segs=[{text:label, b:T.boldNames, i:false}];
+    if(r.source && r.place!=='other'){ segs=segs.concat(parseMarkup(` (${r.conn&&r.conn!=='none'?r.conn+' ':''}${r.source})`)); }
+    let dv='';
+    if(def.dv && v!=null){ dv=pctText(inDvUnit(v, r.unit, def.unit)/def.dv*100); }
+    else { dv='†'; daggerUsed=true; }
+    rowsTop.push({key:r.id, rowId:r.id, segs, amount:amtStr(p, v, r.unit), dv, indent:0});
+  }
+  // dietary ingredients (tree order)
+  const walk=(gid,depth)=>{
+    for(const r of childrenOf(p,gid)){
+      if(r.kind==='group'){
+        let total='';
+        if(r.showTotal){ total = r.override ? r.override.replace(/\s+/g, T.unitSpace?' ':'') : fmtTotal(p, groupSumMg(p,r.id)); }
+        const top = depth===0;
+        if(top) daggerUsed=true;
+        rowsDI.push({key:r.id, rowId:r.id, segs:parseMarkup(r.name,{b:top}), amount:total, amountBold:top, dv:top?'†':'', indent:depth, group:true, top});
+        walk(r.id, depth+1);
+      } else {
+        const dv = depth===0 ? '†' : '';
+        if(dv) daggerUsed=true;
+        rowsDI.push({key:r.id, rowId:r.id, segs:parseMarkup(r.name), amount:amtStr(p, num(r.amt), r.unit), dv, indent:depth, top:depth===0});
+      }
+    }
+  };
+  walk('',0);
+  const foot=[];
+  if(pctUsed) foot.push(T.pctSym+T.pctNote);
+  if(daggerUsed) foot.push('†'+T.daggerNote);
+  return {rowsTop, rowsDI, foot, pctUsed, daggerUsed};
+}
+
+function otherIngredients(p){
+  const T=p.text; const items=[]; const flav=[];
+  for(const r of p.rows){
+    if(r.kind==='other'){
+      if(r.cat==='flavor'){ flav.push(r); continue; }
+      let name=r.name; if(r.cat==='color' && !/\(color\)/i.test(name)) name+=' (color)';
+      items.push({name, w:num(r.input), rowId:r.id});
+    } else if(r.kind==='nutrient' && r.source && r.place==='other'){
+      items.push({name:r.source, w:num(r.input), rowId:r.id});
+    }
+  }
+  if(flav.length){
+    const types=new Set(flav.map(f=>f.ftype||'unconfirmed'));
+    const hasArt = types.has('artificial')||types.has('nat_art');
+    const hasNat = types.has('natural')||types.has('unconfirmed')||types.has('nat_art');
+    let label = hasArt&&hasNat ? T.flavorMix : hasArt ? (flav.length>1?'Artificial Flavors':'Artificial Flavor') : (flav.length>1?'Natural Flavors':'Natural Flavor');
+    const w = flav.reduce((a,f)=>a+(num(f.input)||0),0);
+    items.push({name:label, w: flav.some(f=>num(f.input)==null)?null:w, flavor:true, members:flav.map(f=>f.id)});
+  }
+  items.sort((a,b)=>(b.w??-1)-(a.w??-1));
+  const allergens=[...new Set(p.rows.map(r=>(r.allergen||'').trim()).filter(Boolean))];
+  let contains = allergens.length ? 'Contains: '+allergens.join(', ') : '';
+  if(contains && T.containsUpper) contains = contains.toUpperCase();
+  return {items, text: items.map(i=>i.name).join(', ')+(items.length?'.':''), contains};
+}
+
+function suggestedUse(p){
+  const s=p.suggested; if(s.override && s.override.trim()) return {text:s.override.trim(), auto:false, missing:[]};
+  const missing=[]; let t='';
+  if(p.form==='powder'){
+    const liquid = s.liquid || (missing.push('water volume'),'[__ fl oz]');
+    t = `Mix ${s.qty||'one serving'} with ${liquid} of water`;
+    if(s.timing) t+=` and consume ${s.timing}`; t+='.';
+  } else {
+    t = `As a dietary supplement, take ${s.qty||'one serving'}${s.freq?' '+s.freq:''} with water`;
+    if(s.timing) t+=`, ${s.timing}`; t+='.';
+    if(!s.freq) missing.push('frequency');
+  }
+  return {text:t, auto:true, missing};
+}
+function totalCaffeine(p){ let mg=0, n=0; for(const r of p.rows){ if(r.kind==='ingredient' && num(r.caff)){ mg+=(toMg(num(r.amt),r.unit)||0)*num(r.caff)/100; n++; } } return {mg:Math.round(mg), n}; }
+
+/* ---------- layout → display list ---------- */
+function layout(p){
+  const S=p.style, T=p.text, f=fontDef(p,'body'), tf=fontDef(p,'title');
+  const W=S.widthIn*72, pad=S.pad, x0=pad, xr=W-pad, inner=W-2*pad;
+  const items=[]; const rowY={};
+  const panel=computePanel(p);
+  let y=pad;
+  const rule=(h,grp)=>{ if(h<=0) return; items.push({t:'rect',x:x0,y,w:inner,h,grp}); y+=h; };
+  // title
+  const title = T.titleCase==='upper'?'SUPPLEMENT FACTS':'Supplement Facts';
+  const tseg=[{text:title,b:S.titleStyle==='b',i:false}];
+  let ts = S.titleSize;
+  if(S.fitTitle){ const w1=measureSegs(tf,tseg,10); ts = Math.min(40, 10*inner/w1); }
+  y += ts*0.74;
+  items.push({t:'text',x:x0,y,segs:tseg,size:ts,font:'title',grp:'Title'});
+  y += ts*0.2;
+  // serving
+  const sv=p.serving; const sp=T.unitSpace?' ':'';
+  const wStr = sv.weight? `${trim(sv.weight,2)}${sp}g` : '';
+  let servText = sv.pattern==='weight_approx' ? `${wStr} (Approx. ${sv.qty}${sv.unit?' '+sv.unit:''})` : sv.pattern==='unit_weight' && wStr ? `${sv.qty} ${sv.unit} (${wStr})` : `${sv.qty} ${sv.unit}`.trim();
+  const colon=T.servingColon?':':'';
+  const servLines=[[{text:`Serving Size${colon} `,b:T.servingBold,i:false},{text:servText,b:false,i:false}]];
+  if(sv.showSpc && sv.spc) servLines.push([{text:`Servings Per Container${colon} `,b:T.servingBold,i:false},{text:String(sv.spc),b:false,i:false}]);
+  const lh=S.body*S.lead;
+  servLines.forEach((segs,i)=>{ const wr=wrapSegs(f,segs,S.body,inner,S.indent); wr.forEach(l=>{ y+=lh; items.push({t:'text',x:x0,y:y-lh*0.22,segs:l,size:S.body,grp:i?'Servings_Per_Container':'Serving_Size'}); }); });
+  y += lh*0.25;
+  rule(S.heavy,'Bar_Heavy_Top');
+  // column widths
+  const allRows=[...panel.rowsTop,...panel.rowsDI];
+  const dvHeadSeg=[{text:T.dvHead,b:true,i:false}], amtHeadSeg=[{text:T.amtHead,b:true,i:false}];
+  let dvW = measureSegs(f,dvHeadSeg,S.head);
+  let amtW = 0;
+  allRows.forEach(r=>{ dvW=Math.max(dvW, measure(f,{text:r.dv,b:false,i:false},S.body)); amtW=Math.max(amtW, measure(f,{text:r.amount,b:!!r.amountBold,i:false},S.body)); });
+  const dvRight = xr, amtRight = xr - dvW - S.colGap;
+  const nameMax = amtRight - amtW - S.colGap - x0;
+  // header row
+  const hh=S.head*S.lead + S.rowPad*2;
+  const hb = y + S.rowPad + S.head*0.8;
+  items.push({t:'text',x:amtRight,y:hb,segs:amtHeadSeg,size:S.head,anchor:'end',grp:'Header'});
+  items.push({t:'text',x:dvRight,y:hb,segs:dvHeadSeg,size:S.head,anchor:'end',grp:'Header'});
+  y += hh;
+  rule(S.medium,'Bar_Medium_Header');
+  const drawRow=(r)=>{
+    const ind = r.indent*S.indent;
+    const lines = wrapSegs(f, r.segs, S.body, nameMax-ind, S.indent*0.8);
+    const top=y; const h = S.rowPad*2 + Math.max(1,lines.length)*lh;
+    const grp = 'Row_'+(r.macro||plain(r.segs.map(s=>s.text).join('')).replace(/[^A-Za-z0-9]+/g,'_').slice(0,32));
+    lines.forEach((l,i)=>{ const by = top + S.rowPad + S.body*0.8 + i*lh; items.push({t:'text',x:x0+ind+(i?S.indent*0.8:0),y:by,segs:l,size:S.body,grp,row:r.rowId}); });
+    const by0 = top + S.rowPad + S.body*0.8;
+    if(r.amount) items.push({t:'text',x:amtRight,y:by0,segs:[{text:r.amount,b:!!r.amountBold,i:false}],size:S.body,anchor:'end',grp,row:r.rowId});
+    if(r.dv) items.push({t:'text',x:dvRight,y:by0,segs:[{text:r.dv,b:false,i:false}],size:S.body,anchor:'end',grp,row:r.rowId});
+    if(r.rowId) rowY[r.rowId]=top+h/2; if(r.macro) rowY['m_'+r.macro]=top+h/2;
+    y += h;
+  };
+  panel.rowsTop.forEach((r,i)=>{ if(i && S.rowRules) rule(S.hair,'Hairline'); drawRow(r); });
+  if(panel.rowsDI.length){
+    if(panel.rowsTop.length) rule(S.heavy,'Bar_Heavy_Section');
+    panel.rowsDI.forEach((r,i)=>{ if(i){ if(r.top && r.group && S.groupBars) rule(S.medium,'Bar_Group'); else if(S.rowRules && (r.top||!S.groupBars)) rule(S.hair,'Hairline'); } drawRow(r); });
+  }
+  rule(S.heavy,'Bar_Heavy_Bottom');
+  const flh=S.foot*S.lead;
+  y += flh*0.15;
+  panel.foot.forEach(t=>{ const segs=[{text:t,b:false,i:false}]; wrapSegs(f,segs,S.foot,inner,0).forEach(l=>{ y+=flh; items.push({t:'text',x:x0,y:y-flh*0.22,segs:l,size:S.foot,grp:'Footnotes'}); }); });
+  y += pad;
+  const H=y;
+  items.unshift({t:'box',x:S.box/2,y:S.box/2,w:W-S.box,h:H-S.box,sw:S.box,grp:'Box'});
+  // outside: other ingredients
+  const oi=otherIngredients(p); const ext=[]; let ey=H+S.oiGap;
+  if(S.showOI){
+    const olh=S.oiSize*S.lead;
+    if(oi.contains){ wrapSegs(f,[{text:oi.contains,b:true,i:false}],S.oiSize,W,0).forEach(l=>{ ey+=olh; ext.push({t:'text',x:0,y:ey-olh*0.22,segs:l,size:S.oiSize,grp:'Contains'}); }); }
+    if(oi.items.length){ wrapSegs(f,[{text:T.oiLabel+' ',b:true,i:false},{text:oi.text,b:false,i:false}],S.oiSize,W,0).forEach(l=>{ ey+=olh; ext.push({t:'text',x:0,y:ey-olh*0.22,segs:l,size:S.oiSize,grp:'Other_Ingredients'}); }); }
+  }
+  return {W,H,items,ext,extH:ext.length?ey+2:H,rowY,panel,oi,f,tf,titleSize:ts,nameMax,amtRight,dvRight};
+}
+
+/* ---------- checks ---------- */
+function checks(p, L){
+  const S=p.style, out=[]; const add=(sev,msg,det,rowId,src)=>out.push({sev,msg,det,rowId,src});
+  const area=num(p.pkg.area);
+  let cat='standard', minBody=8, minSmall=6;
+  if(area!=null && area<12){ cat='small'; minBody=4.5; minSmall=4.5; }
+  else if(area!=null && area<=40){ cat='intermediate'; minBody=6; minSmall=6; }
+  if(area==null) add('warn','Label area not set','Enter the area available for labeling to evaluate small-package type minimums.',null,'Package');
+  else if(p.pkg.areaSource!=='dieline') add('info',`Package: ${cat} (${trim(area,1)} sq in, estimated)`,'Confirm the available labeling area against the dieline.',null,'Package');
+  if(S.body<minBody) add('warn',`Body type ${S.body} pt is under the ${minBody} pt minimum`,`${cat==='standard'?'101.36(e)':'101.36(i)(2)'}: ${cat} package. Flagged, not enforced.`,null,'Type size');
+  if(S.head<minSmall) add('warn',`Column heading ${S.head} pt is under ${minSmall} pt`,'Column headings and footnotes may be 6 pt on standard packages.',null,'Type size');
+  if(S.foot<minSmall) add('warn',`Footnotes ${S.foot} pt are under ${minSmall} pt`,'',null,'Type size');
+  const bigger = Math.max(S.body,S.head,S.foot);
+  if(L.titleSize<=bigger) add('block','Title is not the largest type','"Supplement Facts" must be larger than all other print in the panel.',null,'Type size');
+  const proc=PROCESS[p.pkg.process]||PROCESS.digital;
+  [['hairline',S.hair],['box rule',S.box],['medium bar',S.medium]].forEach(([n,w])=>{ if(w>0 && w<proc.minRule) add('warn',`${n[0].toUpperCase()+n.slice(1)} ${w} pt is under the ${proc.label.toLowerCase()} minimum`,`Printer minimum set to ${proc.minRule} pt.`,null,'Print'); });
+  const minText=Math.min(S.body,S.head,S.foot,S.oiSize);
+  if(minText<proc.minType) add('warn',`Smallest type ${minText} pt is under the ${proc.label.toLowerCase()} limit`,`Process minimum ${proc.minType} pt.`,null,'Print');
+  if(S.inverse) add('info','Reversed panel','Text and rules export as knockout (0/0/0/0). Check the minimum reversed type size with your printer.',null,'Print');
+  // font
+  const f=fontDef(p,'body');
+  if(!fontAvailable(f.css) && !state.loadedFonts[f.name]) add('info',`${f.name} is not available to this browser`,'Preview and line breaks use fallback metrics. Load the font files under Style for exact widths; exported text still names the real font.',null,'Font');
+  // macros
+  const cal=p.macros.calories;
+  if(cal && cal.status!=='verified' && num(cal.v)!=null && cal.v>=3.5 && cal.v<7.5) add('warn',`Calories (${trim(cal.v,1)} kcal) estimated near the 5 kcal cutoff`,'Declared as '+roundMacro('cal',cal.v)+'. Supplier data decides whether the line appears.','m_calories','Nutrition data');
+  MACROS.forEach(m=>{ const e=p.macros[m.k]; if(!e) return; const rv=roundMacro(m.round,num(e.v)); if(e.show==='show' && (rv===0||e.v==null)) add('info',`${m.label} shown at zero`,'101.36 omits nutrients present at zero. Showing "0 g" is a common liberty (e.g. to advertise zero sugar).','m_'+m.k,'Liberty'); });
+  // rows
+  const vmSeen={}; const est=[];
+  for(const r of p.rows){
+    const nm = r.kind==='nutrient' ? (r.label||VMK[r.nk]?.label||'Nutrient') : plain(r.name||'Row');
+    if(r.status==='estimated') est.push({nm,id:r.id});
+    if(r.status==='missing') add('block',`${nm}: supplier data missing`,'',r.id,'Data');
+    if(r.note) add(r.noteSev||'info', nm, r.note, r.id, 'Reviewer note');
+    if(r.tm && r.tmStatus==='pending') add('warn',`${r.tm} styling not confirmed`,'Take styling from the TLA, the brand, or a TLA-reviewed product on market.',r.id,'Trademark');
+    if(r.kind==='nutrient'){
+      if(vmSeen[r.nk]) add('block',`${nm} listed twice`,'Combine sources into one line: "(as A and B)".',r.id,'Panel');
+      vmSeen[r.nk]=1;
+      const v=num(r.amt);
+      if((r.nk==='sodium'||r.nk==='potassium') && v!=null && roundNaK(v)!==v){ if(p.text.naKRound) add('info',`${nm} rounded ${trim(v)} → ${roundNaK(v)} mg`,'Sodium/potassium rounding per 101.9(c): nearest 5 mg up to 140 mg, nearest 10 mg above.',r.id,'Rounding'); else add('warn',`${nm} printed unrounded (${trim(v)} mg)`,`101.9(c) rounding would give ${roundNaK(v)} mg. Rounding is switched off under Text.`,r.id,'Rounding'); }
+      if(r.place==='other' && r.source && num(r.input)==null) add('warn',`${nm}: source weight missing`,'Needed to place the source in Other Ingredients.',r.id,'Other ingredients');
+    }
+    if(r.kind==='ingredient' && r.botanical){ const n=r.name||''; if(!/_[^_]+_/.test(n)) add('warn',`${nm}: Latin name missing`,'Botanicals need the Latin binomial (italicized: wrap in _underscores_).',r.id,'Botanical'); if(!/\b(root|leaf|leaves|bark|seed|fruit|flower|aerial|whole plant|husk|rhizome|berry|peel|stem|herb)\b/i.test(n)) add('warn',`${nm}: plant part missing`,'101.4(h) requires the part of the plant.',r.id,'Botanical'); }
+    if(r.kind==='group'){
+      const sum=groupSumMg(p,r.id);
+      if(r.override){ const pa=parseAmt(r.override); if(pa){ const mg=toMg(pa.v,pa.u); if(Math.abs(mg-sum)>Math.max(0.5,sum*0.005)) add('block',`${plain(r.name)} total reads ${r.override}`,`Components add to ${fmtTotal(p,sum)}. Check the value and unit.`,r.id,'Blend math'); } }
+      if(!childrenOf(p,r.id).length) add('warn',`${plain(r.name)} has no components`,'',r.id,'Blend math');
+    }
+    if(r.kind==='other'){
+      if(num(r.input)==null) add('warn',`${nm}: weight missing`,'Listed last until a weight is entered; the order may be wrong.',r.id,'Other ingredients');
+      if(r.cat==='flavor' && (!r.ftype || r.ftype==='unconfirmed')) add('warn',`${nm}: natural or artificial not confirmed`,'Item code does not say. Get the composition statement.',r.id,'Other ingredients');
+    }
+  }
+  if(est.length>3) add('warn',`${est.length} inputs are estimates`,est.map(e=>e.nm).join(', ')+'. Replace with supplier spec or COA values.',null,'Data');
+  else est.forEach(e=>add('warn',`${e.nm}: data estimated`,'Replace with supplier spec or COA values.',e.id,'Data'));
+  const oi=L.oi; const flavN=p.rows.filter(r=>r.kind==='other'&&r.cat==='flavor').length;
+  if(flavN>1) { const it=oi.items.find(i=>i.flavor); if(it) add('info',`${flavN} flavors grouped as "${it.name}"`,`Placed by combined weight (${trim(it.w||0,1)} mg).`,null,'Other ingredients'); }
+  if(!p.allergensReviewed) add('warn','Allergens not reviewed','Check composition statements (flavors, carriers, branded botanicals) and mark reviewed under Product.',null,'Allergens');
+  if(p.serving.showSpc && String(p.serving.spc)==='1') add('info','"Servings Per Container 1" shown','May be omitted on a single-serving container when net contents states it.',null,'Panel');
+  const su=suggestedUse(p); if(su.missing.length) add('warn','Suggested use incomplete',`Missing: ${su.missing.join(', ')}.`,null,'Text');
+  const caf=totalCaffeine(p); if(caf.n>1) add('info',`Total caffeine ${caf.mg} mg from ${caf.n} sources`,'Use this total for caffeine callouts and statements.',null,'Callouts');
+  // text chars
+  const bad=new Set(); const scan=s=>{ for(const ch of s){ if(!winAnsiCode(ch)) bad.add(ch); } };
+  L.items.concat(L.ext).forEach(it=>{ if(it.t==='text') it.segs.forEach(sg=>scan(sg.text)); });
+  if(bad.size) add('warn','Characters outside the PDF text encoding',`${[...bad].join(' ')}: these export as "?" in the PDF (SVG is fine).`,null,'Export');
+  (p.flags||[]).forEach(fl=>add(fl.sev,fl.msg,fl.det,null,'Co-man review'));
+  const order={block:0,warn:1,info:2}; out.sort((a,b)=>order[a.sev]-order[b.sev]);
+  return out;
+}
+
+/* ---------- rendering: SVG ---------- */
+function svgFor(p, L, opts={}){
+  const S=p.style; const ink = S.inverse?'#FFFFFF':'#000000';
+  const forExport = !!opts.export; const withExt = opts.ext!==false && S.showOI;
+  const Hall = withExt ? L.extH : L.H;
+  const f=L.f, tf=L.tf;
+  const fam=(font,seg)=>{ const k=seg.b&&seg.i?'bi':seg.b?'b':seg.i?'i':'r'; return font.ps[k]; };
+  const txt=(it)=>{
+    const font = it.font==='title'?tf:f;
+    const anchor = it.anchor==='end'?' text-anchor="end"':'';
+    if(forExport){
+      const spans = it.segs.map(s=>`<tspan font-family="${esc(fam(font,s))}">${esc(s.text)}</tspan>`).join('');
+      return `<text x="${trim(it.x)}" y="${trim(it.y)}" font-size="${trim(it.size)}" fill="${ink}"${anchor} xml:space="preserve">${spans}</text>`;
+    }
+    const spans = it.segs.map(s=>`<tspan font-weight="${s.b?700:400}" font-style="${s.i?'italic':'normal'}">${esc(s.text)}</tspan>`).join('');
+    return `<text x="${trim(it.x)}" y="${trim(it.y)}" font-size="${trim(it.size)}" fill="${ink}" font-family='${esc(font.css+FALLBACK)}'${anchor} xml:space="preserve">${spans}</text>`;
+  };
+  const groups=new Map(); const orderK=[];
+  const put=(g,s)=>{ if(!groups.has(g)){groups.set(g,[]);orderK.push(g);} groups.get(g).push(s); };
+  L.items.forEach(it=>{
+    if(it.t==='box') put('Box',`<rect x="${trim(it.x)}" y="${trim(it.y)}" width="${trim(it.w)}" height="${trim(it.h)}" fill="none" stroke="${ink}" stroke-width="${trim(it.sw)}"/>`);
+    else if(it.t==='rect') put(it.grp,`<rect x="${trim(it.x)}" y="${trim(it.y)}" width="${trim(it.w)}" height="${trim(it.h)}" fill="${ink}"/>`);
+    else put(it.grp, txt(it));
+  });
+  let seen={}; const gid=g=>{ seen[g]=(seen[g]||0)+1; return seen[g]>1?`${g}_${seen[g]}`:g; };
+  // hairlines/bars share names; merge rules into one "Rules" group for tidy layers
+  let body='';
+  const ruleG=[]; const textG=[];
+  orderK.forEach(k=>{ const c=groups.get(k).join(''); if(/^Bar_|^Hairline|^Box/.test(k)) ruleG.push(`<g id="${gid(k)}">${c}</g>`); else textG.push(`<g id="${gid(k)}">${c}</g>`); });
+  body = `<g id="Supplement_Facts"><g id="Rules">${ruleG.join('')}</g><g id="Text">${textG.join('')}</g></g>`;
+  if(withExt && L.ext.length){ const eg=new Map(); L.ext.forEach(it=>{ if(!eg.has(it.grp)) eg.set(it.grp,[]); eg.get(it.grp).push(txt(it)); }); body += `<g id="Outside_Panel">${[...eg].map(([k,v])=>`<g id="${k}">${v.join('')}</g>`).join('')}</g>`; }
+  let overlay='';
+  if(!forExport && state.overlay && opts.flags){
+    const marks={}; opts.flags.forEach((fl,i)=>{ if(fl.rowId && L.rowY[fl.rowId]!=null && fl.sev!=='info'){ (marks[fl.rowId]=marks[fl.rowId]||[]).push({n:i+1,sev:fl.sev}); } });
+    Object.entries(marks).forEach(([rid,arr])=>{ const y=L.rowY[rid]; arr.slice(0,3).forEach((m,j)=>{ const cx=L.W+7+j*9.5; const col=m.sev==='block'?'#B0271F':'#C98200'; overlay+=`<g class="mk" data-row="${esc(rid)}" style="cursor:pointer"><circle cx="${cx}" cy="${y}" r="4.2" fill="${col}"/><text x="${cx}" y="${y+1.6}" font-size="4.4" text-anchor="middle" fill="#fff" font-family="IBM Plex Mono, monospace">${m.n}</text></g>`; }); });
+  }
+  const pad = forExport?0:0;
+  const vbW = forExport ? L.W : L.W + (overlay?34:0);
+  const z = opts.zoom||1;
+  const size = forExport ? `width="${trim(L.W)}pt" height="${trim(Hall)}pt"` : `width="${trim(vbW*z)}" height="${trim(Hall*z)}"`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" ${size} viewBox="0 0 ${trim(vbW)} ${trim(Hall)}">${forExport?`<title>Supplement Facts - ${esc(p.name)}</title>`:''}${body}${overlay}</svg>`;
+}
+
+/* ---------- rendering: PDF (DeviceCMYK, live text) ---------- */
+const WIN = {0x20AC:0x80,0x201A:0x82,0x0192:0x83,0x201E:0x84,0x2026:0x85,0x2020:0x86,0x2021:0x87,0x02C6:0x88,0x2030:0x89,0x0160:0x8A,0x2039:0x8B,0x0152:0x8C,0x017D:0x8E,0x2018:0x91,0x2019:0x92,0x201C:0x93,0x201D:0x94,0x2022:0x95,0x2013:0x96,0x2014:0x97,0x02DC:0x98,0x2122:0x99,0x0161:0x9A,0x203A:0x9B,0x0153:0x9C,0x017E:0x9E,0x0178:0x9F};
+const WIN_REV = Object.fromEntries(Object.entries(WIN).map(([u,c])=>[c,+u]));
+function winAnsiCode(ch){ const u=ch.codePointAt(0); if(u>=32&&u<127) return u; if(u>=160&&u<=255) return u; return WIN[u]||0; }
+function pdfStr(s){ let o=''; for(const ch of s){ let c=winAnsiCode(ch)||63; if(c===40||c===41||c===92) o+='\\'+String.fromCharCode(c); else if(c<32||c>126) o+='\\'+c.toString(8).padStart(3,'0'); else o+=String.fromCharCode(c); } return '('+o+')'; }
+function pdfFor(p, L, withExt){
+  const S=p.style; const k = S.inverse?'0 0 0 0':'0 0 0 1';
+  const H = withExt?L.extH:L.H; const W=L.W;
+  const fontsUsed=new Map(); // ps -> {res, font, seg}
+  const fk=(font,seg)=>{ const key=seg.b&&seg.i?'bi':seg.b?'b':seg.i?'i':'r'; const ps=font.ps[key]; if(!fontsUsed.has(ps)) fontsUsed.set(ps,{res:'F'+(fontsUsed.size+1), font, b:!!seg.b, i:!!seg.i}); return fontsUsed.get(ps).res; };
+  let c=`% Supplement Facts - ${p.name.replace(/[^\x20-\x7e]/g,'')}\n${k} k ${k} K\n`;
+  const all = withExt ? L.items.concat(L.ext) : L.items;
+  for(const it of all){
+    if(it.t==='box'){ c+=`${trim(it.sw)} w ${trim(it.x)} ${trim(H-it.y-it.h)} ${trim(it.w)} ${trim(it.h)} re S\n`; }
+    else if(it.t==='rect'){ c+=`${trim(it.x)} ${trim(H-it.y-it.h)} ${trim(it.w)} ${trim(it.h)} re f\n`; }
+    else {
+      const font = it.font==='title'?L.tf:L.f;
+      const w = measureSegs(font,it.segs,it.size);
+      const x = it.anchor==='end' ? it.x - w : it.x;
+      c+=`BT 1 0 0 1 ${trim(x)} ${trim(H-it.y)} Tm `;
+      it.segs.forEach(sg=>{ c+=`/${fk(font,sg)} ${trim(it.size)} Tf ${pdfStr(sg.text)} Tj `; });
+      c+='ET\n';
+    }
+  }
+  const objs=[]; const add=s=>{ objs.push(s); return objs.length; };
+  const catalogId=add(null), pagesId=add(null), pageId=add(null);
+  const contentId=add(`<< /Length ${c.length} >>\nstream\n${c}endstream`);
+  const fontRefs=[];
+  for(const [ps,info] of fontsUsed){
+    const widths=[]; for(let code=32;code<=255;code++){ const u = (code>=0x80&&code<=0x9F)? (WIN_REV[code]||32) : code; widths.push(Math.round(measure(info.font,{text:String.fromCodePoint(u),b:info.b,i:info.i},1000))); }
+    const flags = 32 + (info.i?64:0);
+    const fd=add(`<< /Type /FontDescriptor /FontName /${ps} /Flags ${flags} /FontBBox [-200 -250 1200 950] /ItalicAngle ${info.i?-11:0} /Ascent 750 /Descent -250 /CapHeight 674 /StemV ${info.b?140:88} >>`);
+    const fid=add(`<< /Type /Font /Subtype /Type1 /BaseFont /${ps} /Encoding /WinAnsiEncoding /FirstChar 32 /LastChar 255 /Widths [${widths.join(' ')}] /FontDescriptor ${fd} 0 R >>`);
+    fontRefs.push(`/${info.res} ${fid} 0 R`);
+  }
+  objs[catalogId-1]=`<< /Type /Catalog /Pages ${pagesId} 0 R >>`;
+  objs[pagesId-1]=`<< /Type /Pages /Kids [${pageId} 0 R] /Count 1 >>`;
+  objs[pageId-1]=`<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${trim(W)} ${trim(H)}] /TrimBox [0 0 ${trim(W)} ${trim(H)}] /Resources << /Font << ${fontRefs.join(' ')} >> >> /Contents ${contentId} 0 R >>`;
+  const infoId=add(`<< /Title ${pdfStr('Supplement Facts - '+p.name)} /Producer (Supplement Facts Builder) >>`);
+  let out='%PDF-1.4\n%\xE2\xE3\xCF\xD3\n'; const offs=[];
+  objs.forEach((o,i)=>{ offs.push(out.length); out+=`${i+1} 0 obj\n${o}\nendobj\n`; });
+  const xref=out.length;
+  out+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n`+offs.map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('');
+  out+=`trailer\n<< /Size ${objs.length+1} /Root ${catalogId} 0 R /Info ${infoId} 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  const bytes=new Uint8Array(out.length); for(let i=0;i<out.length;i++) bytes[i]=out.charCodeAt(i)&255;
+  return bytes;
+}
+
+/* ---------- saving ---------- */
+let dl=null; const dlReady = (window.claude && window.claude.use) ? window.claude.use('downloads').then(x=>{dl=x;}).catch(()=>{}) : Promise.resolve();
+async function saveFile(name, data, mime){
+  await dlReady;
+  if(dl){ try{ await dl.save({filename:name, data}); toast('Saved '+name); }catch(e){ if(e&&e.code==='declined') toast('Save cancelled'); else toast('Could not save: '+(e&&e.message||'unavailable')); } return; }
+  try{ const blob=new Blob([data],{type:mime}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500); toast('Downloaded '+name); }catch(e){ toast('Download is not available here'); }
+}
+function fileBase(p){ return (p.name||'panel').replace(/[—–]/g,'-').replace(/[^A-Za-z0-9 _-]+/g,'').trim().replace(/\s+/g,'_').slice(0,60)||'panel'; }
+let toastT; function toast(msg){ let t=document.querySelector('.toast'); if(!t){ t=document.createElement('div'); t.className='toast'; t.setAttribute('role','status'); document.body.appendChild(t);} t.textContent=msg; clearTimeout(toastT); toastT=setTimeout(()=>t.remove(),2600); }
+
+/* ---------- editor UI ---------- */
+const TABS=[['formula','Formula'],['product','Product'],['text','Text'],['style','Style'],['outside','Outside panel']];
+function field(label, path, val, type='text', extra=''){
+  const id='f_'+path.replace(/\W/g,'_');
+  if(type==='check') return `<label class="chk"><input type="checkbox" id="${id}" data-k="${path}" ${val?'checked':''}> ${label}</label>`;
+  if(type==='area') return `<label class="f" for="${id}"><span>${label}</span><textarea id="${id}" data-k="${path}" ${extra}>${esc(val)}</textarea></label>`;
+  return `<label class="f" for="${id}"><span>${label}</span><input id="${id}" type="${type}" data-k="${path}" value="${esc(val??'')}" ${type==='number'?'step="any"':''} ${extra}></label>`;
+}
+function sel(label, path, val, opts, extra=''){
+  const id='f_'+path.replace(/\W/g,'_');
+  return `<label class="f" for="${id}"><span>${label}</span><select id="${id}" data-k="${path}" data-struct="1" ${extra}>${opts.map(o=>{ const [v,t]=Array.isArray(o)?o:[o,o]; return `<option value="${esc(v)}" ${String(v)===String(val)?'selected':''}>${esc(t)}</option>`; }).join('')}</select></label>`;
+}
+function rowSummary(p,r,i,flagsByRow){
+  const depth = (()=>{ let d=0, cur=r.parent; while(cur){ d++; const g=p.rows.find(x=>x.id===cur); cur=g?g.parent:''; if(d>4) break; } return d; })();
+  let name, amt='', kind;
+  if(r.kind==='nutrient'){ kind='<span class="kind nut">DV</span>'; name=(r.label||VMK[r.nk]?.label||'—')+(r.source?` (${r.conn&&r.conn!=='none'?r.conn+' ':''}${r.source})`:''); amt=`${trim(num(r.amt)||0)} ${r.unit}`; }
+  else if(r.kind==='group'){ kind='<span class="kind grp">Blend</span>'; name=plain(r.name); amt=r.showTotal?(r.override||fmtTotal(p,groupSumMg(p,r.id))):''; }
+  else if(r.kind==='ingredient'){ kind='<span class="kind">Ingr</span>'; name=plain(r.name); amt=`${trim(num(r.amt)||0)} ${r.unit}`; }
+  else { kind='<span class="kind oth">Other</span>'; name=r.name; amt=num(r.input)!=null?`${trim(num(r.input),1)} mg`:'no wt'; }
+  const fl=flagsByRow[r.id]; const dot = fl ? `<span class="dot ${fl}" title="Has ${fl==='block'?'blocking':'warning'} checks"></span>` : '';
+  return `<summary>${kind}<span class="rname ${depth===1?'child':depth>1?'child2':''}">${esc(name)}</span><span class="ramt">${esc(amt)}</span>${dot||'<span></span>'}</summary>`;
+}
+function rowBody(p,r,i){
+  const b=`rows.${i}.`; const groups=p.rows.filter(x=>x.kind==='group' && x.id!==r.id);
+  const status = sel('Data source', b+'status', r.status, [['verified','Supplier spec / COA'],['estimated','Estimated'],['missing','Missing']]);
+  const tm = `<div class="grid2">${field('Trademark in this line',b+'tm',r.tm)}${sel('Trademark styling source',b+'tmStatus',r.tmStatus,[['n/a','No trademark'],['tla','TLA'],['brand','Brand provided'],['market','On-market reviewed product'],['pending','Pending licensor review']])}</div>`;
+  const note = `<div class="grid2" style="grid-template-columns:1fr auto">${field('Reviewer note (shows in Checks)',b+'note',r.note)}${sel('Level',b+'noteSev',r.noteSev,[['info','Info'],['warn','Warning'],['block','Blocking']])}</div>`;
+  let h='';
+  if(r.kind==='nutrient'){
+    h+=`<div class="grid2">${sel('Nutrient',b+'nk',r.nk,VM.map(v=>[v.k,v.label]))}${field('Label name override',b+'label',r.label||'','text',`placeholder="${esc(VMK[r.nk]?.label||'')}"`)}</div>`;
+    h+=`<div class="grid3">${field('Label claim',b+'amt',r.amt,'number')}${sel('Unit',b+'unit',r.unit,UNITS_VM)}${sel('Link word',b+'conn',r.conn||'as',[['as','as'],['from','from'],['none','none']])}</div>`;
+    h+=`<div class="grid2">${field('Source compound',b+'source',r.source)}${sel('Name the source',b+'place',r.place||'panel',[['panel','In the panel (parentheses)'],['other','In Other Ingredients']])}</div>`;
+    h+=`<div class="grid2">${field('Input weight of source (mg/serving)',b+'input',r.input,'number')}${status}</div>`;
+    const dv=VMK[r.nk]; if(dv && dv.dv) h+=`<p class="hint">DV ${dv.dv} ${dv.unit} → ${pctText(inDvUnit(num(r.amt)||0,r.unit,dv.unit)/dv.dv*100)}</p>`;
+  } else if(r.kind==='ingredient'){
+    h+=field('Name as printed (_italic_ for Latin names, **bold**)',b+'name',r.name);
+    h+=`<div class="grid3">${field('Label claim',b+'amt',r.amt,'number')}${sel('Unit',b+'unit',r.unit,['mg','g','mcg'])}${sel('In blend',b+'parent',r.parent||'',[['','— none —'],...groups.map(g=>[g.id,plain(g.name)])])}</div>`;
+    h+=`<div class="grid3">${field('Input (mg/serving)',b+'input',r.input,'number')}${field('Caffeine %',b+'caff',r.caff,'number')}${field('Allergen',b+'allergen',r.allergen)}</div>`;
+    h+=`<div class="grid2">${status}<div class="f"><span>&nbsp;</span>${field('Botanical (check Latin name + part)',b+'botanical',r.botanical,'check')}</div></div>`;
+  } else if(r.kind==='group'){
+    h+=field('Blend name',b+'name',r.name);
+    h+=`<div class="grid2">${sel('Nested in',b+'parent',r.parent||'',[['','— top level —'],...groups.map(g=>[g.id,plain(g.name)])])}${field('Printed total override',b+'override',r.override,'text','placeholder="auto: sum of components"')}</div>`;
+    h+=field('Show blend total',b+'showTotal',r.showTotal,'check');
+    h+=`<p class="hint">Components add to ${esc(fmtTotal(p,groupSumMg(p,r.id)))}.</p>`;
+  } else {
+    h+=`<div class="grid2">${field('Name in Other Ingredients',b+'name',r.name)}${sel('Role',b+'cat',r.cat||'excipient',CATEGORIES)}</div>`;
+    h+=`<div class="grid3">${field('Input (mg/serving)',b+'input',r.input,'number')}${r.cat==='flavor'?sel('Flavor type',b+'ftype',r.ftype||'unconfirmed',[['natural','Natural'],['artificial','Artificial'],['nat_art','Natural & artificial'],['unconfirmed','Not confirmed']]):'<span></span>'}${field('Allergen',b+'allergen',r.allergen)}</div>`;
+    h+=status;
+  }
+  if(r.kind!=='other') h+=tm;
+  h+=note;
+  h+=`<div class="rowtools"><button class="btn sm ghost" type="button" data-act="up" data-i="${i}">Move up</button><button class="btn sm ghost" type="button" data-act="down" data-i="${i}">Move down</button><button class="btn sm ghost danger" type="button" data-act="del" data-i="${i}">Remove</button></div>`;
+  return `<div class="body">${h}</div>`;
+}
+function editorHTML(p, flags){
+  const flagsByRow={}; flags.forEach(f=>{ if(f.rowId && f.sev!=='info'){ if(flagsByRow[f.rowId]!=='block') flagsByRow[f.rowId]=f.sev; } });
+  if(state.tab==='formula'){
+    const sections=[['nutrient','Vitamins & minerals (with %DV)'],['dietary','Dietary ingredients & blends'],['other','Other ingredients']];
+    let h='';
+    for(const [sec,title] of sections){
+      h+=`<div class="lbl">${title}</div>`;
+      p.rows.forEach((r,i)=>{ const s = r.kind==='nutrient'?'nutrient':r.kind==='other'?'other':'dietary'; if(s!==sec) return; h+=`<details class="row" data-id="${r.id}" ${state.open===r.id?'open':''}>${rowSummary(p,r,i,flagsByRow)}${rowBody(p,r,i)}</details>`; });
+      if(sec==='nutrient') h+=`<div class="addbar"><button class="btn sm" type="button" data-add="nutrient">+ Vitamin or mineral</button></div>`;
+      if(sec==='dietary') h+=`<div class="addbar"><button class="btn sm" type="button" data-add="ingredient">+ Dietary ingredient</button><button class="btn sm" type="button" data-add="group">+ Blend</button></div>`;
+      if(sec==='other') h+=`<div class="addbar"><button class="btn sm" type="button" data-add="other">+ Other ingredient</button></div>`;
+    }
+    h+=`<p class="hint">Vitamins and minerals are sorted into 21 CFR 101.36 order automatically. Dietary ingredients print in the order listed here. Other Ingredients are sorted by input weight, with flavors grouped by combined weight.</p>`;
+    return h;
+  }
+  if(state.tab==='product'){
+    let h=`<div class="lbl">Product</div>${field('Product name','name',p.name)}<div class="grid2">${field('Co-man','coman',p.coman)}${field('Client / brand','client',p.client)}</div>${field('Spec reference','ref',p.ref)}`;
+    h+=`<div class="grid2">${sel('Panel type','panelType','SFP',[['SFP','Supplement Facts'],['NFP','Nutrition Facts (next build)']],'disabled')}${sel('Form','form',p.form,[['capsule','Capsule / tablet / softgel'],['powder','Powder / stick pack'],['liquid','Liquid']])}</div>`;
+    h+=`<div class="lbl">Serving</div><div class="grid3">${field('Quantity','serving.qty',p.serving.qty)}${field('Unit','serving.unit',p.serving.unit)}${field('Weight (g)','serving.weight',p.serving.weight,'number')}</div>`;
+    h+=`<div class="grid2">${sel('Serving size wording','serving.pattern',p.serving.pattern,[['unit_weight','1 Stick Pack (6.49 g)'],['weight_approx','20.3 g (Approx. 1 scoop)'],['unit','2 Capsules']])}${field('Servings per container','serving.spc',p.serving.spc)}</div>`;
+    h+=field('Show servings per container','serving.showSpc',p.serving.showSpc,'check');
+    h+=`<div class="lbl">Package</div><div class="grid3">${field('Label area (sq in)','pkg.area',p.pkg.area,'number')}${sel('Area from','pkg.areaSource',p.pkg.areaSource,[['dieline','Dieline'],['estimated','Estimate']])}${sel('Print process','pkg.process',p.pkg.process,Object.entries(PROCESS).map(([k,v])=>[k,v.label]))}</div>`;
+    h+=`<p class="hint">Under 12 sq in: 4.5 pt minimum. 12–40 sq in: 6 pt. Over 40 sq in: 8 pt body, 6 pt headings and footnotes.</p>`;
+    h+=`<div class="lbl">Calories and macronutrients</div><table class="mini"><thead><tr><th>Nutrient</th><th>Value</th><th>Data</th><th>Line</th><th>Prints</th></tr></thead><tbody>`;
+    MACROS.forEach(m=>{ const e=p.macros[m.k]; const rv=roundMacro(m.round,num(e.v)); h+=`<tr><td>${m.label}${m.unit?` <span class="hint">(${m.unit})</span>`:''}</td><td style="width:70px"><input type="number" step="any" aria-label="${m.label} value" data-k="macros.${m.k}.v" value="${esc(e.v??'')}"></td><td style="width:92px"><select aria-label="${m.label} data" data-k="macros.${m.k}.status" data-struct="1">${[['verified','Verified'],['estimated','Estimate'],['missing','Missing']].map(([v,t])=>`<option value="${v}" ${e.status===v?'selected':''}>${t}</option>`).join('')}</select></td><td style="width:74px"><select aria-label="${m.label} line" data-k="macros.${m.k}.show" data-struct="1">${[['auto','Auto'],['show','Show'],['hide','Hide']].map(([v,t])=>`<option value="${v}" ${e.show===v?'selected':''}>${t}</option>`).join('')}</select></td><td class="num">${e.v==null?'—':esc(String(rv))}</td></tr>`; });
+    h+=`</tbody></table><p class="hint">Auto hides a line that rounds to zero, as 101.36 intends. "Show" keeps a 0 g line and raises a liberty flag.</p>`;
+    h+=`<div class="lbl">Allergens</div>${field('Allergens reviewed against composition statements','allergensReviewed',p.allergensReviewed,'check')}`;
+    h+=`<div class="lbl">Co-man review notes</div>`;
+    (p.flags||[]).forEach((fl,i)=>{ h+=`<div class="card" style="margin-bottom:6px"><div class="grid2" style="grid-template-columns:1fr auto">${field('Issue','flags.'+i+'.msg',fl.msg)}${sel('Level','flags.'+i+'.sev',fl.sev,[['info','Info'],['warn','Warning'],['block','Blocking']])}</div>${field('Detail','flags.'+i+'.det',fl.det)}<div class="rowtools"><button class="btn sm ghost danger" type="button" data-act="delflag" data-i="${i}">Remove</button></div></div>`; });
+    h+=`<div class="addbar"><button class="btn sm" type="button" data-act="addflag">+ Review note</button></div>`;
+    return h;
+  }
+  if(state.tab==='text'){
+    const T=p.text; const t='text.';
+    let h=`<div class="lbl">Headings</div><div class="grid2">${sel('Title','text.titleCase',T.titleCase,[['title','Supplement Facts'],['upper','SUPPLEMENT FACTS']])}${sel('Amount heading',t+'amtHead',T.amtHead,['Amount Per Serving','Amount Per 2 Capsules','Amount Per Stick Pack','Amount Per Scoop'])}</div>`;
+    h+=`<div class="grid2">${sel('%DV heading',t+'dvHead',T.dvHead,['% Daily Value','%DV','% DV'])}${sel('Carbohydrate name',t+'carbLabel',T.carbLabel,['Total Carbohydrate','Total Carb.'])}</div>`;
+    h+=`<div class="grid2">${field('"Serving Size" label bold',t+'servingBold',T.servingBold,'check')}${field('Colon after labels',t+'servingColon',T.servingColon,'check')}</div>`;
+    h+=`<div class="grid2">${field('Space between number and unit',t+'unitSpace',T.unitSpace,'check')}${field('Bold nutrient names',t+'boldNames',T.boldNames,'check')}</div>`;
+    h+=field('Round sodium and potassium (101.9(c))',t+'naKRound',T.naKRound,'check');
+    h+=`<div class="lbl">Footnotes</div><div class="grid2">${sel('%DV symbol',t+'pctSym',T.pctSym,[['*','* (default)'],['**','** (when * is used for claims)']])}${sel('%DV note',t+'pctNote',T.pctNote,['Percent Daily Values are based on a 2,000 calorie diet.','Percent Daily Values (DV) are based on a 2,000 calorie diet.','Percent Daily Values (DV) based on a 2,000-calorie diet.'])}</div>`;
+    h+=sel('Dagger note',t+'daggerNote',T.daggerNote,['Daily Value not established.',' Daily Value not established.','Daily Value (DV) not established.']);
+    h+=`<div class="lbl">Other Ingredients</div><div class="grid2">${sel('Label',t+'oiLabel',T.oiLabel,['Other Ingredients:','Other ingredients:','OTHER INGREDIENTS:'])}${sel('Mixed flavors',t+'flavorMix',T.flavorMix,['Natural & Artificial Flavors','Natural and Artificial Flavors','Natural and Artificial Flavor'])}</div>`;
+    h+=field('"Contains" statement in caps',t+'containsUpper',T.containsUpper,'check');
+    const s=p.suggested, sp='suggested.';
+    h+=`<div class="lbl">Suggested use</div><div class="grid2">${field('Amount',sp+'qty',s.qty,'text','placeholder="2 capsules"')}${p.form==='powder'?field('Water volume',sp+'liquid',s.liquid,'text','placeholder="12 fl oz"'):field('Frequency',sp+'freq',s.freq,'text','placeholder="daily"')}</div>`;
+    h+=field('Timing',sp+'timing',s.timing,'text','placeholder="20–30 minutes before training"');
+    h+=field('Override with brand text',sp+'override',s.override,'area');
+    h+=`<p class="hint">Auto draft: ${esc(suggestedUse(Object.assign({},p,{suggested:Object.assign({},s,{override:''})})).text)}</p>`;
+    return h;
+  }
+  if(state.tab==='style'){
+    const S=p.style, s='style.';
+    let h=`<div class="lbl">Typeface</div><div class="grid2">${sel('Panel font',s+'family',S.family,Object.keys(FONTS))}${sel('Title font',s+'titleFamily',S.titleFamily,[['same','Same as panel'],...Object.keys(FONTS).filter(k=>k!=='Custom').map(k=>[k,k])])}</div>`;
+    if(S.family==='Custom') h+=`<div class="grid2">${field('Family name (as installed)',s+'custom.css',S.custom.css)}${field('PostScript regular',s+'custom.r',S.custom.r)}${field('PostScript bold',s+'custom.b',S.custom.b)}${field('PostScript italic',s+'custom.i',S.custom.i)}</div>`;
+    const f=fontDef(p,'body');
+    h+=`<p class="hint">Exports reference <span class="mono">${esc(f.ps.r)}</span>, <span class="mono">${esc(f.ps.b)}</span>, <span class="mono">${esc(f.ps.i)}</span>. Fonts are named, not embedded, so text stays editable.</p>`;
+    h+=`<div class="f"><span>Load font files for exact widths (stays on this computer)</span><input type="file" id="fontFiles" accept=".otf,.ttf,.woff,.woff2" multiple></div>`;
+    h+=`<div class="lbl">Sizes (pt)</div><div class="grid3">${field('Body',s+'body',S.body,'number')}${field('Column heads',s+'head',S.head,'number')}${field('Footnotes',s+'foot',S.foot,'number')}</div>`;
+    h+=`<div class="grid3">${field('Title',s+'titleSize',S.titleSize,'number',S.fitTitle?'disabled':'')}${sel('Title weight',s+'titleStyle',S.titleStyle,[['b','Bold'],['r','Regular']])}<div class="f"><span>&nbsp;</span>${field('Fit title to width',s+'fitTitle',S.fitTitle,'check')}</div></div>`;
+    h+=`<div class="grid3">${field('Leading ×',s+'lead',S.lead,'number')}${field('Row padding',s+'rowPad',S.rowPad,'number')}${field('Indent',s+'indent',S.indent,'number')}</div>`;
+    h+=`<div class="lbl">Panel</div><div class="grid3">${field('Width (in)',s+'widthIn',S.widthIn,'number')}${field('Inner margin',s+'pad',S.pad,'number')}${field('Column gap',s+'colGap',S.colGap,'number')}</div>`;
+    h+=`<div class="lbl">Rules (pt)</div><div class="grid2">${field('Heavy bar',s+'heavy',S.heavy,'number')}${field('Medium bar',s+'medium',S.medium,'number')}${field('Hairline',s+'hair',S.hair,'number')}${field('Box',s+'box',S.box,'number')}</div>`;
+    h+=`<div class="grid2">${field('Hairline between rows',s+'rowRules',S.rowRules,'check')}${field('Medium bar between blends',s+'groupBars',S.groupBars,'check')}</div>`;
+    h+=`<div class="lbl">Color</div>${field('Reversed (white knockout on dark art)',s+'inverse',S.inverse,'check')}`;
+    h+=`<div class="lbl">Outside the panel</div><div class="grid3">${field('Other Ingr. size',s+'oiSize',S.oiSize,'number')}${field('Gap below panel',s+'oiGap',S.oiGap,'number')}<div class="f"><span>&nbsp;</span>${field('Include in export',s+'showOI',S.showOI,'check')}</div></div>`;
+    h+=`<p class="hint">Measurements are points (1 in = 72 pt). The panel reflows when any value changes.</p>`;
+    return h;
+  }
+  if(state.tab==='outside'){
+    const L=lastLayout; const su=suggestedUse(p); const caf=totalCaffeine(p);
+    let h=`<div class="lbl">Callouts</div><p class="hint" style="margin-top:0">Amounts are pulled from the formula, so front-panel numbers always match the panel.</p>`;
+    h+=`<table class="mini"><thead><tr><th>Source</th><th>Label</th><th>Prints</th><th></th></tr></thead><tbody>`;
+    const opts=[['caffeine','Total caffeine'],...p.rows.filter(r=>r.kind==='ingredient'||r.kind==='nutrient').map(r=>['id:'+r.id, r.kind==='nutrient'?(VMK[r.nk]?.label||''):plain(r.name).slice(0,40)])];
+    (p.callouts||[]).forEach((c,i)=>{ const v=calloutValue(p,c); h+=`<tr><td><select aria-label="Callout source" data-k="callouts.${i}.src" data-struct="1">${opts.map(([v2,t])=>`<option value="${esc(v2)}" ${resolveSrc(p,c.src)===v2?'selected':''}>${esc(t)}</option>`).join('')}</select></td><td><input type="text" aria-label="Callout label" data-k="callouts.${i}.label" value="${esc(c.label)}"></td><td class="num">${esc(v)}</td><td><button class="btn sm ghost danger" type="button" data-act="delcall" data-i="${i}" aria-label="Remove callout">×</button></td></tr>`; });
+    h+=`</tbody></table><div class="addbar"><button class="btn sm" type="button" data-act="addcall">+ Callout</button><button class="btn sm" type="button" data-act="expcall">Export callouts SVG</button></div>`;
+    h+=`<div class="lbl">Caffeine</div><p class="hint" style="margin-top:0">${caf.n?`${caf.mg} mg total from ${caf.n} source${caf.n>1?'s':''}.`:'No caffeine sources marked (set Caffeine % on an ingredient).'}</p>`;
+    h+=`<div class="lbl">Trademark credits</div>`;
+    const tms=p.rows.filter(r=>r.tm); h+= tms.length? `<table class="mini"><tbody>${tms.map(r=>`<tr><td>${esc(r.tm)}</td><td>${esc({tla:'TLA',brand:'Brand',market:'On market',pending:'Pending review','n/a':''}[r.tmStatus]||'')}</td></tr>`).join('')}</tbody></table><p class="hint">Send this list with the proof for licensor sign-off.</p>` : '<p class="hint" style="margin-top:0">No branded ingredients.</p>';
+    return h;
+  }
+  return '';
+}
+function resolveSrc(p,src){ if(!src) return 'caffeine'; if(src==='caffeine') return 'caffeine'; if(src.startsWith('id:')) return src; if(src.startsWith('row:')){ const r=p.rows[+src.slice(4)]; return r?'id:'+r.id:'caffeine'; } if(src.startsWith('name:')){ const r=p.rows.find(x=>plain(x.name)===src.slice(5)); return r?'id:'+r.id:'caffeine'; } return src; }
+function calloutValue(p,c){ const s=resolveSrc(p,c.src); if(s==='caffeine') return `${totalCaffeine(p).mg}${p.text.unitSpace?' ':''}mg`; const r=p.rows.find(x=>'id:'+x.id===s); if(!r) return '—'; let v=num(r.amt); if(r.kind==='nutrient'&&(r.nk==='sodium'||r.nk==='potassium')) v=roundNaK(v); return amtStr(p,v,r.unit); }
+function calloutsSVG(p){
+  const f=fontDef(p,'body'); const ink='#000000'; let y=0, out='';
+  (p.callouts||[]).forEach((c,i)=>{ const v=calloutValue(p,c); y+=22; out+=`<g id="Callout_${i+1}"><text x="0" y="${y}" font-size="18" fill="${ink}"><tspan font-family="${esc(f.ps.b)}">${esc(v)}</tspan></text><text x="${trim(measure(f,{text:v,b:true},18)+6)}" y="${y}" font-size="12" fill="${ink}"><tspan font-family="${esc(f.ps.b)}">${esc((c.label||'').toUpperCase())}</tspan></text></g>`; });
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="220pt" height="${y+6}pt" viewBox="0 0 220 ${y+6}"><title>Callouts - ${esc(p.name)}</title>${out}</svg>`;
+}
+
+/* ---------- main render ---------- */
+let lastLayout=null, lastFlags=[];
+function renderProjects(){
+  const s=document.getElementById('projPick');
+  s.innerHTML=state.projects.map((p,i)=>`<option value="${i}" ${i===state.cur?'selected':''}>${esc(p.name)}</option>`).join('');
+}
+function renderTabs(){ document.getElementById('tabs').innerHTML=TABS.map(([k,t])=>`<button class="tab" role="tab" type="button" data-tab="${k}" aria-selected="${state.tab===k}">${t}</button>`).join(''); }
+function renderEditor(){
+  const ed=document.getElementById('editor'); const st=ed.scrollTop;
+  ed.innerHTML=editorHTML(P(), lastFlags); ed.scrollTop=st;
+  const ff=document.getElementById('fontFiles'); if(ff) ff.addEventListener('change',loadFonts);
+}
+function renderOutput(){
+  const p=P();
+  lastLayout=layout(p);
+  lastFlags=checks(p,lastLayout);
+  const z=state.zoom;
+  const svg=svgFor(p,lastLayout,{zoom:z,flags:lastFlags,ext:false});
+  const oi=lastLayout.oi, su=suggestedUse(p);
+  const f=fontDef(p,'body');
+  const avail = fontAvailable(f.css) || state.loadedFonts[f.name];
+  document.getElementById('fontStatus').innerHTML = `Font <b>${esc(f.name)}</b> · ${avail?'<span style="color:var(--ok)">metrics exact</span>':'<span style="color:var(--warn)">fallback metrics</span>'} · ${trim(lastLayout.W/72,2)} × ${trim(lastLayout.H/72,2)} in`;
+  const oiHTML = `${oi.contains?`<p style="font-weight:600;margin-bottom:4px">${esc(oi.contains)}</p>`:''}<p><b>${esc(p.text.oiLabel)}</b> ${esc(oi.text)||'<span class="hint">None</span>'}</p>`;
+  document.getElementById('board').innerHTML = `
+    <div style="text-align:center"><div class="sheet ${p.style.inverse?'inverse':'light'}" id="sheet">${svg}</div></div>
+    <p class="caption">${esc(p.coman||'')}${p.ref?' · '+esc(p.ref):''}</p>
+    <div class="outside">
+      <div class="card"><h4>Other ingredients <button class="btn sm" type="button" data-copy="oi">Copy</button></h4>${oiHTML}</div>
+      <div class="card"><h4>Suggested use ${su.auto?'<span class="pill info">auto draft</span>':'<span class="pill ok">brand text</span>'}<button class="btn sm" type="button" data-copy="su">Copy</button></h4><p>${esc(su.text)}</p></div>
+      ${p.text.sfDisclaimer?`<div class="card"><h4>Disclaimer <button class="btn sm" type="button" data-copy="dis">Copy</button></h4><p>*These statements have not been evaluated by the Food and Drug Administration. This product is not intended to diagnose, treat, cure, or prevent any disease.</p></div>`:''}
+    </div>`;
+  const counts={block:0,warn:0,info:0}; lastFlags.forEach(x=>counts[x.sev]++);
+  document.getElementById('counts').innerHTML = `<span class="pill block">${counts.block} blocking</span><span class="pill warn">${counts.warn} warn</span><span class="pill info">${counts.info} info</span>`;
+  document.getElementById('flags').innerHTML = lastFlags.length ? lastFlags.map((x,i)=>`<div class="flag ${x.sev} ${x.rowId&&!x.rowId.startsWith('m_')?'link':''}" ${x.rowId?`data-row="${esc(x.rowId)}"`:''}><div class="t"><span class="n">${i+1}</span><span class="m">${esc(x.msg)}</span></div>${x.det?`<div class="d">${esc(x.det)}</div>`:''}<div class="src">${esc(x.src||'')}</div></div>`).join('') : '<p class="hint">No issues found.</p>';
+}
+function renderAll(){ renderProjects(); renderTabs(); renderOutput(); renderEditor(); }
+
+/* ---------- state updates ---------- */
+function setPath(obj, path, val){ const ks=path.split('.'); let o=obj; for(let i=0;i<ks.length-1;i++){ o=o[ks[i]]; if(o==null) return; } o[ks[ks.length-1]]=val; }
+function readInput(el){ if(el.type==='checkbox') return el.checked; if(el.type==='number'){ const n=num(el.value); return n; } return el.value; }
+document.addEventListener('input', e=>{ const el=e.target; if(!el.dataset || !el.dataset.k) return; if(el.dataset.struct) return; setPath(P(), el.dataset.k, readInput(el)); if(el.dataset.k==='name') renderProjects(); renderOutput(); });
+document.addEventListener('change', e=>{ const el=e.target; if(!el.dataset || !el.dataset.k) return; setPath(P(), el.dataset.k, readInput(el)); if(el.dataset.k.endsWith('.src')){ } renderOutput(); if(el.dataset.struct || el.type==='checkbox' || el.dataset.k.endsWith('.name') || el.dataset.k.endsWith('.amt')|| el.dataset.k.endsWith('.input')) renderEditor(); });
+document.addEventListener('toggle', e=>{ const d=e.target; if(d.matches && d.matches('details.row')){ if(d.open) state.open=d.dataset.id; else if(state.open===d.dataset.id) state.open=null; } }, true);
+document.addEventListener('click', async e=>{
+  const t=e.target.closest('button,[data-row],.tab'); if(!t) return;
+  const p=P();
+  if(t.dataset.tab){ state.tab=t.dataset.tab; renderTabs(); renderEditor(); return; }
+  if(t.dataset.add){
+    const k=t.dataset.add; let r;
+    if(k==='nutrient') r=R({kind:'nutrient',nk:'vitC',amt:null,unit:'mg',source:'',conn:'as',place:'panel',input:null});
+    if(k==='ingredient') r=R({kind:'ingredient',name:'New ingredient',amt:null,unit:'mg',parent:'',input:null});
+    if(k==='group') r=R({kind:'group',name:'Proprietary Blend',parent:'',showTotal:true,override:''});
+    if(k==='other') r=R({kind:'other',name:'New ingredient',cat:'excipient',input:null});
+    const last = [...p.rows].map((x,i)=>[x,i]).filter(([x])=> (k==='nutrient'?x.kind==='nutrient':k==='other'?x.kind==='other':(x.kind==='ingredient'||x.kind==='group'))).pop();
+    p.rows.splice(last?last[1]+1:p.rows.length,0,r); state.open=r.id; renderOutput(); renderEditor();
+    const d=document.querySelector(`details[data-id="${r.id}"]`); if(d){ d.scrollIntoView({block:'nearest'}); const inp=d.querySelector('input[type=text],input[type=number]'); if(inp) inp.focus(); }
+    return;
+  }
+  const act=t.dataset.act, i=+t.dataset.i;
+  if(act==='up'||act==='down'){ const j=act==='up'?i-1:i+1; if(j<0||j>=p.rows.length) return; [p.rows[i],p.rows[j]]=[p.rows[j],p.rows[i]]; state.open=p.rows[j].id; renderOutput(); renderEditor(); return; }
+  if(act==='del'){ const r=p.rows[i]; if(t.dataset.confirm!=='1'){ t.dataset.confirm='1'; t.textContent='Click again to remove'; setTimeout(()=>{ if(t.isConnected){ t.dataset.confirm=''; t.textContent='Remove'; } },2500); return; } if(r.kind==='group') p.rows.forEach(x=>{ if(x.parent===r.id) x.parent=r.parent||''; }); p.rows.splice(i,1); renderOutput(); renderEditor(); return; }
+  if(act==='addflag'){ (p.flags=p.flags||[]).push({sev:'warn',msg:'New review note',det:''}); renderOutput(); renderEditor(); return; }
+  if(act==='delflag'){ p.flags.splice(i,1); renderOutput(); renderEditor(); return; }
+  if(act==='addcall'){ (p.callouts=p.callouts||[]).push({src:'caffeine',label:'Caffeine',amt:''}); renderEditor(); return; }
+  if(act==='delcall'){ p.callouts.splice(i,1); renderEditor(); return; }
+  if(act==='expcall'){ saveFile(fileBase(p)+'_callouts.svg', calloutsSVG(p), 'image/svg+xml'); return; }
+  if(t.dataset.copy){ const L=lastLayout; const txt = t.dataset.copy==='oi' ? `${L.oi.contains?L.oi.contains+'\n':''}${p.text.oiLabel} ${L.oi.text}` : t.dataset.copy==='su' ? suggestedUse(p).text : '*These statements have not been evaluated by the Food and Drug Administration. This product is not intended to diagnose, treat, cure, or prevent any disease.'; copyText(txt); return; }
+  if(t.dataset.row){ const rid=t.dataset.row; if(rid.startsWith('m_')){ state.tab='product'; renderTabs(); renderEditor(); return; } state.tab='formula'; state.open=rid; renderTabs(); renderEditor(); const d=document.querySelector(`details[data-id="${rid}"]`); if(d) d.scrollIntoView({block:'center'}); return; }
+});
+document.getElementById('board').addEventListener('click', e=>{ const m=e.target.closest('.mk'); if(!m) return; state.tab='formula'; state.open=m.dataset.row; renderTabs(); renderEditor(); const d=document.querySelector(`details[data-id="${m.dataset.row}"]`); if(d) d.scrollIntoView({block:'center'}); });
+async function copyText(txt){ try{ await navigator.clipboard.writeText(txt); toast('Copied'); }catch(e){ const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); toast('Copied'); }catch(_){ toast('Select the text and copy it'); } ta.remove(); } }
+document.getElementById('projPick').addEventListener('change', e=>{ state.cur=+e.target.value; state.open=null; renderAll(); });
+document.getElementById('optOverlay').addEventListener('change', e=>{ state.overlay=e.target.checked; renderOutput(); });
+document.getElementById('zoom').addEventListener('change', e=>{ state.zoom=+e.target.value; renderOutput(); });
+document.getElementById('btnNew').addEventListener('click', ()=>{ state.projects.push(blankProject()); state.cur=state.projects.length-1; state.tab='product'; renderAll(); });
+document.getElementById('btnDup').addEventListener('click', ()=>{ const c=JSON.parse(JSON.stringify(P())); c.id=uid(); c.name=P().name+' (copy)'; state.projects.push(c); state.cur=state.projects.length-1; renderAll(); toast('Duplicated. Use it for another flavor.'); });
+document.getElementById('btnSave').addEventListener('click', ()=>{ saveFile(fileBase(P())+'.sfp.json', JSON.stringify({app:'supplement-facts-builder',v:1,project:P()},null,2), 'application/json'); });
+document.getElementById('btnOpen').addEventListener('click', ()=>document.getElementById('fileOpen').click());
+document.getElementById('fileOpen').addEventListener('change', async e=>{ const f=e.target.files[0]; if(!f) return; try{ const j=JSON.parse(await f.text()); const pr=j.project||j; if(!pr.rows||!pr.style) throw 0; pr.text=Object.assign(baseText(),pr.text); pr.style=Object.assign(baseStyle(),pr.style); state.projects.push(pr); state.cur=state.projects.length-1; renderAll(); toast('Opened '+f.name); }catch(_){ toast('That file is not a saved project'); } e.target.value=''; });
+document.getElementById('btnSvg').addEventListener('click', ()=>{ const p=P(); saveFile(fileBase(p)+'_SFP.svg', svgFor(p,layout(p),{export:true}), 'image/svg+xml'); });
+document.getElementById('btnCopy').addEventListener('click', ()=>{ const p=P(); copyText(svgFor(p,layout(p),{export:true})); });
+document.getElementById('btnPdf').addEventListener('click', ()=>{ const p=P(); const L=layout(p); saveFile(fileBase(p)+'_SFP.pdf', pdfFor(p,L,p.style.showOI), 'application/pdf'); });
+async function loadFonts(e){
+  const p=P(); const f=fontDef(p,'body'); const fam=f.css.split(',')[0].replace(/"/g,'');
+  for(const file of e.target.files){
+    const n=file.name.toLowerCase(); const b=/bold|bd|black|heavy/.test(n); const i=/italic|it\b|it\.|obl|oblique|cno|-it/.test(n);
+    try{ const ff=new FontFace(fam, await file.arrayBuffer(), {weight:b?'700':'400', style:i?'italic':'normal'}); await ff.load(); document.fonts.add(ff); }catch(_){ toast('Could not read '+file.name); }
+  }
+  state.loadedFonts[f.name]=true; mcache.clear(); renderOutput(); renderEditor(); toast('Font loaded for exact metrics');
+}
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>{ mcache.clear(); renderOutput(); });
+renderAll();
+</script>
+<script>
+"use strict";
+/* ================= Spec import: spreadsheets (column mapping) + PDFs (co-man templates) ================= */
+const LIBS = {
+  xlsx:['https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'],
+  pdf:['https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js','https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js']
+};
+const libLoaded={};
+function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=()=>rej(new Error('load')); document.head.appendChild(s); }); }
+async function needLib(k){ if(libLoaded[k]) return; for(const u of LIBS[k]) await loadScript(u); libLoaded[k]=true; }
+
+const CAPSULE_MG = {'000':163,'00':118,'0':96,'1':76,'2':61,'3':48,'4':38};
+const imp = { step:'pick', file:null, kind:null, template:'auto', items:null, lines:null, detected:null, wb:null, sheet:null, grid:null, map:null, headerRow:0, profile:'', header:{}, rows:[], specOther:null, error:'' };
+
+/* ---------- PDF text → lines ---------- */
+async function pdfItems(buf){
+  await needLib('pdf');
+  const lib=window.pdfjsLib; lib.GlobalWorkerOptions.workerSrc=LIBS.pdf[0];
+  const doc=await lib.getDocument({data:buf}).promise; const items=[];
+  for(let p=1;p<=doc.numPages;p++){
+    const page=await doc.getPage(p); const vp=page.getViewport({scale:1}); const tc=await page.getTextContent();
+    tc.items.forEach(it=>{ if(!it.str || !it.str.trim()) return; items.push({p:p-1, x:it.transform[4], y:vp.height-it.transform[5], s:it.str}); });
+  }
+  return items;
+}
+function buildLines(items){
+  const sorted=items.slice().sort((a,b)=>a.p-b.p || a.y-b.y || a.x-b.x);
+  const L=[];
+  for(const it of sorted){ const last=L[L.length-1]; if(last && last.p===it.p && Math.abs(last.y-it.y)<2.5) last.c.push(it); else L.push({p:it.p,y:it.y,c:[it]}); }
+  const out=[]; let prev=null;
+  for(const l of L){ l.c.sort((a,b)=>a.x-b.x); const text=l.c.map(c=>c.s.trim()).join(' ').replace(/\s+/g,' ').trim(); if(!text) continue;
+    if(prev && prev.p===l.p && prev.text===text && Math.abs(prev.y-l.y)<20) continue; // duplicated faux-bold runs
+    const o={p:l.p,y:l.y,text}; out.push(o); prev=o; }
+  return out;
+}
+const numv = s=>{ if(s==null) return null; const n=parseFloat(String(s).replace(/,/g,'')); return Number.isFinite(n)?n:null; };
+function firstMatch(lines, re){ for(const l of lines){ const m=l.text.match(re); if(m) return m; } return null; }
+function block(lines, startRe, endRe){ const i=lines.findIndex(l=>startRe.test(l.text)); if(i<0) return null; const out=[]; for(let j=i+1;j<lines.length;j++){ if(endRe.test(lines[j].text) || lines[j].p!==lines[i].p) break; out.push(lines[j].text); } return out.join(' ').trim(); }
+
+/* ---------- templates ---------- */
+const TEMPLATES = {
+  acb:{ label:'ACB quote (Arizona Custom Blends)', detect:t=>/ARIZONA CUSTOM BLENDS|ACB Formula #|acbmfg\.com/i.test(t) && /Claimed Ingredient/i.test(t),
+    parse(lines){
+      const rows=[]; let nonActive=false;
+      for(const l of lines){
+        if(/Non-Active Ingredients/i.test(l.text)){ nonActive=true; continue; }
+        const m=l.text.match(/^(R\d{4,6})\s+(.+?)\s+(No|Yes)\s+([\d.,]+)\s+(mcg|mg|g|IU)\s+([\d.]+)\s+([\d.]+)\s+([\d.,]+)$/i);
+        if(m){ const claim=numv(m[4]); if(!claim) continue; rows.push({code:m[1], name:m[2].trim(), claim, unit:m[5].toLowerCase(), potency:numv(m[6]), overage:numv(m[7]), input:numv(m[8]), custSupplied:m[3]==='Yes', forceOther:nonActive, raw:l.text}); }
+      }
+      const h={};
+      let m=firstMatch(lines,/Product:\s*(.+?)\s+ACB Formula #\s*(\d+)/i); if(m){ h.product=m[1]; h.formula=m[2]; }
+      m=firstMatch(lines,/Number:\s*(\d+)\s+Revision#?\s*(\d+)/i); if(m){ h.quote=m[1]; h.rev=m[2]; }
+      m=firstMatch(lines,/Company Name:\s*(.+)$/i); if(m) h.client=m[1].trim();
+      m=firstMatch(lines,/PRODUCT INFORMATION FOR\s+(\w+)/i); if(m) h.form=/powder/i.test(m[1])?'powder':/capsule|tablet|softgel/i.test(m[1])?'capsule':/liquid/i.test(m[1])?'liquid':'powder';
+      m=firstMatch(lines,/Grams per (Sachet|Stick|Serving|Scoop)\s+([\d.]+)/i); if(m){ h.weight=numv(m[2]); h.unit=/sachet/i.test(m[1])?'Sachet':/stick/i.test(m[1])?'Stick Pack':''; }
+      m=firstMatch(lines,/Net Weight per serving \(mg\):\s*([\d.,]+)/i); if(m && !h.weight) h.weight=+(numv(m[1])/1000).toFixed(2);
+      m=firstMatch(lines,/Size:\s*([\d.]+)\s*w\s*x\s*([\d.]+)\s*h/i); if(m) h.labelSize=`${m[1]} × ${m[2]} in`;
+      m=firstMatch(lines,/(Sachets|Sticks) per Retail Box:?\s*(\d+)/i); if(m) h.perBox=m[2];
+      m=firstMatch(lines,/Date:\s*([\d/]+)/i); if(m) h.date=m[1];
+      h.coman='Arizona Custom Blends (ACB)';
+      h.ref=[h.quote&&`Quote ${h.quote}${h.rev?' Rev '+h.rev:''}`, h.formula&&`Formula ${h.formula}`, h.date].filter(Boolean).join(' · ');
+      if(h.form==='powder'){ h.qty='1'; h.unit=h.unit||'Serving'; h.spc='1'; h.showSpc=false; }
+      return {rows, header:h, specOther:null};
+    }},
+  veritacor:{ label:'Veritacor finished product spec', detect:t=>/Finish Product Specification Formulation/i.test(t),
+    parse(lines){
+      const rows=[];
+      for(const l of lines){
+        if(l.p>0) break;
+        const m=l.text.match(/^(.+?)\s+(\d+\.\d{2})%\s+([\d.,]+)\s*(mcg|mg|g)\s+(\d+(?:\.\d+)?)%\s+(.*)$/i);
+        if(!m) continue; const name=m[1].trim(); const claim=numv(m[3]); if(name==='0' || !claim) continue;
+        const nums=m[6].split(/\s+/).filter(t=>/^[\d.,]+$/.test(t)).map(numv);
+        rows.push({name, claim, unit:m[4].toLowerCase(), potency:numv(m[2]), overage:numv(m[5]), input:nums[1]??nums[0]??null, raw:l.text});
+      }
+      const h={coman:'Veritacor'};
+      let m=firstMatch(lines,/Product Description:\s*(.+?)\s+# Units/i); if(m) h.product=m[1];
+      m=firstMatch(lines,/(?:Number )?Servings:?\s+(\d+)\b/i); if(m) h.spc=m[1];
+      m=firstMatch(lines,/Customer:?\s+(.+?)\s+(?:Capsules|Customer|Tablets|Softgels|Scoops)/i); if(m) h.client=m[1];
+      m=firstMatch(lines,/(Capsules|Tablets|Softgels)\/Servings?:?\s+(\d+)/i); if(m){ h.qty=m[2]; h.unit=m[1][0].toUpperCase()+m[1].slice(1).toLowerCase(); h.form='capsule'; }
+      m=firstMatch(lines,/(?:Capsules|Tablets|Softgels) (?:Per|per) Container\s+(\d+)|(?:Capsules|Tablets|Softgels)\/Container\s+(\d+)/i); if(m) h.count=m[1]||m[2];
+      m=firstMatch(lines,/Date:\s*([\d/]+)/i); if(m) h.date=m[1];
+      m=firstMatch(lines,/Version #\s*(\w+)/i); if(m) h.version=m[1];
+      h.ref=[h.version&&`Spec Ver ${h.version}`, h.date].filter(Boolean).join(' · ');
+      if(!h.form) h.form='powder';
+      h.showSpc=true;
+      const other=block(lines,/^Other Ingredients:?$/i,/^(Label Claims|Capsule Information|Allergens|5\. Testing)/i);
+      const allergens=block(lines,/^Allergens:?$/i,/^Other Ingredients/i);
+      if(allergens) h.allergens=allergens;
+      m=firstMatch(lines,/^Capsule\s+(.+?)\s+([\d,.]+)\s+[\d,.]+$/i);
+      if(m){ const desc=m[1]; const sz=(desc.match(/Size\s*(000|00|0|1|2|3|4)\b/i)||[])[1]; const veg=/veg|hpmc|hypromellose|plant/i.test(desc); h.capsule={desc, size:sz, veg, per:numv(h.qty)||1, mg:sz!=null?CAPSULE_MG[sz]:null}; }
+      return {rows, header:h, specOther: other===null?null:other};
+    }},
+  generic:{ label:'Generic table (any PDF)', detect:()=>true,
+    parse(lines){
+      const rows=[];
+      for(const l of lines){
+        if(/total|net weight|batch|price|\$|serving size|servings per|date:|phone|email/i.test(l.text)) continue;
+        const m=l.text.match(/^([A-Za-z][^\d]*?(?:\d+:\d+|\d+%[^\d]*?)?)\s+([\d.,]+)\s*(mcg|mg|g|IU)\b(.*)$/i);
+        if(!m) continue; const claim=numv(m[2]); if(!claim) continue;
+        const pot=(m[4].match(/([\d.]+)%/)||[])[1];
+        rows.push({name:m[1].trim(), claim, unit:m[3].toLowerCase(), potency:pot?numv(pot):null, overage:null, input:null, raw:l.text});
+      }
+      return {rows, header:{}, specOther:null};
+    }}
+};
+
+/* ---------- classification ---------- */
+const NUT_RE = [
+  [/methylcobalamin|cyanocobalamin|adenosylcobalamin|hydroxocobalamin|vitamin b-?12\b/i,'vitB12'],[/pyridox|vitamin b-?6\b/i,'vitB6'],
+  [/folate|folic acid|methylfolate|methyltetrahydrofolate/i,'folate'],[/thiamin|vitamin b-?1\b/i,'thiamin'],[/riboflavin|vitamin b-?2\b/i,'riboflavin'],
+  [/niacin|nicotinamide|vitamin b-?3\b/i,'niacin'],[/pantothen|vitamin b-?5\b/i,'pantothenic'],[/biotin/i,'biotin'],
+  [/ascorbic|ascorbate|vitamin c\b/i,'vitC'],[/cholecalciferol|ergocalciferol|vitamin d/i,'vitD'],[/tocopher|vitamin e\b/i,'vitE'],
+  [/phylloquinone|menaquinone|vitamin k/i,'vitK'],[/retinyl|retinol|vitamin a\b/i,'vitA'],[/\bcholine\b/i,'choline'],
+  [/chromium/i,'chromium'],[/selen/i,'selenium'],[/molybd/i,'molybdenum'],[/iodine|iodide|kelp/i,'iodine'],[/\bzinc\b/i,'zinc'],
+  [/copper|cupric/i,'copper'],[/mangan/i,'manganese'],[/\biron\b|ferrous|ferric/i,'iron'],[/magnesium/i,'magnesium'],[/calcium/i,'calcium'],
+  [/potassium/i,'potassium'],[/\bsodium\b|\bsalt\b/i,'sodium'],[/chloride/i,'chloride'],[/phosph/i,'phosphorus']
+];
+const OTHER_RE = [
+  ['capsule',/capsule|hypromellose|\bhpmc\b|gelatin|pullulan/i],
+  ['flavor',/flavou?r/i],
+  ['color',/\bcolou?r\b|fd&c|red (no\.? ?)?40|blue (no\.? ?)?1\b|yellow (no\.? ?)?[56]\b|\bbeet\b|carmine|annatto|caramel color|titanium dioxide|beta.?carotene/i],
+  ['sweetener',/sucralose|stevia|\breb[\s-]?[a-m]\b|rebaudioside|acesulfame|ace-k|monk ?fruit|luo han|erythritol|xylitol|allulose|\bsugar\b|dextrose|sucrose|aspartame|thaumatin/i],
+  ['acid',/citric acid|malic acid|tartaric acid|lactic acid|fumaric acid|adipic acid|phosphoric acid/i],
+  ['preservative',/sorbate|benzoate/i],
+  ['excipient',/stearate|stearic|silicon dioxide|\bsilica\b|rice flour|rice extract|cellulose|maltodextrin|calcium silicate|tricalcium phosphate|dicalcium phosphate|croscarmellose|\bgum\b|lecithin|glycerin|starch|\btalc\b|shellac|\bmct\b|inulin|dextrin|xanthan|guar|acacia|carrageenan|alginate|bicarbonate|magnesium silicate/i]
+];
+const NOT_BOTANICAL=/creatine|alanine|citrulline|arginine|tyrosine|glutamine|taurine|carnitine|lipoic|betaine|caffeine|malate|gpc|glycine|leucine|valine/i;
+const titleFirst=s=>s.replace(/\b([a-z])/g,(m,c)=>c.toUpperCase());
+function classify(r){
+  const name=r.name; const pot=r.potency;
+  const out={include:true, note:'', noteSev:'info'};
+  let oc=null; for(const [c,re] of OTHER_RE){ if(re.test(name)){ oc=c; break; } }
+  if(r.forceOther && !oc) oc='excipient';
+  // nutrient?
+  let nk=null; for(const [re,k] of NUT_RE){ if(re.test(name)){ nk=k; break; } }
+  const startsWithNut = nk && new RegExp('^\\s*'+VMK[nk].label.split(' ')[0],'i').test(name);
+  const isNutrient = nk && !oc && (startsWithNut || (pot!=null && pot<100) || /vitamin/i.test(name));
+  if(isNutrient){
+    out.role='n:'+nk;
+    let src='', conn='as', tm='';
+    const tmm=name.match(/\(([^()]*[®™][^()]*)\)/); if(tmm) tm=tmm[1].trim();
+    const asm=name.match(/\((as|from)\s+([^)]+)\)/i);
+    if(asm){ conn=asm[1].toLowerCase(); src=asm[2]; }
+    else if(startsWithNut){ const pm=name.match(/\(([^)]+)\)/); if(pm && pm[1]!==tm) src=pm[1]; else if(name.replace(/\(.*?\)/g,'').trim().toLowerCase()!==VMK[nk].label.toLowerCase()) src=name.replace(/\s*\([^)]*\)/g,''); }
+    else src=name;
+    src=src.replace(/\s*\d+(\.\d+)?\s*%/g,'').replace(/\s*\([^)]*[®™][^)]*\)/g,'').trim();
+    if(tm && src && !src.includes(tm)) src=tm+' '+src;
+    out.source=src; out.conn=conn; out.tm=tm;
+    const def=VMK[nk]; let claim=r.claim, unit=r.unit;
+    if(def.unit==='mcg' && unit==='mg' && claim<1){ claim=+(claim*1000).toFixed(3); unit='mcg'; }
+    if(nk==='folate') unit='mcg DFE';
+    out.claim=claim; out.unit=unit;
+    if(pot===100 && !startsWithNut) { out.note='Potency is 100%: check whether the claim is the elemental nutrient or the whole compound.'; out.noteSev='warn'; }
+    if(tm) { out.note=(out.note?out.note+' ':'')+`Trademark "${tm}" found: confirm styling with the TLA.`; out.noteSev=out.noteSev==='warn'?'warn':'warn'; }
+    if(nk==='folate' && /folic/i.test(name)){ out.note=(out.note?out.note+' ':'')+'Folic acid: DFE = mcg folic acid × 1.7.'; out.noteSev='warn'; }
+    return out;
+  }
+  if(oc){
+    out.role='o:'+oc; out.claim=r.claim; out.unit=r.unit;
+    let nm=name;
+    if(oc==='flavor'){ const nat=/\bnat(ural)?\b/i.test(name), art=/\bart(ificial)?\b|\bN\s?&\s?A\b/i.test(name); out.ftype= nat&&art?'nat_art':nat?'natural':art?'artificial':'unconfirmed';
+      nm=name.replace(/^flavou?r\s*[-–:]\s*/i,'').trim(); if(!/flavou?r/i.test(nm)) nm=nm+' Flavor'; }
+    if(oc==='sweetener' && /reb\s?m/i.test(name) && /stevia/i.test(name)){ nm='Stevia Leaf Extract (Reb M)'; out.note='Confirm Reb M name with the supplier (leaf extract vs. bioconversion).'; out.noteSev='warn'; }
+    out.oname=nm;
+    return out;
+  }
+  out.role='d'; out.claim=r.claim; out.unit=r.unit;
+  let nm=name;
+  if(out.claim<1 && out.unit==='mg'){ out.claim=+(out.claim*1000).toFixed(3); out.unit='mcg'; }
+  if(out.claim>=1000 && out.unit==='mg' && out.claim%100===0){ out.claim=out.claim/1000; out.unit='g'; }
+  out.caff = /dicaffeine malate/i.test(name)?74 : /caffeine citrate/i.test(name)?50 : /caffeine/i.test(name)?100 : null;
+  out.botanical = /extract|root|leaf|leaves|bark|seed|fruit|herb|husk|berry|rhizome|flower|powder/i.test(name) && !NOT_BOTANICAL.test(name);
+  const namePct=(name.match(/(\d+(?:\.\d+)?)\s*%/)||[])[1];
+  if(namePct && pot===100 && !/std\.?|standardi[sz]ed/i.test(name)) { out.note=`Name says ${namePct}% but potency is 100%. Is the claim the raw material or the active?`; out.noteSev='block'; }
+  else if(pot!=null && pot<100){ out.note=`Potency ${pot}%: the claim looks like the active marker, not the ingredient weight. Confirm how it should be declared.`; out.noteSev='warn'; }
+  if(out.botanical){ out.note=(out.note?out.note+' ':'')+'Add the Latin name (_italic_) and plant part.'; if(out.noteSev==='info') out.noteSev='warn'; }
+  out.dname=nm;
+  return out;
+}
+function prepRows(raw){
+  return raw.map(r=>{ const c=classify(r);
+    const open=(r.name.match(/\(/g)||[]).length, close=(r.name.match(/\)/g)||[]).length;
+    if(open!==close){ c.note=(c.note?c.note+' ':'')+'Name looks cut off in the spec (unbalanced parentheses).'; if(c.noteSev==='info') c.noteSev='warn'; } return Object.assign({}, r, c, {id:uid()}); });
+}
+
+/* ---------- spreadsheets ---------- */
+const FIELD_DEFS=[['name','Ingredient name',/ingredient|description|raw material|component|material name|^item$|^name$/i],['claim','Label claim',/label claim|^claim|amount per serving|per serving(?!.*adj)|dosage/i],['unit','Unit',/^uom$|^unit|units?$/i],['potency','Potency / active %',/potency|active\s*%|assay|purity/i],['overage','Overage %',/overage\s*%?$|^overage/i],['input','Input weight (mg/serving)',/input|adjusted to overage|adj.*overage|mg\/serving|weight per serving/i],['code','Item code',/code|item\s*#|rm\s*#|^id$|part/i]];
+function loadProfiles(){ try{ return JSON.parse(localStorage.getItem('sfb.profiles')||'{}'); }catch(_){ return {}; } }
+function saveProfiles(o){ try{ localStorage.setItem('sfb.profiles',JSON.stringify(o)); }catch(_){ } }
+function sheetGrid(){ const ws=imp.wb.Sheets[imp.sheet]; return window.XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''}).map(r=>r.map(v=>String(v??'').trim())); }
+function autoHeader(grid){ let best=0,bi=0; for(let i=0;i<Math.min(40,grid.length);i++){ const row=grid[i]; let sc=0; FIELD_DEFS.forEach(([k,,re])=>{ if(row.some(c=>c&&re.test(c))) sc++; }); if(sc>best){best=sc;bi=i;} } return bi; }
+function headerSig(grid,hr){ return (grid[hr]||[]).map(c=>c.toLowerCase().replace(/\s+/g,' ')).join('|'); }
+function autoMap(grid,hr){
+  const hdr=(grid[hr]||[]).map((c,i)=>{ const below=(grid[hr+1]||[])[i]; return (c+' '+(below&&!/\d/.test(below)?below:'')).trim(); });
+  const own=(grid[hr]||[]); const map={}; const used=new Set();
+  FIELD_DEFS.forEach(([k,,re])=>{ let i=own.findIndex((c,j)=>!used.has(j) && c && re.test(c)); if(i<0) i=hdr.findIndex((c,j)=>!used.has(j) && c && re.test(c)); if(i>=0){ map[k]=i; used.add(i); } else map[k]=-1; });
+  return map;
+}
+function sheetRows(){
+  const g=imp.grid, m=imp.map; const out=[]; let blanks=0;
+  for(let i=imp.headerRow+1;i<g.length;i++){
+    const row=g[i]; const name=m.name>=0?row[m.name]:'';
+    if(!name){ if(++blanks>2) break; continue; } blanks=0;
+    if(/^(total|net weight|batch|subtotal)/i.test(name)) break;
+    if(/non-?active/i.test(name) && row.filter(Boolean).length<=2) { out.push({section:'other'}); continue; }
+    let claimCell=m.claim>=0?row[m.claim]:''; let unit=m.unit>=0?row[m.unit]:'';
+    const cm=String(claimCell).match(/([\d.,]+)\s*(mcg|mg|g|iu)?/i); const claim=cm?numv(cm[1]):null; if(!unit && cm && cm[2]) unit=cm[2];
+    if(claim==null || name==='0') continue;
+    unit=(unit||'mg').toLowerCase().replace(/[^a-z]/g,'')||'mg'; if(unit==='gram'||unit==='grams') unit='g';
+    out.push({name, claim, unit, potency:m.potency>=0?numv(String(row[m.potency]).replace('%','')):null, overage:m.overage>=0?numv(String(row[m.overage]).replace('%','')):null, input:m.input>=0?numv(row[m.input]):null, code:m.code>=0?row[m.code]:'', raw:row.filter(Boolean).join(' | ')});
+  }
+  let other=false; return out.filter(r=>{ if(r.section){ other=true; return false; } if(other) r.forceOther=true; return true; });
+}
+
+/* ---------- create project ---------- */
+function normName(s){ return String(s||'').toLowerCase().replace(/\(.*?\)/g,'').replace(/[^a-z0-9]+/g,' ').replace(/\bflavors?\b/,'flavor').trim(); }
+function createFromImport(){
+  const h=imp.header; const p=blankProject();
+  p.name = h.product || (imp.file?imp.file.name.replace(/\.[^.]+$/,''):'Imported product');
+  p.coman=h.coman||imp.profile||''; p.client=h.client||''; p.ref=[h.ref, imp.file&&imp.file.name].filter(Boolean).join(' · ');
+  p.form=h.form||p.form;
+  p.serving={qty:h.qty||(p.form==='powder'?'1':'2'), unit:h.unit||(p.form==='powder'?'Serving':'Capsules'), weight:h.weight||null, pattern:h.weight?'unit_weight':'unit', spc:h.spc||'', showSpc:h.showSpc!==false};
+  p.suggested={qty:`${p.serving.qty} ${String(p.serving.unit).toLowerCase()}`.trim(), liquid:'', timing:'', freq:p.form==='powder'?'':'daily', override:''};
+  const flags=[];
+  if(p.form==='powder'){ p.style.widthIn=2.1; }
+  const rows=[];
+  for(const r of imp.rows){
+    if(!r.include) continue;
+    const [k,sub]=r.role.split(':');
+    const common={status:'verified', note:r.note||'', noteSev:r.noteSev||'info', input:r.input??null, allergen:''};
+    if(k==='n') rows.push(R(Object.assign(common,{kind:'nutrient', nk:sub, amt:r.claim, unit:r.unit, source:r.source||'', conn:r.conn||'as', place:'panel', tm:r.tm||'', tmStatus:r.tm?'pending':'n/a'})));
+    else if(k==='d') rows.push(R(Object.assign(common,{kind:'ingredient', name:r.dname||r.name, amt:r.claim, unit:r.unit, parent:'', caff:r.caff||null, botanical:!!r.botanical})));
+    else rows.push(R(Object.assign(common,{kind:'other', name:r.oname||r.name, cat:sub, ftype:sub==='flavor'?(r.ftype||'unconfirmed'):undefined, input:r.input??(r.unit==='mg'?r.claim:null)})));
+  }
+  if(h.capsule){
+    const c=h.capsule; const nm = c.veg?'Vegetable Capsule':'Gelatin Capsule';
+    if(!rows.some(r=>r.kind==='other' && r.cat==='capsule')) rows.push(R({kind:'other', name:nm, cat:'capsule', input:c.mg!=null?+(c.mg*c.per).toFixed(0):null, status:'estimated', note:`From packaging "${c.desc}". ${c.mg!=null?`${c.per} × ~${c.mg} mg size ${c.size} shell assumed.`:'Capsule size unknown.'} Confirm the shell weight.`, noteSev:'warn'}));
+  }
+  p.rows=rows;
+  if(h.allergens){ p.allergensReviewed=false; flags.push({sev:'info', msg:`Spec allergens: ${h.allergens}`, det:'Confirm against composition statements.'}); }
+  if(h.labelSize) flags.push({sev:'warn', msg:`Label size on spec: ${h.labelSize}`, det:'Enter the area available for labeling from the dieline to set type minimums.'});
+  if(h.perBox) flags.push({sev:'info', msg:`${h.perBox} units per retail box`, det:'The carton panel needs its own servings per container and net contents.'});
+  if(imp.specOther!==null){
+    const spec=(imp.specOther||'').replace(/\.$/,'').split(/\s*,\s*/).filter(Boolean);
+    const gen=otherIngredients(p).items.map(i=>i.name);
+    if(!spec.length) flags.push({sev:'block', msg:'Spec "Other Ingredients" field is blank', det:`Generated from the formula: ${gen.join(', ')||'none'}.`});
+    else {
+      const gN=gen.map(normName), sN=spec.map(normName);
+      const extra=spec.filter((s,i)=>!gN.includes(sN[i])); const missing=gen.filter((g,i)=>!sN.includes(gN[i]));
+      if(extra.length) flags.push({sev:'block', msg:`Spec Other Ingredients lists ${extra.map(x=>`"${x}"`).join(', ')}`, det:'Not in the formula. Left out until the co-man confirms.'});
+      if(missing.length) flags.push({sev:'warn', msg:`Spec Other Ingredients omits ${missing.join(', ')}`, det:'These are in the formula.'});
+      const common=gN.filter(x=>sN.includes(x)); const specOrder=sN.filter(x=>gN.includes(x));
+      if(common.join('|')!==specOrder.join('|')) flags.push({sev:'warn', msg:'Spec Other Ingredients order differs from weight order', det:`Spec: ${spec.join(', ')}. By weight: ${gen.join(', ')}.`});
+    }
+  }
+  flags.push({sev:'info', msg:`Imported with ${imp.kind==='pdf'?TEMPLATES[imp.detected].label:'column mapping'+(imp.profile?` "${imp.profile}"`:'')}`, det:'Review every row against the source document before release.'});
+  if(p.rows.some(r=>r.kind!=='other') ) flags.push({sev:'warn', msg:'Calories and macronutrients not on the spec', det:'Enter supplier nutrition data under Product, or confirm they fall below declaration thresholds.'});
+  p.flags=flags;
+  state.projects.push(p); state.cur=state.projects.length-1; state.tab='formula'; state.open=null;
+  closeImport(); renderAll(); toast('Project created from '+(imp.file?imp.file.name:'import'));
+}
+
+/* ---------- UI ---------- */
+const IV=()=>document.getElementById('importView');
+function openImport(){ Object.assign(imp,{step:'pick',file:null,kind:null,template:'auto',items:null,lines:null,detected:null,wb:null,grid:null,map:null,rows:[],header:{},specOther:null,error:''}); document.querySelector('main.work').hidden=true; IV().hidden=false; renderImport(); }
+function closeImport(){ document.querySelector('main.work').hidden=false; IV().hidden=true; }
+function roleOptions(sel){
+  const o=[['d','Dietary ingredient (†)'], ...VM.map(v=>['n:'+v.k,'Vitamin/mineral: '+v.label]), ...CATEGORIES.map(c=>['o:'+c,'Other ingredient: '+c])];
+  return o.map(([v,t])=>`<option value="${v}" ${v===sel?'selected':''}>${esc(t)}</option>`).join('');
+}
+function renderImport(){
+  const v=IV(); const stepIdx={pick:0,map:1,review:2}[imp.step];
+  const steps=`<div class="steps">${['Choose file','Read it','Review rows'].map((t,i)=>`<span class="${i===stepIdx?'on':''}">${i+1}. ${t}</span>`).join('')}</div>`;
+  let h=`<div class="ibar"><h2>Import a co-man spec</h2><div class="spacer"></div><button class="btn" type="button" data-imp="cancel">Cancel</button></div>${steps}`;
+  if(imp.error) h+=`<div class="flag block"><div class="t"><span class="m">${esc(imp.error)}</span></div></div>`;
+  if(imp.step==='pick'){
+    h+=`<div class="drop" id="dropZone"><b>Drop a PDF, Excel or CSV spec here</b><span class="note-s">Formula quotes and spec sheets from ACB and Veritacor are read with built-in templates. Other PDFs use a generic table reader. Spreadsheets are matched column by column, and the match is remembered per co-man.</span><button class="btn primary" type="button" data-imp="choose">Choose file</button><input type="file" id="impFile" accept=".pdf,.xlsx,.xls,.xlsm,.csv,.tsv" hidden><span class="note-s">Files are read in this browser. Nothing is uploaded.</span></div>`;
+  }
+  if(imp.step==='map' && imp.kind==='pdf'){
+    const tl=Object.entries(TEMPLATES).map(([k,t])=>`<option value="${k}" ${imp.detected===k?'selected':''}>${esc(t.label)}</option>`).join('');
+    const parsed=TEMPLATES[imp.detected].parse(imp.lines);
+    h+=`<div class="card"><h3>${esc(imp.file.name)}</h3><div class="ibar"><label class="f" style="min-width:280px"><span>Template</span><select id="impTpl">${tl}</select></label><span class="note-s">${parsed.rows.length} formula rows found${imp.autoDetected?' · template detected automatically':''}.</span><div class="spacer"></div><button class="btn primary" type="button" data-imp="toReview" ${parsed.rows.length?'':'disabled'}>Review rows</button></div>
+      ${parsed.rows.length?'':'<p class="note-s block">No formula rows matched this template. Try another template, or ask for a new co-man template to be added.</p>'}
+      <details style="margin-top:8px"><summary class="note-s">Show extracted text</summary><pre class="raw">${esc(imp.lines.map(l=>l.text).join('\n'))}</pre></details></div>`;
+  }
+  if(imp.step==='map' && imp.kind==='sheet'){
+    const g=imp.grid; const cols=Math.max(...g.slice(0,60).map(r=>r.length),1);
+    const colName=i=>{ let s='',n=i; do{ s=String.fromCharCode(65+n%26)+s; n=Math.floor(n/26)-1; }while(n>=0); return s; };
+    const colOpts=sel=>`<option value="-1">— none —</option>`+Array.from({length:cols},(_,i)=>`<option value="${i}" ${sel===i?'selected':''}>${colName(i)}: ${esc((g[imp.headerRow]||[])[i]||'').slice(0,28)}</option>`).join('');
+    const profiles=Object.keys(loadProfiles());
+    h+=`<div class="card"><h3>${esc(imp.file.name)}</h3><div class="grid3" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">
+      <label class="f"><span>Sheet</span><select id="impSheet">${imp.wb.SheetNames.map(n=>`<option ${n===imp.sheet?'selected':''}>${esc(n)}</option>`).join('')}</select></label>
+      <label class="f"><span>Header row</span><input type="number" id="impHdr" min="1" value="${imp.headerRow+1}"></label>
+      <label class="f"><span>Co-man (saves this mapping)</span><input type="text" id="impProfile" list="profList" value="${esc(imp.profile)}" placeholder="e.g. ACB"><datalist id="profList">${profiles.map(p=>`<option value="${esc(p)}">`).join('')}</datalist></label></div>
+      <div class="lbl">Match columns${imp.profileApplied?` <span class="pill ok">using saved "${esc(imp.profileApplied)}"</span>`:''}</div>
+      <div class="grid3" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">${FIELD_DEFS.map(([k,t])=>`<label class="f"><span>${t}${k==='name'||k==='claim'?' *':''}</span><select data-map="${k}">${colOpts(imp.map[k])}</select></label>`).join('')}</div>`;
+    const rows=imp.map.name>=0&&imp.map.claim>=0?sheetRows():[];
+    h+=`<div class="ibar" style="margin-top:10px"><span class="note-s">${rows.length} rows read.${imp.map.input<0?' No input-weight column: Other Ingredients will sort by label claim.':''}</span><div class="spacer"></div><button class="btn primary" type="button" data-imp="toReview" ${rows.length?'':'disabled'}>Review rows</button></div></div>`;
+    h+=`<div class="tblwrap"><table class="grid"><tbody>${g.slice(0,Math.min(g.length,imp.headerRow+30)).map((r,i)=>`<tr class="${i===imp.headerRow?'hdr':''}"><th>${i+1}</th>${Array.from({length:cols},(_,j)=>`<td title="${esc(r[j]||'')}">${esc(r[j]||'')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  }
+  if(imp.step==='review'){
+    const hd=imp.header;
+    h+=`<div class="card"><h3>Product</h3><div class="grid3" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">
+      ${['product:Product name','coman:Co-man','client:Client / brand','qty:Serving quantity','unit:Serving unit','weight:Serving weight (g)','spc:Servings per container'].map(x=>{ const [k,t]=x.split(':'); return `<label class="f"><span>${t}</span><input type="${k==='weight'?'number':'text'}" step="any" data-h="${k}" value="${esc(hd[k]??'')}"></label>`; }).join('')}
+      <label class="f"><span>Form</span><select data-h="form">${[['capsule','Capsule / tablet'],['powder','Powder / stick pack'],['liquid','Liquid']].map(([v,t])=>`<option value="${v}" ${hd.form===v?'selected':''}>${t}</option>`).join('')}</select></label></div>
+      ${imp.specOther!==null?`<p class="note-s" style="margin-top:8px">Spec Other Ingredients: <b>${esc(imp.specOther||'(blank)')}</b>. It will be compared with the list built from the formula.</p>`:''}
+      ${hd.capsule?`<p class="note-s">Capsule from packaging: ${esc(hd.capsule.desc)} → added as an Other ingredient.</p>`:''}</div>`;
+    const inc=imp.rows.filter(r=>r.include).length;
+    h+=`<div class="ibar"><h3 style="margin:0">Formula rows <span class="note-s">(${inc} of ${imp.rows.length} included)</span></h3><div class="spacer"></div><button class="btn" type="button" data-imp="back">Back</button><button class="btn primary" type="button" data-imp="create">Create project</button></div>`;
+    h+=`<div class="tblwrap"><table class="rev"><thead><tr><th>Use</th><th>Goes on label as</th><th>Name</th><th>Claim</th><th>Unit</th><th>Potency %</th><th>Input mg</th><th>Notes</th></tr></thead><tbody>`;
+    imp.rows.forEach((r,i)=>{
+      const nameKey = r.role.startsWith('n:')?'source':r.role.startsWith('o:')?'oname':'dname';
+      const nameVal = r.role.startsWith('n:') ? (r.source||'') : r.role.startsWith('o:') ? (r.oname||r.name) : (r.dname||r.name);
+      h+=`<tr class="${r.include?'':'skip'}"><td><input type="checkbox" aria-label="Include row" data-r="${i}" data-f="include" ${r.include?'checked':''}></td>
+        <td><select aria-label="Role" data-r="${i}" data-f="role">${roleOptions(r.role)}</select></td>
+        <td><input type="text" aria-label="${nameKey==='source'?'Source compound':'Name'}" data-r="${i}" data-f="${nameKey}" value="${esc(nameVal)}"><div class="note-s">${nameKey==='source'?'Source compound · ':''}spec: ${esc(r.name)}${r.code?' · '+esc(r.code):''}</div></td>
+        <td><input type="number" step="any" aria-label="Claim" data-r="${i}" data-f="claim" value="${esc(r.claim??'')}"></td>
+        <td><select aria-label="Unit" data-r="${i}" data-f="unit">${['mg','mcg','g','mcg DFE','mcg RAE','IU'].map(u=>`<option ${u===r.unit?'selected':''}>${u}</option>`).join('')}</select></td>
+        <td class="num">${r.potency??''}</td>
+        <td><input type="number" step="any" aria-label="Input mg" data-r="${i}" data-f="input" value="${esc(r.input??'')}"></td>
+        <td>${r.note?`<span class="note-s ${r.noteSev}">${esc(r.note)}</span>`:''}${r.role.startsWith('o:flavor')?`<div><select aria-label="Flavor type" data-r="${i}" data-f="ftype">${[['natural','Natural'],['artificial','Artificial'],['nat_art','Natural & artificial'],['unconfirmed','Not confirmed']].map(([v,t])=>`<option value="${v}" ${r.ftype===v?'selected':''}>${t}</option>`).join('')}</select></div>`:''}</td></tr>`;
+    });
+    h+=`</tbody></table></div><p class="note-s">Label claims come from the spec's claim column, not the overage-adjusted input. Input weights set the Other Ingredients order.</p>`;
+  }
+  v.innerHTML=h;
+  const f=document.getElementById('impFile'); if(f) f.addEventListener('change',e=>{ if(e.target.files[0]) readImportFile(e.target.files[0]); });
+  const dz=document.getElementById('dropZone');
+  if(dz){ dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over');}); dz.addEventListener('dragleave',()=>dz.classList.remove('over')); dz.addEventListener('drop',e=>{ e.preventDefault(); dz.classList.remove('over'); const fl=e.dataTransfer.files[0]; if(fl) readImportFile(fl); }); }
+}
+async function readImportFile(file){
+  imp.file=file; imp.error='';
+  const ext=file.name.toLowerCase().split('.').pop();
+  try{
+    const buf=await file.arrayBuffer();
+    if(ext==='pdf'){
+      imp.kind='pdf'; IV().querySelector('.drop b').textContent='Reading PDF…';
+      try{ imp.items=await pdfItems(buf); }catch(e){ throw new Error(e.message==='load'?'The PDF reader could not load. Check your internet connection and try again.':'This PDF could not be read. If it is a scan, text extraction is not possible.'); }
+      setPdfLines(buildLines(imp.items));
+    } else {
+      imp.kind='sheet';
+      try{ await needLib('xlsx'); }catch(_){ throw new Error('The spreadsheet reader could not load. Check your internet connection and try again.'); }
+      imp.wb = window.XLSX.read(buf,{type:'array'}); imp.sheet=imp.wb.SheetNames[0];
+      setGrid(sheetGrid());
+    }
+    imp.step='map';
+  }catch(e){ imp.error=e.message||'Could not read that file.'; imp.step='pick'; }
+  renderImport();
+}
+function setPdfLines(lines){
+  imp.lines=lines; const all=lines.map(l=>l.text).join('\n');
+  imp.detected = TEMPLATES.acb.detect(all)?'acb':TEMPLATES.veritacor.detect(all)?'veritacor':'generic'; imp.autoDetected=imp.detected!=='generic';
+}
+function setGrid(grid){
+  imp.grid=grid; imp.headerRow=autoHeader(grid); imp.map=autoMap(grid,imp.headerRow); imp.profileApplied='';
+  const sig=headerSig(grid,imp.headerRow); const prof=loadProfiles();
+  for(const [name,pr] of Object.entries(prof)){ if(pr.sig===sig){ imp.map=Object.assign({},pr.map); imp.profile=name; imp.profileApplied=name; break; } }
+}
+function toReview(){
+  if(imp.kind==='pdf'){ const parsed=TEMPLATES[imp.detected].parse(imp.lines); imp.header=parsed.header; imp.specOther=parsed.specOther; imp.rows=prepRows(parsed.rows); }
+  else {
+    if(imp.profile){ const pr=loadProfiles(); pr[imp.profile]={sig:headerSig(imp.grid,imp.headerRow), map:imp.map, headerRow:imp.headerRow}; saveProfiles(pr); }
+    imp.header={product:imp.file.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' '), coman:imp.profile}; imp.specOther=null; imp.rows=prepRows(sheetRows());
+  }
+  imp.step='review'; renderImport();
+}
+document.getElementById('btnImport').addEventListener('click', openImport);
+IV().addEventListener('click', e=>{
+  const b=e.target.closest('[data-imp]'); if(!b) return; const a=b.dataset.imp;
+  if(a==='cancel') closeImport();
+  if(a==='choose') document.getElementById('impFile').click();
+  if(a==='toReview') toReview();
+  if(a==='back'){ imp.step='map'; renderImport(); }
+  if(a==='create') createFromImport();
+});
+IV().addEventListener('change', e=>{
+  const t=e.target;
+  if(t.id==='impTpl'){ imp.detected=t.value; imp.autoDetected=false; renderImport(); return; }
+  if(t.id==='impSheet'){ imp.sheet=t.value; setGrid(sheetGrid()); renderImport(); return; }
+  if(t.id==='impHdr'){ const n=Math.max(1,parseInt(t.value)||1)-1; imp.headerRow=n; imp.map=autoMap(imp.grid,n); renderImport(); return; }
+  if(t.id==='impProfile'){ imp.profile=t.value.trim(); const pr=loadProfiles()[imp.profile]; if(pr){ imp.map=Object.assign({},pr.map); imp.headerRow=pr.headerRow||imp.headerRow; imp.profileApplied=imp.profile; } renderImport(); return; }
+  if(t.dataset.map){ imp.map[t.dataset.map]=+t.value; imp.profileApplied=''; renderImport(); return; }
+  if(t.dataset.h){ imp.header[t.dataset.h]= t.type==='number'?num(t.value):t.value; return; }
+  if(t.dataset.r!=null){ const r=imp.rows[+t.dataset.r]; const f=t.dataset.f;
+    if(f==='include') r.include=t.checked;
+    else if(f==='role'){ r.role=t.value; const [k,sub]=t.value.split(':'); if(k==='n'){ r.source=r.source||r.name; } if(k==='o'){ r.oname=r.oname||r.name; if(sub==='flavor' && !r.ftype) r.ftype='unconfirmed'; } if(k==='d'){ r.dname=r.dname||r.name; } }
+    else if(f==='claim'||f==='input') r[f]=num(t.value);
+    else r[f]=t.value;
+    renderImport(); }
+});
+IV().addEventListener('input', e=>{ const t=e.target; if(t.dataset.h){ imp.header[t.dataset.h]= t.type==='number'?num(t.value):t.value; } if(t.dataset.r!=null && t.type==='text'){ imp.rows[+t.dataset.r][t.dataset.f]=t.value; } });
+</script>
+
+</body></html>

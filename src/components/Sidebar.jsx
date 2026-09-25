@@ -3,6 +3,7 @@ const NAV = [
   { id: "projects", label: "Projects" },
   { id: "work_orders", label: "Work Orders", match: ["work_orders", "plastic_work_orders"] },
   { id: "quick_quote", label: "Quoting", match: ["quick_quote", "plastics", "rfq"] },
+  { id: "supplement_facts", label: "Supplement Facts" },
   { id: "customers", label: "Customers" },
 ];
 
