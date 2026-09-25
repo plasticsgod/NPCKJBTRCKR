@@ -14,7 +14,7 @@ import Console from "./components/Console";
 import RFQ from "./components/RFQ";
 import QuotingHub from "./components/QuotingHub";
 import QuickQuote from "./components/QuickQuote";
-import SupplementFacts from "./components/SupplementFacts";
+import PanelBuilder from "./components/PanelBuilder";
 import { DashboardSkeleton, WorkOrdersSkeleton } from "./components/Skeletons";
 import Projects from "./projects/Projects";
 import JobModal from "./components/JobModal";
@@ -22,7 +22,7 @@ import PlasticJobModal from "./components/PlasticJobModal";
 import { Toaster, toast } from "./components/Toaster";
 import SearchOverlay from "./components/SearchOverlay";
 
-const PAGES = ["dashboard", "work_orders", "plastic_work_orders", "projects", "plastics", "customers", "console", "rfq", "quick_quote", "supplement_facts"];
+const PAGES = ["dashboard", "work_orders", "plastic_work_orders", "projects", "plastics", "customers", "console", "rfq", "quick_quote", "panel_builder"];
 
 // Instant client-side check for the core team (matches the SQL allowlist) so
 // they never see a flash; invited "members" are confirmed via RPC below.
@@ -36,7 +36,8 @@ const KNOWN_INTERNAL = [
 // Hash routes: "#page" or, for links from Slack, "#page?task=ID" / "?job=ID" / "?plastic=ID".
 function parseHash() {
   const raw = window.location.hash.replace("#", "");
-  const [p, q = ""] = raw.split("?");
+  let [p, q = ""] = raw.split("?");
+  if (p === "supplement_facts") p = "panel_builder";   // old name
   return { page: PAGES.includes(p) ? p : "dashboard", params: new URLSearchParams(q) };
 }
 function getPageFromHash() {
@@ -188,7 +189,7 @@ export default function App() {
       projects: "Projects",
       console: "Console",
       quick_quote: "Quick Quote",
-      supplement_facts: "Supplement Facts",
+      panel_builder: "Panel Builder",
     };
     document.title = `${names[page] || "NutraPack"} · NutraPack App`;
   }, [page]);
@@ -438,8 +439,8 @@ export default function App() {
             estimator={<PlasticsEstimator userEmail={session.user.email} />}
             rfq={<RFQ userEmail={session.user.email} openId={rfqOpenId} onOpened={() => setRfqOpenId(null)} />}
           />
-        ) : page === "supplement_facts" ? (
-          <SupplementFacts />
+        ) : page === "panel_builder" ? (
+          <PanelBuilder />
         ) : page === "customers" ? (
           <Customers />
         ) : (page === "work_orders" || page === "plastic_work_orders") ? (

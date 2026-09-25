@@ -1,11 +1,11 @@
-// Supplement Facts Builder page. The builder is a self-contained tool served from
-// /public/tools/supplement-facts.html and shown here full-height. Its projects are
-// still saved as files (Save project / Open…); nothing is stored in the database.
-export default function SupplementFacts() {
+// Panel Builder page (Supplement Facts today; Nutrition Facts to come). The builder
+// is a self-contained tool served from /public/tools/panel-builder.html and shown
+// here full-height. Projects are still saved as files (Save project / Open…).
+export default function PanelBuilder() {
   return (
     <iframe
-      src="/tools/supplement-facts.html"
-      title="Supplement Facts Builder"
+      src="/tools/panel-builder.html"
+      title="Panel Builder"
       allow="clipboard-read; clipboard-write"
       style={{
         display: "block",
