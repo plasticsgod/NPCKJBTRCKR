@@ -15,7 +15,7 @@
 const LOOKBACK_DAYS = 14;
 const LATE_DAYS = 3;
 const TZ = "America/Chicago";
-const DEFAULT_FOCUS = ["eduardonutramedia@gmail.com", "cc@nutramedia.co", "taylor.knox@nutrapack.co", "tk@nutramedia.co"];
+const DEFAULT_FOCUS = ["Eduardo Trevino", "Christina Carpenter", "Taylor Knox"];   // Monday names or emails
 
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { "Content-Type": "application/json" } });
 const esc = (s: string) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -30,74 +30,102 @@ export function mentionedIds(html: string): string[] {
 }
 
 // Pure: Monday data in → Slack message out (null on a quiet day).
-// updates: [{ id, body, text_body, created_at, creator:{id,name}, item:{id,name,board:{id,name}}, replies:[...] }]
-// users:   [{ id, name, email }] non-guest team members
+// updates: [{ body, text_body, created_at, creator:{id,name},
+//             item:{ id, name, board:{id,name}, column_values:[{ persons_and_teams:[{id,kind}] }] },
+//             replies:[...] }]
+// users:   [{ id, name, email }] non-guest team members (everyone else = client/guest)
 export function buildMondayDigest(d: any, now: Date) {
   const cutoff = now.getTime() - LOOKBACK_DAYS * 864e5;
   const team = new Map<string, any>((d.users || []).map((u: any) => [String(u.id), u]));
-  const focus = new Set<string>((d.focusEmails || []).map((e: string) => e.toLowerCase()));
-  const isFocus = (id: string) => focus.has(String(team.get(id)?.email || "").toLowerCase());
+  const focus = new Set<string>((d.focusEmails || []).map((e: string) => e.trim().toLowerCase()));
+  const isFocus = (id: string) => {
+    const u = team.get(id) || {};
+    return focus.has(String(u.email || "").toLowerCase()) || focus.has(String(u.name || "").toLowerCase());
+  };
+  const assignees = (item: any) => {
+    const ids = new Set<string>();
+    for (const cv of item?.column_values || []) for (const p of cv?.persons_and_teams || []) if (p.kind !== "team" && team.has(String(p.id))) ids.add(String(p.id));
+    return [...ids];
+  };
 
-  const open: any[] = [];
+  // Every post on each item (updates + comments). A later written post by a
+  // teammate other than the asker = answered. Reactions are never read.
+  const itemPosts = new Map<string, { t: number; by: string }[]>();
   for (const u of d.updates || []) {
     if (!u?.item) continue;
-    const thread = [u, ...(u.replies || [])].map((p: any) => ({ ...p, t: new Date(p.created_at).getTime(), by: String(p.creator?.id || "") }))
-      .sort((a: any, b: any) => a.t - b.t);
-    for (const post of thread) {
-      if (post.t < cutoff) continue;
-      for (const who of mentionedIds(post.body)) {
-        if (who === post.by || !team.has(who)) continue;              // self-mentions and guests/clients skipped
-        // Handled once ANYONE on the team (other than whoever did the tagging)
-        // replies later in the same update thread.
-        const answered = thread.some((p: any) => p.t > post.t && p.by !== post.by && team.has(p.by));
-        if (answered) continue;
-        if (open.some((o) => o.who === who && o.item.id === u.item.id)) continue;   // one line per person per item
-        const tagged = mentionedIds(post.body).filter((id) => team.has(id)).map((id) => team.get(id).name);
-        open.push({ who, focus: isFocus(who), item: u.item, from: post.creator?.name || "Someone", tagged, text: post.text_body, days: Math.floor((now.getTime() - post.t) / 864e5) });
+    const list = itemPosts.get(u.item.id) || itemPosts.set(u.item.id, []).get(u.item.id)!;
+    for (const p of [u, ...(u.replies || [])]) list.push({ t: new Date(p.created_at).getTime(), by: String(p.creator?.id || "") });
+  }
+
+  // Open (item, person) pairs — keep the oldest wait per pair.
+  const open = new Map<string, { item: any; who: string; t: number }>();
+  const add = (item: any, who: string, t: number) => {
+    const k = item.id + "|" + who, prev = open.get(k);
+    if (!prev || t < prev.t) open.set(k, { item, who, t });
+  };
+  for (const u of d.updates || []) {
+    if (!u?.item) continue;
+    for (const post of [u, ...(u.replies || [])]) {
+      const t = new Date(post.created_at).getTime(), by = String(post.creator?.id || "");
+      if (t < cutoff) continue;
+      const answered = (itemPosts.get(u.item.id) || []).some((p) => p.t > t && p.by !== by && team.has(p.by));
+      if (answered) continue;
+      const tagged = mentionedIds(post.body).filter((id) => team.has(id) && id !== by);
+      if (tagged.length) { for (const who of tagged) add(u.item, who, t); continue; }
+      // No @mention: only client/guest messages need an answer → the item's assigned person(s).
+      if (!team.has(by)) {
+        const owners = assignees(u.item);
+        if (owners.length) for (const who of owners) add(u.item, who, t); else add(u.item, "unassigned", t);
       }
     }
   }
-  if (!open.length) return null;
+  if (!open.size) return null;
+
+  const first = (id: string) => id === "unassigned" ? "Unassigned" : String(team.get(id)?.name || "Unknown").split(" ")[0];
+  const days = (t: number) => Math.floor((now.getTime() - t) / 864e5);
+
+  // One row per item: everyone it's waiting on + the longest wait.
+  const byItem = new Map<string, { item: any; whos: string[]; t: number }>();
+  for (const o of open.values()) {
+    const r = byItem.get(o.item.id) || byItem.set(o.item.id, { item: o.item, whos: [], t: o.t }).get(o.item.id)!;
+    if (!r.whos.includes(o.who)) r.whos.push(o.who);
+    r.t = Math.min(r.t, o.t);
+  }
+  const rows = [...byItem.values()].sort((a, b) => a.t - b.t);
+  const late = rows.filter((r) => days(r.t) >= LATE_DAYS);
 
   const slug = d.slug;
   const itemUrl = (it: any) => slug && it.board?.id ? `https://${slug}.monday.com/boards/${it.board.id}/pulses/${it.id}` : (slug ? `https://${slug}.monday.com` : "https://monday.com");
-  const line = (o: any) => `• <${itemUrl(o.item)}|${esc(o.item.name)}>  _· ${esc(o.item.board?.name || "")}_\n      ${esc(o.from)} → *${esc(o.tagged.join(", "))}*: “${esc(clip(o.text))}”  ·  ${o.days >= LATE_DAYS ? `*${o.days}d* 🔴` : o.days + "d"}`;
-
-  const sections = (title: string, list: any[]) => {
-    if (!list.length) return [];
-    const byPerson = new Map<string, any[]>();
-    for (const o of list.sort((a, b) => b.days - a.days)) (byPerson.get(o.who) || byPerson.set(o.who, []).get(o.who))!.push(o);
-    const chunks: string[] = []; let cur = title;
-    for (const [id, items] of byPerson) {
-      const shown = items.slice(0, 6).map(line);
-      if (items.length > 6) shown.push(`_…and ${items.length - 6} more_`);
-      const part = `\n*${esc(team.get(id)?.name || "Unknown")}* (${items.length})\n` + shown.join("\n");
-      if ((cur + part).length > 2800) { chunks.push(cur); cur = part.trimStart(); } else cur += part;
-    }
-    chunks.push(cur);
-    return chunks;
+  const rowLine = (r: any) => {
+    const n = days(r.t);
+    return `${n >= LATE_DAYS ? "🔴" : "🟡"} *${n}d*   <${itemUrl(r.item)}|${esc(clip(r.item.name, 48))}>  ·  _${esc(clip(r.item.board?.name || "", 28))}_  ·  ${esc(r.whos.map(first).join(", "))}`;
   };
 
-  const mine = open.filter((o) => o.focus), rest = open.filter((o) => !o.focus);
-  const late = open.filter((o) => o.days >= LATE_DAYS).length;
-  const today = now.toLocaleDateString("en-US", { timeZone: TZ, weekday: "long", month: "short", day: "numeric" });
+  // Counts per person (distinct items), you three first.
+  const perPerson = new Map<string, number>();
+  for (const o of open.values()) perPerson.set(o.who, (perPerson.get(o.who) || 0) + 1);
+  const tally = (ids: string[]) => ids.sort((a, b) => (perPerson.get(b)! - perPerson.get(a)!)).map((id) => `${esc(first(id))} *${perPerson.get(id)}*`).join("  ·  ");
+  const mineIds = [...perPerson.keys()].filter((id) => id !== "unassigned" && isFocus(id));
+  const teamIds = [...perPerson.keys()].filter((id) => !mineIds.includes(id));
 
+  const today = now.toLocaleDateString("en-US", { timeZone: TZ, weekday: "long", month: "short", day: "numeric" });
+  const top = rows.slice(0, 10);
   const blocks: any[] = [
-    { type: "header", text: { type: "plain_text", text: "🦄 Unanswered on Monday", emoji: true } },
-    { type: "context", elements: [{ type: "mrkdwn", text: `<!channel>  ·  ${today}  ·  Mentions nobody on the team has replied to, last ${LOOKBACK_DAYS} days, all workspaces` }] },
-    { type: "section", fields: [
-      { type: "mrkdwn", text: `*${mine.length}*\nWaiting on you three` },
-      { type: "mrkdwn", text: `*${rest.length}*\nWaiting on the team` },
-      { type: "mrkdwn", text: `*${late}*\nOlder than ${LATE_DAYS} days` },
-    ] },
+    { type: "header", text: { type: "plain_text", text: `🦄 ${rows.length} unanswered on Monday · ${late.length} late`, emoji: true } },
+    { type: "context", elements: [{ type: "mrkdwn", text: `<!channel>  ·  ${today}  ·  last ${LOOKBACK_DAYS} days, all workspaces` }] },
+    { type: "divider" },
+    { type: "section", text: { type: "mrkdwn", text: [`*⏳ OLDEST FIRST*  —  showing ${top.length} of ${rows.length}`, ...top.map(rowLine)].join("\n") } },
+    { type: "divider" },
+    { type: "section", text: { type: "mrkdwn", text: [
+      "*📊 BY PERSON*",
+      mineIds.length ? `🎯 *You three* —  ${tally(mineIds)}` : "🎯 *You three* —  nothing waiting 🎉",
+      teamIds.length ? `👥 *Team* —  ${tally(teamIds)}` : "",
+    ].filter(Boolean).join("\n") } },
+    { type: "divider" },
+    { type: "actions", elements: [{ type: "button", text: { type: "plain_text", text: "Open Monday.com" }, url: slug ? `https://${slug}.monday.com` : "https://monday.com" }] },
+    { type: "context", elements: [{ type: "mrkdwn", text: `Clears once anyone on the team writes on the item (comment or new update). Reactions don't count. Untagged client messages count toward whoever is assigned. 🔴 = ${LATE_DAYS}+ days.` }] },
   ];
-  for (const t of [...sections("🎯 *TAGGED — YOU THREE*", mine), ...sections("👥 *TAGGED — REST OF TEAM*", rest)]) {
-    blocks.push({ type: "divider" }, { type: "section", text: { type: "mrkdwn", text: t } });
-  }
-  blocks.push({ type: "divider" });
-  blocks.push({ type: "actions", elements: [{ type: "button", text: { type: "plain_text", text: "Open Monday.com" }, url: slug ? `https://${slug}.monday.com` : "https://monday.com" }] });
-  blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: "A mention drops off once anyone on the team replies in that update." }] });
-  return { text: `<!channel> 🦄 ${mine.length} waiting on you three, ${rest.length} on the team`, blocks: blocks.slice(0, 50) };
+  return { text: `<!channel> 🦄 ${rows.length} unanswered on Monday, ${late.length} late`, blocks };
 }
 
 async function monday(query: string, token: string) {
@@ -124,7 +152,7 @@ Deno.serve(async (req) => {
     for (let page = 1; page <= 30; page++) {
       const d = await monday(`query { updates(limit: 100, page: ${page}) {
         id body text_body created_at creator { id name }
-        item { id name board { id name } }
+        item { id name board { id name } column_values(types: [people]) { ... on PeopleValue { persons_and_teams { id kind } } } }
         replies { id body text_body created_at creator { id name } }
       } }`, token);
       const batch = d.updates || [];
